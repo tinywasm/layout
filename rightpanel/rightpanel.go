@@ -15,6 +15,9 @@ type Module interface {
 // All slots are optional. A nil slot is simply not rendered.
 // The layout does not define what the slots contain — that is the consumer's job.
 //
+// IMPORTANT: All dom.Component implementors passed as slots MUST embed dom.Element as a value,
+// not as a pointer. See tinywasm/dom interface.dom.go for details.
+//
 // Usage:
 //
 //	panel := &rightpanel.RightPanel{
