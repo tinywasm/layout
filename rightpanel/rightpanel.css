@@ -1,0 +1,130 @@
+/* ── RightPanel layout tokens (with fallbacks) ───────────────── */
+:root {
+  --rp-title-height:    var(--title-height,    8vh);
+  --rp-content-height:  var(--content-height,  89vh);
+  --rp-controls-height: var(--controls-height, 3vh);
+  --rp-main-width:      66vw;
+  --rp-aside-width:     30vw;
+  --rp-gap:             var(--mag-pri, 0.5rem);
+  --rp-border-color:    var(--color-tertiary,  #94a3b8);
+  --rp-bg:              var(--color-gray,      #f8fafc);
+  --rp-aside-bg:        var(--color-quaternary,#1e293b);
+  --rp-title-color:     var(--color-secondary, #7c3aed);
+}
+
+/* ── Wrapper ─────────────────────────────────────────────────── */
+.rp-wrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: var(--rp-content-height);
+  overflow: hidden;
+}
+
+/* ── Main section ────────────────────────────────────────────── */
+.rp-main {
+  display: grid;
+  grid-template-rows:
+    auto          /* rp-header  */
+    1fr;          /* rp-article */
+  width: var(--rp-main-width);
+  height: 100%;
+  overflow: hidden;
+  border-right: 0.1vw solid var(--rp-border-color);
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.rp-header {
+  display: flex;
+  flex-direction: column;
+  background: var(--rp-bg);
+  padding: var(--mag-sec, 0.2rem) var(--mag-pri, 0.5rem);
+}
+
+.rp-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--rp-gap);
+  min-height: var(--rp-title-height);
+}
+
+.rp-title-row h1 {
+  font-size: 1.5rem;
+  color: var(--rp-title-color);
+  margin: 0;
+}
+
+.rp-head-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: var(--rp-controls-height);
+  padding-bottom: var(--mag-sec, 0.2rem);
+}
+
+/* ── Article ─────────────────────────────────────────────────── */
+.rp-article {
+  overflow-y: auto;
+  padding: var(--mag-pri, 0.5rem);
+  background: var(--color-gray, #f8fafc);
+  border-radius: 0.4em 0.4em 0 0;
+}
+
+.rp-article::-webkit-scrollbar        { width: 0.2em; background: none; }
+.rp-article::-webkit-scrollbar-thumb  { background: var(--color-tertiary, #94a3b8); border-radius: 0.1em; }
+
+/* ── Aside panel ─────────────────────────────────────────────── */
+.rp-aside {
+  display: grid;
+  grid-template-rows:
+    auto   /* rp-aside-header  */
+    1fr;   /* rp-aside-content */
+  width: var(--rp-aside-width);
+  height: 100%;
+  overflow: hidden;
+}
+
+.rp-aside-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: var(--rp-controls-height);
+  padding: var(--mag-sec, 0.2rem) var(--mag-pri, 0.5rem);
+  background: var(--rp-aside-bg);
+}
+
+.rp-aside-content {
+  overflow-y: auto;
+  padding: var(--mag-pri, 0.5rem);
+  background: var(--rp-aside-bg);
+}
+
+.rp-aside-content::-webkit-scrollbar        { width: 0.2em; background: none; }
+.rp-aside-content::-webkit-scrollbar-thumb  { background: var(--color-tertiary, #94a3b8); border-radius: 0.1em; }
+
+/* ── Mobile (<640px): stack vertically ───────────────────────── */
+@media (max-width: 640px) {
+  .rp-wrapper {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .rp-main {
+    width: 100%;
+    height: auto;
+  }
+
+  .rp-aside {
+    width: 100%;
+    height: auto;
+  }
+
+  .rp-article {
+    overflow-y: visible;
+  }
+
+  .rp-aside-content {
+    overflow-y: visible;
+  }
+}
