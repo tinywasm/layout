@@ -1,15 +1,15 @@
-/* ── RightPanel layout tokens (with fallbacks) ───────────────── */
+/* ── RightPanel layout tokens ────────────────────────────────── */
 :root {
-  --rp-title-height:    var(--title-height,    8vh);
-  --rp-content-height:  var(--content-height,  89vh);
-  --rp-controls-height: var(--controls-height, 3vh);
+  --rp-title-height:    8vh;
+  --rp-content-height:  89vh;
+  --rp-controls-height: 3vh;
   --rp-main-width:      66vw;
   --rp-aside-width:     30vw;
-  --rp-gap:             var(--mag-pri, 0.5rem);
-  --rp-border-color:    var(--color-tertiary,  #94a3b8);
-  --rp-bg:              var(--color-gray,      #f8fafc);
-  --rp-aside-bg:        var(--color-quaternary,#1e293b);
-  --rp-title-color:     var(--color-secondary, #7c3aed);
+  --rp-gap:             var(--space-2);
+  --rp-border-color:    var(--color-muted);
+  --rp-bg:              var(--color-surface);
+  --rp-aside-bg:        var(--color-on-surface);
+  --rp-title-color:     var(--color-secondary);
 }
 
 /* ── Wrapper ─────────────────────────────────────────────────── */
@@ -38,7 +38,7 @@
   display: flex;
   flex-direction: column;
   background: var(--rp-bg);
-  padding: var(--mag-sec, 0.2rem) var(--mag-pri, 0.5rem);
+  padding: var(--space-1) var(--space-2);
 }
 
 .rp-title-row {
@@ -50,7 +50,7 @@
 }
 
 .rp-title-row h1 {
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
   color: var(--rp-title-color);
   margin: 0;
 }
@@ -60,19 +60,19 @@
   flex-direction: row;
   align-items: center;
   min-height: var(--rp-controls-height);
-  padding-bottom: var(--mag-sec, 0.2rem);
+  padding-bottom: var(--space-1);
 }
 
 /* ── Article ─────────────────────────────────────────────────── */
 .rp-article {
   overflow-y: auto;
-  padding: var(--mag-pri, 0.5rem);
-  background: var(--color-gray, #f8fafc);
-  border-radius: 0.4em 0.4em 0 0;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
 }
 
 .rp-article::-webkit-scrollbar        { width: 0.2em; background: none; }
-.rp-article::-webkit-scrollbar-thumb  { background: var(--color-tertiary, #94a3b8); border-radius: 0.1em; }
+.rp-article::-webkit-scrollbar-thumb  { background: var(--color-muted); border-radius: var(--radius-sm); }
 
 /* ── Aside panel ─────────────────────────────────────────────── */
 .rp-aside {
@@ -90,18 +90,18 @@
   flex-direction: row;
   align-items: center;
   min-height: var(--rp-controls-height);
-  padding: var(--mag-sec, 0.2rem) var(--mag-pri, 0.5rem);
+  padding: var(--space-1) var(--space-2);
   background: var(--rp-aside-bg);
 }
 
 .rp-aside-content {
   overflow-y: auto;
-  padding: var(--mag-pri, 0.5rem);
+  padding: var(--space-2);
   background: var(--rp-aside-bg);
 }
 
 .rp-aside-content::-webkit-scrollbar        { width: 0.2em; background: none; }
-.rp-aside-content::-webkit-scrollbar-thumb  { background: var(--color-tertiary, #94a3b8); border-radius: 0.1em; }
+.rp-aside-content::-webkit-scrollbar-thumb  { background: var(--color-muted); border-radius: var(--radius-sm); }
 
 /* ── Mobile (<640px): stack vertically ───────────────────────── */
 @media (max-width: 640px) {
