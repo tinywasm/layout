@@ -1,6 +1,21 @@
 package rightpanel
 
-import "github.com/tinywasm/dom"
+import (
+	"github.com/tinywasm/css"
+	. "github.com/tinywasm/dom"
+)
+
+var (
+	clsWrapper      css.Class = "rp-wrapper"
+	clsMain         css.Class = "rp-main"
+	clsHeader       css.Class = "rp-header"
+	clsTitleRow     css.Class = "rp-title-row"
+	clsHeadControls css.Class = "rp-head-controls"
+	clsArticle      css.Class = "rp-article"
+	clsAside        css.Class = "rp-aside"
+	clsAsideHeader  css.Class = "rp-aside-header"
+	clsAsideContent css.Class = "rp-aside-content"
+)
 
 // Module is the interface the consumer must satisfy to provide the layout ID.
 // Any struct with a ModelName() string method qualifies (e.g. ORM model structs).
@@ -15,7 +30,7 @@ type Module interface {
 // All slots are optional. A nil slot is simply not rendered.
 // The layout does not define what the slots contain — that is the consumer's job.
 //
-// IMPORTANT: All dom.Component implementors passed as slots MUST embed dom.Element as a value,
+// IMPORTANT: All Component implementors passed as slots MUST embed Element as a value,
 // not as a pointer. See tinywasm/dom interface.dom.go for details.
 //
 // Usage:
@@ -30,7 +45,7 @@ type Module interface {
 //	}
 //	panel.Render()
 type RightPanel struct {
-	*dom.Element
+	*Element
 
 	// Module provides the ID for the root wrapper element.
 	Module Module
@@ -39,26 +54,26 @@ type RightPanel struct {
 	Title string
 
 	// Head is rendered beside the <h1> (e.g. status badge, icon).
-	Head dom.Component
+	Head Component
 
 	// HeadControls is rendered below the title row (e.g. select with search).
-	HeadControls dom.Component
+	HeadControls Component
 
 	// Article is the main content area.
-	Article dom.Component
+	Article Component
 
 	// AsideControls is rendered at the top of the aside panel (e.g. search + filter).
-	AsideControls dom.Component
+	AsideControls Component
 
 	// Aside is the content area of the aside panel (e.g. detail view, info card).
-	Aside dom.Component
+	Aside Component
 }
 
 // Render builds the layout element tree.
-// Implements dom.ViewRenderer.
-func (r *RightPanel) Render() *dom.Element {
+// Implements ViewRenderer.
+func (r *RightPanel) Render() *Element {
 	if r.Element == nil {
-		r.Element = &dom.Element{}
+		r.Element = &Element{}
 	}
 
 	// ── root wrapper ─────────────────────────────────────────────────────────
@@ -67,20 +82,20 @@ func (r *RightPanel) Render() *dom.Element {
 		id = r.Module.ModelName()
 	}
 
-	wrapper := dom.Div().Class("rp-wrapper")
+	wrapper := Div(Class(clsWrapper))
 	if id != "" {
 		wrapper.ID(id)
 	}
 
 	// ── main section ─────────────────────────────────────────────────────────
-	main := dom.Section().Class("rp-main")
+	main := Section(Class(clsMain))
 
 	// header row: title + Head slot + HeadControls slot
-	header := dom.Div().Class("rp-header")
+	header := Div(Class(clsHeader))
 
-	titleRow := dom.Div().Class("rp-title-row")
+	titleRow := Div(Class(clsTitleRow))
 	if r.Title != "" {
-		titleRow.Add(dom.H1().Text(r.Title))
+		titleRow.Add(H1().Text(r.Title))
 	}
 	if r.Head != nil {
 		titleRow.Add(r.Head)
@@ -88,28 +103,28 @@ func (r *RightPanel) Render() *dom.Element {
 	header.Add(titleRow)
 
 	if r.HeadControls != nil {
-		header.Add(dom.Div().Class("rp-head-controls").Add(r.HeadControls))
+		header.Add(Div(Class(clsHeadControls)).Add(r.HeadControls))
 	}
 	main.Add(header)
 
 	// article
 	if r.Article != nil {
-		main.Add(dom.Article().Class("rp-article").Add(r.Article))
+		main.Add(Article(Class(clsArticle)).Add(r.Article))
 	} else {
-		main.Add(dom.Article().Class("rp-article"))
+		main.Add(Article(Class(clsArticle)))
 	}
 
 	wrapper.Add(main)
 
 	// ── aside panel ──────────────────────────────────────────────────────────
 	if r.AsideControls != nil || r.Aside != nil {
-		aside := dom.Aside().Class("rp-aside")
+		aside := Aside(Class(clsAside))
 
 		if r.AsideControls != nil {
-			aside.Add(dom.Div().Class("rp-aside-header").Add(r.AsideControls))
+			aside.Add(Div(Class(clsAsideHeader)).Add(r.AsideControls))
 		}
 		if r.Aside != nil {
-			aside.Add(dom.Div().Class("rp-aside-content").Add(r.Aside))
+			aside.Add(Div(Class(clsAsideContent)).Add(r.Aside))
 		}
 
 		wrapper.Add(aside)
