@@ -1,20 +1,20 @@
 package rightpanel
 
 import (
-	"github.com/tinywasm/css"
+	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 )
 
 var (
-	clsWrapper      css.Class = "rp-wrapper"
-	clsMain         css.Class = "rp-main"
-	clsHeader       css.Class = "rp-header"
-	clsTitleRow     css.Class = "rp-title-row"
-	clsHeadControls css.Class = "rp-head-controls"
-	clsArticle      css.Class = "rp-article"
-	clsAside        css.Class = "rp-aside"
-	clsAsideHeader  css.Class = "rp-aside-header"
-	clsAsideContent css.Class = "rp-aside-content"
+	clsWrapper      Class = "rp-wrapper"
+	clsMain         Class = "rp-main"
+	clsHeader       Class = "rp-header"
+	clsTitleRow     Class = "rp-title-row"
+	clsHeadControls Class = "rp-head-controls"
+	clsArticle      Class = "rp-article"
+	clsAside        Class = "rp-aside"
+	clsAsideHeader  Class = "rp-aside-header"
+	clsAsideContent Class = "rp-aside-content"
 )
 
 // Module is the interface the consumer must satisfy to provide the layout ID.
@@ -82,18 +82,18 @@ func (r *RightPanel) Render() *Element {
 		id = r.Module.ModelName()
 	}
 
-	wrapper := Div(Class(clsWrapper))
+	wrapper := Div(clsWrapper.AsAttr())
 	if id != "" {
 		wrapper.ID(id)
 	}
 
 	// ── main section ─────────────────────────────────────────────────────────
-	main := Section(Class(clsMain))
+	main := Section(clsMain.AsAttr())
 
 	// header row: title + Head slot + HeadControls slot
-	header := Div(Class(clsHeader))
+	header := Div(clsHeader.AsAttr())
 
-	titleRow := Div(Class(clsTitleRow))
+	titleRow := Div(clsTitleRow.AsAttr())
 	if r.Title != "" {
 		titleRow.Add(H1().Text(r.Title))
 	}
@@ -103,28 +103,28 @@ func (r *RightPanel) Render() *Element {
 	header.Add(titleRow)
 
 	if r.HeadControls != nil {
-		header.Add(Div(Class(clsHeadControls)).Add(r.HeadControls))
+		header.Add(Div(clsHeadControls.AsAttr()).Add(r.HeadControls))
 	}
 	main.Add(header)
 
 	// article
 	if r.Article != nil {
-		main.Add(Article(Class(clsArticle)).Add(r.Article))
+		main.Add(Article(clsArticle.AsAttr()).Add(r.Article))
 	} else {
-		main.Add(Article(Class(clsArticle)))
+		main.Add(Article(clsArticle.AsAttr()))
 	}
 
 	wrapper.Add(main)
 
 	// ── aside panel ──────────────────────────────────────────────────────────
 	if r.AsideControls != nil || r.Aside != nil {
-		aside := Aside(Class(clsAside))
+		aside := Aside(clsAside.AsAttr())
 
 		if r.AsideControls != nil {
-			aside.Add(Div(Class(clsAsideHeader)).Add(r.AsideControls))
+			aside.Add(Div(clsAsideHeader.AsAttr()).Add(r.AsideControls))
 		}
 		if r.Aside != nil {
-			aside.Add(Div(Class(clsAsideContent)).Add(r.Aside))
+			aside.Add(Div(clsAsideContent.AsAttr()).Add(r.Aside))
 		}
 
 		wrapper.Add(aside)
