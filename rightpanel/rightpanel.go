@@ -2,32 +2,19 @@ package rightpanel
 
 import (
 	"github.com/tinywasm/css"
-	"github.com/tinywasm/dom"
+	. "github.com/tinywasm/dom"
 )
 
 var (
-	ClsWrapper      css.Class = "rp-wrapper"
-	ClsMain         css.Class = "rp-main"
-	ClsHeader       css.Class = "rp-header"
-	ClsTitleRow     css.Class = "rp-title-row"
-	ClsHeadControls css.Class = "rp-head-controls"
-	ClsArticle      css.Class = "rp-article"
-	ClsAside        css.Class = "rp-aside"
-	ClsAsideHeader  css.Class = "rp-aside-header"
-	ClsAsideContent css.Class = "rp-aside-content"
-)
-
-var (
-	TokenTitleHeight    = css.Token{Name: "--rp-title-height", Fallback: "8vh"}
-	TokenContentHeight  = css.Token{Name: "--rp-content-height", Fallback: "89vh"}
-	TokenControlsHeight = css.Token{Name: "--rp-controls-height", Fallback: "3vh"}
-	TokenMainWidth      = css.Token{Name: "--rp-main-width", Fallback: "66vw"}
-	TokenAsideWidth     = css.Token{Name: "--rp-aside-width", Fallback: "30vw"}
-	TokenGap            = css.Token{Name: "--rp-gap", Fallback: "var(--space-2)"}
-	TokenBorderColor    = css.Token{Name: "--rp-border-color", Fallback: "var(--color-muted)"}
-	TokenBg             = css.Token{Name: "--rp-bg", Fallback: "var(--color-surface)"}
-	TokenAsideBg        = css.Token{Name: "--rp-aside-bg", Fallback: "var(--color-on-surface)"}
-	TokenTitleColor     = css.Token{Name: "--rp-title-color", Fallback: "var(--color-secondary)"}
+	clsWrapper      css.Class = "rp-wrapper"
+	clsMain         css.Class = "rp-main"
+	clsHeader       css.Class = "rp-header"
+	clsTitleRow     css.Class = "rp-title-row"
+	clsHeadControls css.Class = "rp-head-controls"
+	clsArticle      css.Class = "rp-article"
+	clsAside        css.Class = "rp-aside"
+	clsAsideHeader  css.Class = "rp-aside-header"
+	clsAsideContent css.Class = "rp-aside-content"
 )
 
 // Module is the interface the consumer must satisfy to provide the layout ID.
@@ -43,7 +30,7 @@ type Module interface {
 // All slots are optional. A nil slot is simply not rendered.
 // The layout does not define what the slots contain — that is the consumer's job.
 //
-// IMPORTANT: All dom.Component implementors passed as slots MUST embed dom.Element as a value,
+// IMPORTANT: All Component implementors passed as slots MUST embed Element as a value,
 // not as a pointer. See tinywasm/dom interface.dom.go for details.
 //
 // Usage:
@@ -58,7 +45,7 @@ type Module interface {
 //	}
 //	panel.Render()
 type RightPanel struct {
-	*dom.Element
+	*Element
 
 	// Module provides the ID for the root wrapper element.
 	Module Module
@@ -67,26 +54,26 @@ type RightPanel struct {
 	Title string
 
 	// Head is rendered beside the <h1> (e.g. status badge, icon).
-	Head dom.Component
+	Head Component
 
 	// HeadControls is rendered below the title row (e.g. select with search).
-	HeadControls dom.Component
+	HeadControls Component
 
 	// Article is the main content area.
-	Article dom.Component
+	Article Component
 
 	// AsideControls is rendered at the top of the aside panel (e.g. search + filter).
-	AsideControls dom.Component
+	AsideControls Component
 
 	// Aside is the content area of the aside panel (e.g. detail view, info card).
-	Aside dom.Component
+	Aside Component
 }
 
 // Render builds the layout element tree.
-// Implements dom.ViewRenderer.
-func (r *RightPanel) Render() *dom.Element {
+// Implements ViewRenderer.
+func (r *RightPanel) Render() *Element {
 	if r.Element == nil {
-		r.Element = &dom.Element{}
+		r.Element = &Element{}
 	}
 
 	// ── root wrapper ─────────────────────────────────────────────────────────
@@ -95,20 +82,20 @@ func (r *RightPanel) Render() *dom.Element {
 		id = r.Module.ModelName()
 	}
 
-	wrapper := dom.Div(dom.Class(ClsWrapper))
+	wrapper := Div(Class(clsWrapper))
 	if id != "" {
 		wrapper.ID(id)
 	}
 
 	// ── main section ─────────────────────────────────────────────────────────
-	main := dom.Section(dom.Class(ClsMain))
+	main := Section(Class(clsMain))
 
 	// header row: title + Head slot + HeadControls slot
-	header := dom.Div(dom.Class(ClsHeader))
+	header := Div(Class(clsHeader))
 
-	titleRow := dom.Div(dom.Class(ClsTitleRow))
+	titleRow := Div(Class(clsTitleRow))
 	if r.Title != "" {
-		titleRow.Add(dom.H1().Text(r.Title))
+		titleRow.Add(H1().Text(r.Title))
 	}
 	if r.Head != nil {
 		titleRow.Add(r.Head)
@@ -116,28 +103,28 @@ func (r *RightPanel) Render() *dom.Element {
 	header.Add(titleRow)
 
 	if r.HeadControls != nil {
-		header.Add(dom.Div(dom.Class(ClsHeadControls)).Add(r.HeadControls))
+		header.Add(Div(Class(clsHeadControls)).Add(r.HeadControls))
 	}
 	main.Add(header)
 
 	// article
 	if r.Article != nil {
-		main.Add(dom.Article(dom.Class(ClsArticle)).Add(r.Article))
+		main.Add(Article(Class(clsArticle)).Add(r.Article))
 	} else {
-		main.Add(dom.Article(dom.Class(ClsArticle)))
+		main.Add(Article(Class(clsArticle)))
 	}
 
 	wrapper.Add(main)
 
 	// ── aside panel ──────────────────────────────────────────────────────────
 	if r.AsideControls != nil || r.Aside != nil {
-		aside := dom.Aside(dom.Class(ClsAside))
+		aside := Aside(Class(clsAside))
 
 		if r.AsideControls != nil {
-			aside.Add(dom.Div(dom.Class(ClsAsideHeader)).Add(r.AsideControls))
+			aside.Add(Div(Class(clsAsideHeader)).Add(r.AsideControls))
 		}
 		if r.Aside != nil {
-			aside.Add(dom.Div(dom.Class(ClsAsideContent)).Add(r.Aside))
+			aside.Add(Div(Class(clsAsideContent)).Add(r.Aside))
 		}
 
 		wrapper.Add(aside)
