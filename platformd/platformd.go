@@ -1,0 +1,236 @@
+package platformd
+
+import (
+	. "github.com/tinywasm/css"
+	. "github.com/tinywasm/dom"
+	. "github.com/tinywasm/fmt"
+	"github.com/tinywasm/time"
+)
+
+var (
+	clsRoot            Class = "pd-root"
+	clsHeader          Class = "pd-header"
+	clsUserBlock       Class = "pd-user-block"
+	clsMsgDesktop      Class = "pd-msg-desktop"
+	clsArea            Class = "pd-area"
+	clsMsgMobile       Class = "pd-msg-mobile"
+	clsMenu            Class = "pd-menu"
+	clsNavbar          Class = "pd-navbar"
+	clsNavItem         Class = "pd-nav-item"
+	clsNavLink         Class = "pd-nav-link"
+	clsLinkText        Class = "pd-link-text"
+	clsNavIcon         Class = "pd-nav-icon"
+	clsNavActive       Class = "pd-nav-active"
+	clsStage           Class = "pd-stage"
+	clsPanel           Class = "pd-panel"
+	clsPanelActive     Class = "pd-panel-active"
+	clsOrientationWarn Class = "pd-orientation-warn"
+	clsMsg             Class = "pd-msg"
+)
+
+// Module describes one registered route/page in the shell.
+// Pure data: the consumer creates these and passes them to Platform.
+type Module struct {
+	ID      string    // hash slug, e.g. "products" → routed via "#products"
+	Label   string    // text shown next to icon in expanded rail
+	Icon    Component // icon component (usually a tinywasm/icons Symbol)
+	View    Component // the module's content (often a *rightpanel.RightPanel)
+	Default bool      // if true and no hash set, this module is shown initially
+}
+
+// Platform is the typed skeleton root.
+type Platform struct {
+	*Element
+
+	// AppName appears in the header (left side, near UserBlock).
+	AppName string
+
+	// UserBlock slot — usually an avatar/name/logout link. Optional.
+	UserBlock Component
+
+	// Modules registered in order — appearance order in the nav rail.
+	Modules []Module
+
+	// internal: notification queue, active module
+	activeModuleID string
+
+	// notifications is a list of active notifications to be rendered.
+	notifications []notification
+}
+
+type notification struct {
+	Type MessageType
+	Msg  string
+	ID   string
+}
+
+// OnMount implements Mountable.
+func (p *Platform) OnMount() {
+	OnHashChange(func(hash string) {
+		if len(hash) > 0 && hash[0] == '#' {
+			p.Activate(hash[1:])
+		}
+	})
+
+	hash := GetHash()
+	if hash != "" && len(hash) > 0 && hash[0] == '#' {
+		p.Activate(hash[1:])
+	} else {
+		// Pick default or first
+		foundDefault := false
+		for _, m := range p.Modules {
+			if m.Default {
+				p.Activate(m.ID)
+				foundDefault = true
+				break
+			}
+		}
+		if !foundDefault && len(p.Modules) > 0 {
+			p.Activate(p.Modules[0].ID)
+		}
+	}
+}
+
+// Render builds the DOM tree (implements ViewRenderer).
+func (p *Platform) Render() *Element {
+	if p.Element == nil {
+		p.Element = Div()
+	}
+
+	p.Element.Add(clsRoot.AsAttr())
+
+	activeLabel := ""
+	for _, mod := range p.Modules {
+		if mod.ID == p.activeModuleID {
+			activeLabel = mod.Label
+			break
+		}
+	}
+
+	// ── header ───────────────────────────────────────────────────────────────
+	header := Header(clsHeader.AsAttr())
+
+	userBlock := Div(clsUserBlock.AsAttr())
+	if p.UserBlock != nil {
+		userBlock.Add(p.UserBlock)
+	}
+	header.Add(userBlock)
+
+	msgDesktop := Div(clsMsgDesktop.AsAttr()).ID("pd-msg-desktop")
+	for _, n := range p.notifications {
+		msgDesktop.Add(p.renderNotification(n))
+	}
+	header.Add(msgDesktop)
+
+	header.Add(H2(clsArea.AsAttr()).Text(activeLabel))
+
+	p.Add(header)
+
+	// ── mobile message slot ──────────────────────────────────────────────────
+	msgMobile := Div(clsMsgMobile.AsAttr()).ID("pd-msg-mobile")
+	for _, n := range p.notifications {
+		msgMobile.Add(p.renderNotification(n))
+	}
+	p.Add(msgMobile)
+
+	// ── navigation menu ──────────────────────────────────────────────────────
+	nav := Nav(clsMenu.AsAttr())
+	navbar := Ul(clsNavbar.AsAttr())
+
+	for _, mod := range p.Modules {
+		item := Li(clsNavItem.AsAttr())
+		link := A("#"+mod.ID, clsNavLink.AsAttr()).
+			Attr("data-id", mod.ID)
+
+		if mod.ID == p.activeModuleID {
+			link.Add(clsNavActive.AsAttr())
+		}
+
+		if mod.Icon != nil {
+			link.Add(mod.Icon)
+		}
+		link.Add(Span(clsLinkText.AsAttr()).Text(mod.Label))
+
+		item.Add(link)
+		navbar.Add(item)
+	}
+
+	nav.Add(navbar)
+	p.Add(nav)
+
+	// ── main stage ───────────────────────────────────────────────────────────
+	stage := Main(clsStage.AsAttr())
+
+	for _, mod := range p.Modules {
+		panel := Section(clsPanel.AsAttr()).
+			ID(mod.ID).
+			Attr("data-id", mod.ID)
+
+		if mod.ID == p.activeModuleID {
+			panel.Add(clsPanelActive.AsAttr())
+		}
+
+		if mod.View != nil {
+			panel.Add(mod.View)
+		}
+		stage.Add(panel)
+	}
+
+	p.Add(stage)
+
+	// orientation warning (placeholder as per PLAN.md A.5)
+	p.Add(Div(clsOrientationWarn.AsAttr()))
+
+	return p.Element
+}
+
+func (p *Platform) renderNotification(n notification) *Element {
+	typeCls := "pd-msg-" + Convert(n.Type.String()).ToLower().String()
+	return Div(clsMsg.AsAttr(), Class(typeCls)).ID(n.ID).Text(n.Msg)
+}
+
+// Notify queues a typed notification in the proper viewport slot.
+// Any non-zero durationMs → schedule dismissal; duration 0 → persistent message.
+func (p *Platform) Notify(t MessageType, msg string, durationMs int) {
+	n := notification{
+		Type: t,
+		Msg:  msg,
+		ID:   "pd-notification-" + p.GetID() + "-" + Sprint(time.Now()),
+	}
+
+	p.notifications = append(p.notifications, n)
+	p.Update()
+
+	if durationMs > 0 {
+		time.AfterFunc(durationMs, func() {
+			p.dismiss(n.ID)
+		})
+	}
+}
+
+func (p *Platform) dismiss(id string) {
+	for i, n := range p.notifications {
+		if n.ID == id {
+			p.notifications = append(p.notifications[:i], p.notifications[i+1:]...)
+			p.Update()
+			return
+		}
+	}
+}
+
+// Activate programmatically switches to a module by ID
+// (also updates window.location.hash on wasm builds).
+func (p *Platform) Activate(moduleID string) {
+	if p.activeModuleID == moduleID {
+		return
+	}
+
+	p.activeModuleID = moduleID
+
+	// Update window hash if needed
+	if GetHash() != "#"+moduleID {
+		SetHash("#" + moduleID)
+	}
+
+	p.Update()
+}
