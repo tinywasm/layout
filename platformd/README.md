@@ -1,0 +1,1 @@
+# platforMD: layout plataforma mobile y desktop
