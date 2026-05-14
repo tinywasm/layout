@@ -41,7 +41,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			BoxSizing(Str("border-box")),
 			Outline(None),
 			TextDecoration(None),
-			RawRule("list-style: none;"), // TODO(css-dsl): add typed list-style shorthand
+			ListStyle(None),
 			ListStyleType(None),
 			RawRule("-webkit-user-select: none;"), // TODO(css-dsl): add typed -webkit-user-select
 			RawRule("-khtml-user-select: none;"),  // TODO(css-dsl): add typed -khtml-user-select
@@ -66,7 +66,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Position(Fixed),
 			AlignSelf(FlexEnd),
 			Bottom(Px(5)),
-			RawRule("margin-left: 5px;"), // TODO(css-dsl): add typed MarginLeft
+			MarginLeft(Px(5)),
 		),
 
 		Rule(Selector("."+string(clsRoot)+" a:link"), Color(tokenColorQuaternary)),
@@ -237,12 +237,12 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				AlignSelf(Unset),
 				Bottom(Auto),
 				Position(Unset),
-				RawRule("margin-left: 0;"), // TODO(css-dsl): add typed MarginLeft
+				MarginLeft(Zero),
 				MaxHeight(tokenHeaderHeight),
 				Width(Vw(100)),
 				GridArea(Str("header")),
 				Display(Grid),
-				RawRule("grid-template-columns: 1fr 3fr 1fr;"), // TODO(css-dsl): add typed GridTemplateColumns
+				GridTemplateColumns(Str("1fr 3fr 1fr")),
 				Background(tokenColorGray),
 			),
 
@@ -250,7 +250,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Top(tokenHeaderHeight),
 				Width(tokenMenuSize),
 				Height(tokenContentHeight),
-				RawRule("margin-left: auto;"), // TODO(css-dsl): add typed MarginLeft
+				MarginLeft(Auto),
 				Right(Zero),
 				Background(tokenColorGray),
 			),
@@ -301,12 +301,12 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				GridArea(Str("module-content")),
 				Position(Unset),
 				Top(tokenHeaderHeight),
-				RawRule("margin-left: -100vw;"), // TODO(css-dsl): add typed MarginLeft
+				MarginLeft(Vw(-100)),
 				BorderRadius(Zero),
 			),
 
 			Rule(clsPanelActive,
-				RawRule("margin-left: 0;"), // TODO(css-dsl): add typed MarginLeft
+				MarginLeft(Zero),
 			),
 
 			Rule(clsMsg,
@@ -318,13 +318,13 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 			Rule(clsUserBlock,
 				FontSize(Calc(".5em + .5vh")),
-				RawRule("margin-left: .4rem;"), // TODO(css-dsl): add typed MarginLeft
+				MarginLeft(Rem(0.4)),
 			),
 
 			Rule(clsArea,
 				FontSize(Calc(".5em + .5vh")),
-				RawRule("margin-left: auto;"),   // TODO(css-dsl): add typed MarginLeft
-				RawRule("margin-right: .4rem;"),  // TODO(css-dsl): add typed MarginRight
+				MarginLeft(Auto),
+				MarginRight(Rem(0.4)),
 				TextAlign(RightText),
 			),
 
@@ -333,7 +333,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(clsMsgMobile,
-				RawRule("all: initial;"), // TODO(css-dsl): add typed All property
+				All(Initial),
 				Display(None),
 			),
 		),
