@@ -11,7 +11,7 @@ func SSRInstance() *Platform { return &Platform{} }
 
 // RenderCSS implements CSSProvider.
 func (p *Platform) RenderCSS() *Stylesheet {
-	return New(
+	return NewStylesheet(
 		Root(
 			Declare(tokenFontSizeNormal, "1.1rem"),
 			Declare(tokenFontSizeSmall, ".6rem"),
