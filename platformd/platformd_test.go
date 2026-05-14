@@ -1,3 +1,5 @@
+//go:build !wasm
+
 package platformd
 
 import (
@@ -43,7 +45,7 @@ func TestPlatform_Render(t *testing.T) {
 
 func TestPlatform_Render_DefaultModule(t *testing.T) {
 	p := &Platform{
-		Element: Div(),
+		Element: *Div(),
 		Modules: []Module{
 			{ID: "mod1", Label: "Mod 1"},
 			{ID: "mod2", Label: "Mod 2", Default: true},
@@ -60,7 +62,7 @@ func TestPlatform_Render_DefaultModule(t *testing.T) {
 
 func TestPlatform_Activate(t *testing.T) {
 	p := &Platform{
-		Element: Div(),
+		Element: *Div(),
 		Modules: []Module{
 			{ID: "mod1", Label: "Mod 1"},
 			{ID: "mod2", Label: "Mod 2"},
@@ -78,7 +80,7 @@ func TestPlatform_Activate(t *testing.T) {
 }
 
 func TestPlatform_Notify_Renders(t *testing.T) {
-	p := &Platform{Element: Div()}
+	p := &Platform{Element: *Div()}
 	p.Notify(Msg.Error, "boom", 0)
 
 	html := p.Render().RenderHTML()
@@ -95,18 +97,18 @@ func TestPlatform_Notify_Renders(t *testing.T) {
 }
 
 func TestPlatform_Notify_Dismiss(t *testing.T) {
-	p := &Platform{Element: Div()}
+	p := &Platform{Element: *Div()}
 	p.Notify(Msg.Info, "hi", 10) // 10ms
 
-	if len(p.notifications) != 1 {
-		t.Fatalf("expected 1 notification, got %d", len(p.notifications))
+	if p.notificationCount() != 1 {
+		t.Fatalf("expected 1 notification, got %d", p.notificationCount())
 	}
 
 	// Wait for dismissal
 	time.Sleep(100 * time.Millisecond)
 
-	if len(p.notifications) != 0 {
-		t.Errorf("expected 0 notifications after dismissal, got %d", len(p.notifications))
+	if p.notificationCount() != 0 {
+		t.Errorf("expected 0 notifications after dismissal, got %d", p.notificationCount())
 	}
 }
 

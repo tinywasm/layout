@@ -19,10 +19,10 @@ func main() {
 		AppName: "Demo Platform",
 		Modules: []platformd.Module{
 			{
-				ID:    "mod1",
-				Label: "Módulo 1",
+				ID:      "mod1",
+				Label:   "Módulo 1",
 				Default: true,
-				Icon:  Div().Class("icon-home"), // dummy icon
+				Icon:    Div().Class("icon-home"), // dummy icon
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod1"},
 					Title:  "Módulo 1",
@@ -52,4 +52,6 @@ func main() {
 
 	// demo of typed Notify — uses fmt.MessageType / fmt.Msg
 	p.Notify(Msg.Success, "Plataforma cargada", 3000)
+
+	select {}
 }

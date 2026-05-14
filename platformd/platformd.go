@@ -1,6 +1,8 @@
 package platformd
 
 import (
+	"sync"
+
 	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
@@ -40,7 +42,7 @@ type Module struct {
 
 // Platform is the typed skeleton root.
 type Platform struct {
-	*Element
+	Element
 
 	// AppName appears in the header (left side, near UserBlock).
 	AppName string
@@ -56,6 +58,7 @@ type Platform struct {
 
 	// notifications is a list of active notifications to be rendered.
 	notifications []notification
+	mu            sync.Mutex
 }
 
 type notification struct {
@@ -93,10 +96,6 @@ func (p *Platform) OnMount() {
 
 // Render builds the DOM tree (implements ViewRenderer).
 func (p *Platform) Render() *Element {
-	if p.Element == nil {
-		p.Element = Div()
-	}
-
 	p.Element.Add(clsRoot.AsAttr())
 
 	activeLabel := ""
@@ -181,7 +180,7 @@ func (p *Platform) Render() *Element {
 	// orientation warning (placeholder as per PLAN.md A.5)
 	p.Add(Div(clsOrientationWarn.AsAttr()))
 
-	return p.Element
+	return &p.Element
 }
 
 func (p *Platform) renderNotification(n notification) *Element {
@@ -192,13 +191,15 @@ func (p *Platform) renderNotification(n notification) *Element {
 // Notify queues a typed notification in the proper viewport slot.
 // Any non-zero durationMs → schedule dismissal; duration 0 → persistent message.
 func (p *Platform) Notify(t MessageType, msg string, durationMs int) {
+	p.mu.Lock()
 	n := notification{
 		Type: t,
 		Msg:  msg,
 		ID:   "pd-notification-" + p.GetID() + "-" + Sprint(time.Now()),
 	}
-
 	p.notifications = append(p.notifications, n)
+	p.mu.Unlock()
+
 	p.Update()
 
 	if durationMs > 0 {
@@ -209,13 +210,22 @@ func (p *Platform) Notify(t MessageType, msg string, durationMs int) {
 }
 
 func (p *Platform) dismiss(id string) {
+	p.mu.Lock()
 	for i, n := range p.notifications {
 		if n.ID == id {
 			p.notifications = append(p.notifications[:i], p.notifications[i+1:]...)
+			p.mu.Unlock()
 			p.Update()
 			return
 		}
 	}
+	p.mu.Unlock()
+}
+
+func (p *Platform) notificationCount() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return len(p.notifications)
 }
 
 // Activate programmatically switches to a module by ID

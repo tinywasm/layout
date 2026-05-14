@@ -45,7 +45,7 @@ type Module interface {
 //	}
 //	panel.Render()
 type RightPanel struct {
-	*Element
+	Element
 
 	// Module provides the ID for the root wrapper element.
 	Module Module
@@ -72,10 +72,6 @@ type RightPanel struct {
 // Render builds the layout element tree.
 // Implements ViewRenderer.
 func (r *RightPanel) Render() *Element {
-	if r.Element == nil {
-		r.Element = &Element{}
-	}
-
 	// ── root wrapper ─────────────────────────────────────────────────────────
 	id := ""
 	if r.Module != nil {
