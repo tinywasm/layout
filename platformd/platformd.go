@@ -96,7 +96,7 @@ func (p *Platform) OnMount() {
 
 // Render builds the DOM tree (implements ViewRenderer).
 func (p *Platform) Render() *Element {
-	p.Element.Add(clsRoot.AsAttr())
+	root := Div(clsRoot.AsAttr())
 
 	activeLabel := ""
 	for _, mod := range p.Modules {
@@ -123,14 +123,14 @@ func (p *Platform) Render() *Element {
 
 	header.Add(H2(clsArea.AsAttr()).Text(activeLabel))
 
-	p.Add(header)
+	root.Add(header)
 
 	// ── mobile message slot ──────────────────────────────────────────────────
 	msgMobile := Div(clsMsgMobile.AsAttr()).ID("pd-msg-mobile")
 	for _, n := range p.notifications {
 		msgMobile.Add(p.renderNotification(n))
 	}
-	p.Add(msgMobile)
+	root.Add(msgMobile)
 
 	// ── navigation menu ──────────────────────────────────────────────────────
 	nav := Nav(clsMenu.AsAttr())
@@ -155,7 +155,7 @@ func (p *Platform) Render() *Element {
 	}
 
 	nav.Add(navbar)
-	p.Add(nav)
+	root.Add(nav)
 
 	// ── main stage ───────────────────────────────────────────────────────────
 	stage := Main(clsStage.AsAttr())
@@ -175,12 +175,12 @@ func (p *Platform) Render() *Element {
 		stage.Add(panel)
 	}
 
-	p.Add(stage)
+	root.Add(stage)
 
 	// orientation warning (placeholder as per PLAN.md A.5)
-	p.Add(Div(clsOrientationWarn.AsAttr()))
+	root.Add(Div(clsOrientationWarn.AsAttr()))
 
-	return &p.Element
+	return root
 }
 
 func (p *Platform) renderNotification(n notification) *Element {
