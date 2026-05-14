@@ -24,7 +24,7 @@ func SSRInstance() *RightPanel { return &RightPanel{} }
 
 // RenderCSS implements CSSProvider.
 func (r *RightPanel) RenderCSS() *Stylesheet {
-	return New(
+	return NewStylesheet(
 		Root(
 			Declare(tokenTitleHeight, "8vh"),
 			Declare(tokenContentHeight, "89vh"),
