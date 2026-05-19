@@ -345,5 +345,13 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		Media("(orientation: landscape) and (min-width: 600px) and (max-width: 1024px)",
 			Rule(clsOrientationWarn, Display(Flex_)),
 		),
+
+		// Hide the orientation-warn overlay when it has no content,
+		// so the platform doesn't render a fullscreen blue panel that
+		// blocks the nav rail in viewports that match the media query
+		// above. Consumers add children (text/icon) to enable it.
+		Rule(Selector("."+string(clsOrientationWarn)+":empty"),
+			Display(None),
+		),
 	)
 }
