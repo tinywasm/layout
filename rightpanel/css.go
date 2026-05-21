@@ -19,9 +19,6 @@ var (
 	tokenTitleColor     = Token{Name: "--rp-title-color", Fallback: "var(--color-secondary)"}
 )
 
-// SSRInstance returns a new instance of RightPanel for SSR asset collection.
-func SSRInstance() *RightPanel { return &RightPanel{} }
-
 // RenderCSS implements CSSProvider.
 func (r *RightPanel) RenderCSS() *Stylesheet {
 	return NewStylesheet(

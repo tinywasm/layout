@@ -6,9 +6,6 @@ import (
 	. "github.com/tinywasm/css"
 )
 
-// SSRInstance returns a new instance of Platform for SSR asset collection.
-func SSRInstance() *Platform { return &Platform{} }
-
 // RenderCSS implements CSSProvider.
 func (p *Platform) RenderCSS() *Stylesheet {
 	return NewStylesheet(

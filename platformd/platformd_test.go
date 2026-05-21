@@ -113,7 +113,7 @@ func TestPlatform_Notify_Dismiss(t *testing.T) {
 }
 
 func TestRenderCSS_NonEmpty(t *testing.T) {
-	p := SSRInstance()
+	p := &Platform{}
 	css := p.RenderCSS().String()
 	if css == "" {
 		t.Fatal("RenderCSS() returned empty string")
