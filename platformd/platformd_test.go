@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/tinywasm/dom"
+	_ "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
+	. "github.com/tinywasm/html"
 )
 
 func TestPlatform_Render(t *testing.T) {
@@ -20,10 +21,10 @@ func TestPlatform_Render(t *testing.T) {
 	}
 
 	el := p.Render()
-	html := el.RenderHTML()
+	html := el.String()
 
 	if html == "" {
-		t.Fatal("RenderHTML() returned empty string")
+		t.Fatal("String() returned empty string")
 	}
 
 	expected := []string{
@@ -53,7 +54,7 @@ func TestPlatform_Render_DefaultModule(t *testing.T) {
 	}
 	p.OnMount() // Should activate mod2
 
-	html := p.Render().RenderHTML()
+	html := p.Render().String()
 	// tinywasm/dom uses single quotes for attributes
 	if !contains(html, "id='mod2' class='pd-panel pd-panel-active'") {
 		t.Errorf("expected mod2 to be active, got HTML: %s", html)
@@ -70,7 +71,7 @@ func TestPlatform_Activate(t *testing.T) {
 	}
 	p.Activate("mod2")
 
-	html := p.Render().RenderHTML()
+	html := p.Render().String()
 	if !contains(html, "id='mod2' class='pd-panel pd-panel-active'") {
 		t.Errorf("expected mod2 to be active after Activate('mod2'), got HTML: %s", html)
 	}
@@ -83,7 +84,7 @@ func TestPlatform_Notify_Renders(t *testing.T) {
 	p := &Platform{Element: *Div()}
 	p.Notify(Msg.Error, "boom", 0)
 
-	html := p.Render().RenderHTML()
+	html := p.Render().String()
 
 	// Desktop slot
 	if !contains(html, "id='pd-msg-desktop'") || !contains(html, "pd-msg-error") || !contains(html, "boom") {
