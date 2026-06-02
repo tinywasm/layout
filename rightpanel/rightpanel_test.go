@@ -18,7 +18,7 @@ type stubComponent struct{ html string }
 
 func (s *stubComponent) GetID() string             { return "stub" }
 func (s *stubComponent) SetID(_ string)            {}
-func (s *stubComponent) RenderHTML() string        { return s.html }
+func (s *stubComponent) String() string            { return s.html }
 func (s *stubComponent) Children() []dom.Component { return nil }
 
 func TestRightPanel_RenderHTML_WithAllSlots(t *testing.T) {
@@ -33,7 +33,7 @@ func TestRightPanel_RenderHTML_WithAllSlots(t *testing.T) {
 	}
 
 	el := panel.Render()
-	html := el.RenderHTML()
+	html := el.String()
 
 	checks := []struct {
 		label, want string
@@ -70,7 +70,7 @@ func TestRightPanel_RenderHTML_AsideOmittedWhenNil(t *testing.T) {
 		// No AsideControls, no Aside
 	}
 
-	html := panel.Render().RenderHTML()
+	html := panel.Render().String()
 
 	if strings.Contains(html, "rp-aside") {
 		t.Error("expected rp-aside to be absent when both AsideControls and Aside are nil")
@@ -79,7 +79,7 @@ func TestRightPanel_RenderHTML_AsideOmittedWhenNil(t *testing.T) {
 
 func TestRightPanel_RenderHTML_NoModuleNoID(t *testing.T) {
 	panel := &rightpanel.RightPanel{Title: "No ID"}
-	html := panel.Render().RenderHTML()
+	html := panel.Render().String()
 
 	if strings.Contains(html, "id=") {
 		t.Error("expected no id attribute when Module is nil")

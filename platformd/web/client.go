@@ -5,6 +5,7 @@ package main
 import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
+	. "github.com/tinywasm/svg"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
 )
@@ -14,15 +15,6 @@ type mod struct{ name string }
 
 func (m mod) ModelName() string { return m.name }
 
-// navIcon builds an SVG sprite reference with the pd-nav-icon class.
-func navIcon(id string) *Element {
-	return Svg(
-		Use().Attr("href", "#"+id),
-	).Class("pd-nav-icon").
-		Attr("aria-hidden", "true").
-		Attr("focusable", "false")
-}
-
 func main() {
 	p := &platformd.Platform{
 		AppName: "Demo Platform",
@@ -31,7 +23,7 @@ func main() {
 				ID:      "mod1",
 				Label:   "Módulo 1",
 				Default: true,
-				Icon:    navIcon("icon-home"),
+				Icon:    Icon("icon-home", "pd-nav-icon"),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod1"},
 					Title:  "Módulo 1",
@@ -40,7 +32,7 @@ func main() {
 			{
 				ID:    "mod2",
 				Label: "Módulo 2",
-				Icon:  navIcon("icon-products"),
+				Icon:  Icon("icon-products", "pd-nav-icon"),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod2"},
 					Title:  "Módulo 2",
@@ -49,7 +41,7 @@ func main() {
 			{
 				ID:    "mod3",
 				Label: "Módulo 3",
-				Icon:  navIcon("icon-info"),
+				Icon:  Icon("icon-info", "pd-nav-icon"),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod3"},
 					Title:  "Módulo 3",

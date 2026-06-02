@@ -6,6 +6,7 @@ import (
 	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
+	. "github.com/tinywasm/html"
 	"github.com/tinywasm/time"
 )
 
