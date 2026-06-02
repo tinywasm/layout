@@ -57,6 +57,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			AlignItems(Center),
 			JustifyContent(Center),
 			Height(Vh(100)),
+			Overflow(Hidden),
 		),
 
 		Rule(clsHeader,
@@ -71,7 +72,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 		Rule(clsMenu,
 			Background(tokenColorGray),
-			Position(Fixed),
+			Position(Absolute),
 			Top(Zero),
 			Width(Vw(100)),
 			Height(tokenMenuSize),
@@ -111,8 +112,8 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 		Rule(clsNavIcon,
 			Color(tokenColorSecondary),
-			Height(Em(8)),
-			Width(Em(8)),
+			Height(Em(2.5)),
+			Width(Em(2.5)),
 			Transition(tokenSlideDur, Str("all"), Str("ease")),
 		),
 
@@ -244,6 +245,8 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(clsMenu,
+				Position(Fixed),
+				GridArea(Str("menu-container")),
 				Top(tokenHeaderHeight),
 				Width(tokenMenuSize),
 				Height(tokenContentHeight),
@@ -265,12 +268,13 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(clsNavItem,
-				Height(Pct(100)),
+				Height(Str("6em")),
 			),
 
 			Rule(clsNavLink,
 				FlexDirection(Row),
-				Height(Pct(100)),
+				JustifyContent(Unset),
+				Height(Str("6em")),
 			),
 
 			Rule(Selector("."+string(clsNavLink)+" svg"),
@@ -294,16 +298,23 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				MinWidth(Em(2.5)),
 			),
 
-			Rule(clsPanel,
+			Rule(clsStage,
 				GridArea(Str("module-content")),
-				Position(Unset),
-				Top(tokenHeaderHeight),
-				MarginLeft(Vw(-100)),
-				BorderRadius(Zero),
+				Position(Str("relative")),
+				Overflow(Hidden),
+			),
+
+			Rule(clsPanel,
+				Position(Absolute),
+				Top(Zero),
+				Left(Pct(-100)),
+				Width(Pct(100)),
+				Height(Pct(100)),
+				BorderRadius(Str("0 .4em 0 0")),
 			),
 
 			Rule(clsPanelActive,
-				MarginLeft(Zero),
+				Left(Zero),
 			),
 
 			Rule(clsMsg,

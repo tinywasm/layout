@@ -14,6 +14,15 @@ type mod struct{ name string }
 
 func (m mod) ModelName() string { return m.name }
 
+// navIcon builds an SVG sprite reference with the pd-nav-icon class.
+func navIcon(id string) *Element {
+	return Svg(
+		Use().Attr("href", "#"+id),
+	).Class("pd-nav-icon").
+		Attr("aria-hidden", "true").
+		Attr("focusable", "false")
+}
+
 func main() {
 	p := &platformd.Platform{
 		AppName: "Demo Platform",
@@ -22,7 +31,7 @@ func main() {
 				ID:      "mod1",
 				Label:   "Módulo 1",
 				Default: true,
-				Icon:    Div().Class("icon-home"), // dummy icon
+				Icon:    navIcon("icon-home"),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod1"},
 					Title:  "Módulo 1",
@@ -31,7 +40,7 @@ func main() {
 			{
 				ID:    "mod2",
 				Label: "Módulo 2",
-				Icon:  Div().Class("icon-products"), // dummy icon
+				Icon:  navIcon("icon-products"),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod2"},
 					Title:  "Módulo 2",
@@ -40,7 +49,7 @@ func main() {
 			{
 				ID:    "mod3",
 				Label: "Módulo 3",
-				Icon:  Div().Class("icon-info"), // dummy icon
+				Icon:  navIcon("icon-info"),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod3"},
 					Title:  "Módulo 3",
@@ -50,7 +59,6 @@ func main() {
 	}
 	Append("body", p)
 
-	// demo of typed Notify — uses fmt.MessageType / fmt.Msg
 	p.Notify(Msg.Success, "Plataforma cargada", 3000)
 
 	select {}
