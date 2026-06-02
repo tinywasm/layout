@@ -29,6 +29,9 @@ var (
 	clsPanelActive     Class = "pd-panel-active"
 	clsOrientationWarn Class = "pd-orientation-warn"
 	clsMsg             Class = "pd-msg"
+	clsHamburger       Class = "pd-hamburger"
+	clsNavOverlay      Class = "pd-nav-overlay"
+	clsMenuOpen        Class = "pd-menu-open"
 )
 
 // Module describes one registered route/page in the shell.
@@ -54,10 +57,10 @@ type Platform struct {
 	// Modules registered in order — appearance order in the nav rail.
 	Modules []Module
 
-	// internal: notification queue, active module
+	// internal state
 	activeModuleID string
+	menuOpen       bool
 
-	// notifications is a list of active notifications to be rendered.
 	notifications []notification
 	mu            sync.Mutex
 }
@@ -98,6 +101,9 @@ func (p *Platform) OnMount() {
 // Render builds the DOM tree (implements ViewRenderer).
 func (p *Platform) Render() *Element {
 	root := Div(clsRoot.AsAttr())
+	if p.menuOpen {
+		root.Add(clsMenuOpen.AsAttr())
+	}
 
 	activeLabel := ""
 	for _, mod := range p.Modules {
@@ -132,6 +138,28 @@ func (p *Platform) Render() *Element {
 		msgMobile.Add(p.renderNotification(n))
 	}
 	root.Add(msgMobile)
+
+	// ── hamburger button (mobile only — hidden via CSS on desktop) ───────────
+	hamburger := Button(clsHamburger.AsAttr()).
+		Attr("aria-label", "Menú").
+		Add(Span(), Span(), Span())
+	hamburger.On("click", func(Event) {
+		p.mu.Lock()
+		p.menuOpen = !p.menuOpen
+		p.mu.Unlock()
+		p.Update()
+	})
+	root.Add(hamburger)
+
+	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
+	overlay := Div(clsNavOverlay.AsAttr())
+	overlay.On("click", func(Event) {
+		p.mu.Lock()
+		p.menuOpen = false
+		p.mu.Unlock()
+		p.Update()
+	})
+	root.Add(overlay)
 
 	// ── navigation menu ──────────────────────────────────────────────────────
 	nav := Nav(clsMenu.AsAttr())
@@ -232,11 +260,12 @@ func (p *Platform) notificationCount() int {
 // Activate programmatically switches to a module by ID
 // (also updates window.location.hash on wasm builds).
 func (p *Platform) Activate(moduleID string) {
-	if p.activeModuleID == moduleID {
+	if p.activeModuleID == moduleID && !p.menuOpen {
 		return
 	}
 
 	p.activeModuleID = moduleID
+	p.menuOpen = false
 
 	// Update window hash if needed
 	if GetHash() != "#"+moduleID {

@@ -31,8 +31,8 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 		// Universal reset for platform elements
 		Rule(Selector("."+string(clsRoot)+" *"),
-			RawRule("-webkit-box-sizing: border-box;"), // TODO(css-dsl): add typed -webkit-box-sizing
-			RawRule("-moz-box-sizing: border-box;"),    // TODO(css-dsl): add typed -moz-box-sizing
+			RawRule("-webkit-box-sizing: border-box;"),
+			RawRule("-moz-box-sizing: border-box;"),
 			Margin(Zero),
 			Padding(Zero),
 			BoxSizing(Str("border-box")),
@@ -40,23 +40,22 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			TextDecoration(None),
 			ListStyle(None),
 			ListStyleType(None),
-			RawRule("-webkit-user-select: none;"), // TODO(css-dsl): add typed -webkit-user-select
-			RawRule("-khtml-user-select: none;"),  // TODO(css-dsl): add typed -khtml-user-select
-			RawRule("-moz-user-select: none;"),    // TODO(css-dsl): add typed -moz-user-select
-			RawRule("-ms-user-select: none;"),     // TODO(css-dsl): add typed -ms-user-select
+			RawRule("-webkit-user-select: none;"),
+			RawRule("-khtml-user-select: none;"),
+			RawRule("-moz-user-select: none;"),
+			RawRule("-ms-user-select: none;"),
 			UserSelect(None),
 			FontFamily(Str("Arvo")),
 		),
 
 		/************ MOBILE (Default) ************/
+
 		Rule(clsRoot,
 			FontSize(Rem(0.8)),
 			Background(tokenColorTertiary),
-			MinHeight(Vh(100)),
-			Display(Flex_),
-			AlignItems(Center),
-			JustifyContent(Center),
+			Width(Vw(100)),
 			Height(Vh(100)),
+			Position(Str("relative")),
 			Overflow(Hidden),
 		),
 
@@ -65,31 +64,82 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			AlignSelf(FlexEnd),
 			Bottom(Px(5)),
 			MarginLeft(Px(5)),
+			ZIndex(Str("5")),
 		),
 
 		Rule(Selector("."+string(clsRoot)+" a:link"), Color(tokenColorQuaternary)),
 		Rule(Selector("."+string(clsRoot)+" a:visited"), Color(tokenColorQuaternary)),
 
+		// Hamburger button — visible only on mobile
+		Rule(clsHamburger,
+			Position(Fixed),
+			Top(Px(8)),
+			Right(Px(8)),
+			ZIndex(Str("10")),
+			Width(Px(44)),
+			Height(Px(44)),
+			Background(tokenColorSecondary),
+			BorderRadius(Px(6)),
+			Display(Flex_),
+			FlexDirection(Column),
+			AlignItems(Center),
+			JustifyContent(SpaceAround),
+			Padding(Px(10), Px(8)),
+			Cursor(Pointer),
+			Border(Str("none")),
+		),
+
+		Rule(Selector("."+string(clsHamburger)+" span"),
+			Display(Block),
+			Width(Pct(100)),
+			Height(Px(2)),
+			Background(tokenColorPrimary),
+			BorderRadius(Px(2)),
+		),
+
+		// Nav drawer — hidden off-screen right
 		Rule(clsMenu,
 			Background(tokenColorGray),
-			Position(Absolute),
+			Position(Fixed),
 			Top(Zero),
-			Width(Vw(100)),
-			Height(tokenMenuSize),
-			Transition(tokenSlideDur, Str("all"), Str("ease")),
-			ZIndex(Str("3")),
+			Right(Vw(-80)),
+			Width(Vw(75)),
+			Height(Vh(100)),
+			Transition(tokenSlideDur, Str("right"), Str("ease")),
+			ZIndex(Str("9")),
+		),
+
+		// Nav overlay backdrop
+		Rule(clsNavOverlay,
+			Position(Fixed),
+			Top(Zero),
+			Left(Zero),
+			Width(Pct(100)),
+			Height(Pct(100)),
+			Background(Str("rgba(0,0,0,0.45)")),
+			ZIndex(Str("8")),
+			Display(None),
+		),
+
+		// Open state: both triggered by pd-menu-open on pd-root
+		Rule(Selector("."+string(clsMenuOpen)+" ."+string(clsMenu)),
+			Right(Zero),
+		),
+		Rule(Selector("."+string(clsMenuOpen)+" ."+string(clsNavOverlay)),
+			Display(Block),
 		),
 
 		Rule(clsNavbar,
 			Display(Flex_),
-			FlexDirection(Row),
-			AlignItems(Center),
+			FlexDirection(Column),
+			AlignItems(Str("stretch")),
 			JustifyContent(SpaceAround),
 			Height(Pct(100)),
 		),
 
 		Rule(clsNavItem,
 			Width(Pct(100)),
+			Flex(Str("1")),
 		),
 
 		Rule(clsNavActive,
@@ -103,10 +153,10 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 		Rule(clsNavLink,
 			Display(Flex_),
-			FlexDirection(Column),
+			FlexDirection(Row),
 			AlignItems(Center),
-			JustifyContent(Center),
-			Height(tokenMenuSize),
+			Height(Pct(100)),
+			Padding(Zero, Rem(1)),
 			Transition(tokenSlideDur, Str("all"), Str("ease")),
 		),
 
@@ -114,11 +164,14 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Color(tokenColorSecondary),
 			Height(Em(2.5)),
 			Width(Em(2.5)),
+			MinWidth(Em(2.5)),
 			Transition(tokenSlideDur, Str("all"), Str("ease")),
+			MarginRight(Rem(0.8)),
 		),
 
 		Rule(clsLinkText,
-			Display(None),
+			Color(tokenColorSecondary),
+			FontSize(Em(1.1)),
 		),
 
 		Rule(clsPanel,
@@ -126,14 +179,14 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Margin(Zero),
 			ZIndex(Str("1")),
 			Width(tokenContentWidth),
-			Height(tokenContentHeight),
+			Height(Vh(100)),
 			Position(Absolute),
 			Background(Hex("#000")),
 			Transition(tokenSlideDur, Str("all"), Str("ease-in-out")),
 		),
 
 		Rule(clsPanelActive,
-			Top(tokenMenuSize),
+			Top(Zero),
 			Background(tokenColorSecondary),
 		),
 
@@ -224,12 +277,19 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Overflow(Hidden),
 				Background(tokenColorGray),
 				FontSize(Px(16)),
-				Height(tokenContentHeight),
+				Height(Vh(100)),
+				// Reset mobile flex centering — critical so grid items stretch to full height
+				AlignItems(Str("normal")),
+				JustifyContent(Str("normal")),
 				Display(Grid),
 				GridTemplate(Str(`"header         header" `+tokenHeaderHeight.Var()+`
 					"module-content menu-container" `+tokenContentHeight.Var()+` /
 					`+tokenContentWidth.Var()+` `+tokenMenuSize.Var())),
 			),
+
+			// Hide hamburger and overlay on desktop
+			Rule(clsHamburger, Display(None)),
+			Rule(clsNavOverlay, Display(None)),
 
 			Rule(clsHeader,
 				AlignSelf(Unset),
@@ -248,10 +308,10 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Position(Fixed),
 				GridArea(Str("menu-container")),
 				Top(tokenHeaderHeight),
+				Right(Zero),
 				Width(tokenMenuSize),
 				Height(tokenContentHeight),
 				MarginLeft(Auto),
-				Right(Zero),
 				Background(tokenColorGray),
 			),
 
@@ -265,20 +325,21 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 			Rule(clsNavbar,
 				FlexDirection(Column),
+				JustifyContent(SpaceAround),
+				AlignItems(Str("stretch")),
 			),
 
+			// Each nav item takes equal share of the rail height — larger hit targets
 			Rule(clsNavItem,
-				Height(Str("6em")),
+				Height(Auto),
+				Flex(Str("1")),
 			),
 
 			Rule(clsNavLink,
 				FlexDirection(Row),
 				JustifyContent(Unset),
-				Height(Str("6em")),
-			),
-
-			Rule(Selector("."+string(clsNavLink)+" svg"),
-				Margin(Zero, Em(0.5)),
+				Height(Pct(100)),
+				Padding(Zero, Em(0.5)),
 			),
 
 			Rule(Selector("."+string(clsNavLink)+":hover"),
@@ -291,16 +352,19 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 			Rule(clsLinkText,
 				Color(tokenColorSecondary),
+				Display(None),
 			),
 
 			Rule(clsNavIcon,
 				MaxWidth(Em(2.5)),
 				MinWidth(Em(2.5)),
+				MarginRight(Zero),
 			),
 
 			Rule(clsStage,
 				GridArea(Str("module-content")),
 				Position(Str("relative")),
+				Height(Pct(100)),
 				Overflow(Hidden),
 			),
 
@@ -315,6 +379,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 			Rule(clsPanelActive,
 				Left(Zero),
+				Top(Zero),
 			),
 
 			Rule(clsMsg,
@@ -354,10 +419,6 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Rule(clsOrientationWarn, Display(Flex_)),
 		),
 
-		// Hide the orientation-warn overlay when it has no content,
-		// so the platform doesn't render a fullscreen blue panel that
-		// blocks the nav rail in viewports that match the media query
-		// above. Consumers add children (text/icon) to enable it.
 		Rule(Selector("."+string(clsOrientationWarn)+":empty"),
 			Display(None),
 		),

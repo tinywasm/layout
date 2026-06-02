@@ -5,7 +5,6 @@ package main
 import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
-	. "github.com/tinywasm/svg"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
 )
@@ -23,7 +22,7 @@ func main() {
 				ID:      "mod1",
 				Label:   "Módulo 1",
 				Default: true,
-				Icon:    Icon("icon-home", "pd-nav-icon"),
+				Icon:    platformd.IconHome.Render(string(platformd.ClsNavIcon)),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod1"},
 					Title:  "Módulo 1",
@@ -32,7 +31,7 @@ func main() {
 			{
 				ID:    "mod2",
 				Label: "Módulo 2",
-				Icon:  Icon("icon-products", "pd-nav-icon"),
+				Icon:  platformd.IconProducts.Render(string(platformd.ClsNavIcon)),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod2"},
 					Title:  "Módulo 2",
@@ -41,7 +40,7 @@ func main() {
 			{
 				ID:    "mod3",
 				Label: "Módulo 3",
-				Icon:  Icon("icon-info", "pd-nav-icon"),
+				Icon:  platformd.IconInfo.Render(string(platformd.ClsNavIcon)),
 				View: &rightpanel.RightPanel{
 					Module: mod{"mod3"},
 					Title:  "Módulo 3",

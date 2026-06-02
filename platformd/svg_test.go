@@ -14,9 +14,9 @@ func TestPlatform_IconSvg_HasRequiredIcons(t *testing.T) {
     if sprite == nil { t.Fatal("IconSvg() returned nil") }
 
     s := sprite.String()
-    required := []string{"icon-home", "icon-products", "icon-info"}
+    required := []string{"home", "products", "info"}
     for _, id := range required {
-        if !strings.Contains(s, id) {
+        if !strings.Contains(s, `id="`+id+`"`) {
             t.Errorf("missing icon: %s", id)
         }
     }
