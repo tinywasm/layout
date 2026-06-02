@@ -7,6 +7,6 @@ require (
 	github.com/tinywasm/dom v0.10.1
 	github.com/tinywasm/fmt v0.23.10
 	github.com/tinywasm/html v0.0.3
-	github.com/tinywasm/svg v0.0.4
+	github.com/tinywasm/svg v0.0.5
 	github.com/tinywasm/time v0.5.0
 )
