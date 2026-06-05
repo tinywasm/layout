@@ -97,16 +97,16 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			BorderRadius(Px(2)),
 		),
 
-		// Nav drawer — hidden off-screen right
+		// Nav drawer — hidden off-screen right using transform (no reflow, GPU)
 		Rule(clsMenu,
 			Background(tokenColorGray),
 			Position(Fixed),
 			Top(Zero),
-			Right(Vw(-80)),
+			Right(Zero),
 			Width(Vw(75)),
 			Height(Vh(100)),
-			Transition(tokenSlideDur, Str("right"), Str("ease")),
 			ZIndex(Str("9")),
+			Transform(Str("translateX(100%)")),
 		),
 
 		// Nav overlay backdrop
@@ -121,9 +121,10 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Display(None),
 		),
 
-		// Open state: both triggered by pd-menu-open on pd-root
+		// Open state — keyframe animation so it fires on new DOM elements too
 		Rule(Selector("."+string(clsMenuOpen)+" ."+string(clsMenu)),
-			Right(Zero),
+			Transform(Str("translateX(0)")),
+			Animation(Str("pdDrawerOpen"), tokenSlideDur, Str("ease")),
 		),
 		Rule(Selector("."+string(clsMenuOpen)+" ."+string(clsNavOverlay)),
 			Display(Block),
@@ -160,7 +161,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Transition(tokenSlideDur, Str("all"), Str("ease")),
 		),
 
-		Rule(clsNavIcon,
+		Rule(ClsNavIcon,
 			Color(tokenColorSecondary),
 			Height(Em(2.5)),
 			Width(Em(2.5)),
@@ -175,19 +176,20 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		),
 
 		Rule(clsPanel,
-			Top(Vh(-100)),
+			Display(None),
+		),
+
+		Rule(clsPanelActive,
+			Display(Block),
+			Top(Zero),
+			Left(Zero),
 			Margin(Zero),
 			ZIndex(Str("1")),
 			Width(tokenContentWidth),
 			Height(Vh(100)),
 			Position(Absolute),
-			Background(Hex("#000")),
-			Transition(tokenSlideDur, Str("all"), Str("ease-in-out")),
-		),
-
-		Rule(clsPanelActive,
-			Top(Zero),
 			Background(tokenColorSecondary),
+			Animation(Str("pdSlideInTop"), tokenSlideDur, Str("ease-in-out")),
 		),
 
 		Rule(clsMsgDesktop,
@@ -264,6 +266,21 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			At("to", Opacity(1.0), Visibility(Visible)),
 		),
 
+		Keyframes("pdSlideInTop",
+			At("from", Top(Vh(-100))),
+			At("to", Top(Zero)),
+		),
+
+		Keyframes("pdSlideInLeft",
+			At("from", Left(Pct(-100))),
+			At("to", Left(Zero)),
+		),
+
+		Keyframes("pdDrawerOpen",
+			At("from", Transform(Str("translateX(100%)"))),
+			At("to", Transform(Str("translateX(0)"))),
+		),
+
 		/************ DESKTOP ************/
 		MediaDesktop(
 			Root(
@@ -313,6 +330,9 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Height(tokenContentHeight),
 				MarginLeft(Auto),
 				Background(tokenColorGray),
+				Transform(Str("none")),
+				Animation(Str("none")),
+				Transition(Str("0.3s"), Str("width"), Str("ease")),
 			),
 
 			Rule(clsMenu.Hover(),
@@ -355,7 +375,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Display(None),
 			),
 
-			Rule(clsNavIcon,
+			Rule(ClsNavIcon,
 				MaxWidth(Em(2.5)),
 				MinWidth(Em(2.5)),
 				MarginRight(Zero),
@@ -369,17 +389,18 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(clsPanel,
-				Position(Absolute),
-				Top(Zero),
-				Left(Pct(-100)),
-				Width(Pct(100)),
-				Height(Pct(100)),
-				BorderRadius(Str("0 .4em 0 0")),
+				Display(None),
 			),
 
 			Rule(clsPanelActive,
-				Left(Zero),
+				Display(Block),
+				Position(Absolute),
 				Top(Zero),
+				Left(Zero),
+				Width(Pct(100)),
+				Height(Pct(100)),
+				BorderRadius(Str("0 .4em 0 0")),
+				Animation(Str("pdSlideInLeft"), tokenSlideDur, Str("ease-in-out")),
 			),
 
 			Rule(clsMsg,
@@ -420,6 +441,11 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		),
 
 		Rule(Selector("."+string(clsOrientationWarn)+":empty"),
+			Display(None),
+		),
+
+		// Hide msg-mobile when empty (no notifications) — prevents blank overlay blocking content
+		Rule(Selector("."+string(clsMsgMobile)+":empty"),
 			Display(None),
 		),
 	)

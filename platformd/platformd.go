@@ -22,7 +22,7 @@ var (
 	clsNavItem         Class = "pd-nav-item"
 	clsNavLink         Class = "pd-nav-link"
 	clsLinkText        Class = "pd-link-text"
-	clsNavIcon         Class = "pd-nav-icon"
+	ClsNavIcon         Class = "pd-nav-icon"
 	clsNavActive       Class = "pd-nav-active"
 	clsStage           Class = "pd-stage"
 	clsPanel           Class = "pd-panel"
@@ -60,6 +60,7 @@ type Platform struct {
 	// internal state
 	activeModuleID string
 	menuOpen       bool
+	mounted        bool
 
 	notifications []notification
 	mu            sync.Mutex
@@ -71,8 +72,15 @@ type notification struct {
 	ID   string
 }
 
-// OnMount implements Mountable.
+// OnMount implements Mountable. Called on first mount only — re-mounts after
+// Update() are skipped to prevent OnHashChange re-registration and spurious
+// Activate() calls that would reset menuOpen.
 func (p *Platform) OnMount() {
+	if p.mounted {
+		return
+	}
+	p.mounted = true
+
 	OnHashChange(func(hash string) {
 		if len(hash) > 0 && hash[0] == '#' {
 			p.Activate(hash[1:])
@@ -83,7 +91,6 @@ func (p *Platform) OnMount() {
 	if hash != "" && len(hash) > 0 && hash[0] == '#' {
 		p.Activate(hash[1:])
 	} else {
-		// Pick default or first
 		foundDefault := false
 		for _, m := range p.Modules {
 			if m.Default {

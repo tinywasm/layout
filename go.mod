@@ -10,3 +10,9 @@ require (
 	github.com/tinywasm/svg v0.0.5
 	github.com/tinywasm/time v0.5.0
 )
+
+replace github.com/tinywasm/svg v0.0.5 => ../svg
+
+replace github.com/tinywasm/dom v0.10.1 => ../dom
+
+replace github.com/tinywasm/css v0.23.10 => ../css
