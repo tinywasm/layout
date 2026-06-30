@@ -79,52 +79,52 @@ func (r *RightPanel) Render() *Element {
 		id = r.Module.ModelName()
 	}
 
-	wrapper := Div(clsWrapper.AsAttr())
+	wrapper := Div().Set(clsWrapper.AsAttr())
 	if id != "" {
 		wrapper.ID(id)
 	}
 
 	// ── main section ─────────────────────────────────────────────────────────
-	main := Section(clsMain.AsAttr())
+	main := Section().Set(clsMain.AsAttr())
 
 	// header row: title + Head slot + HeadControls slot
-	header := Div(clsHeader.AsAttr())
+	header := Div().Set(clsHeader.AsAttr())
 
-	titleRow := Div(clsTitleRow.AsAttr())
+	titleRow := Div().Set(clsTitleRow.AsAttr())
 	if r.Title != "" {
-		titleRow.Add(H1().Text(r.Title))
+		titleRow.Child(H1().Text(r.Title))
 	}
 	if r.Head != nil {
-		titleRow.Add(r.Head)
+		titleRow.Child(r.Head)
 	}
-	header.Add(titleRow)
+	header.Child(titleRow)
 
 	if r.HeadControls != nil {
-		header.Add(Div(clsHeadControls.AsAttr()).Add(r.HeadControls))
+		header.Child(Div().Set(clsHeadControls.AsAttr()).Child(r.HeadControls))
 	}
-	main.Add(header)
+	main.Child(header)
 
 	// article
+	article := Article().Set(clsArticle.AsAttr())
 	if r.Article != nil {
-		main.Add(Article(clsArticle.AsAttr()).Add(r.Article))
-	} else {
-		main.Add(Article(clsArticle.AsAttr()))
+		article.Child(r.Article)
 	}
+	main.Child(article)
 
-	wrapper.Add(main)
+	wrapper.Child(main)
 
 	// ── aside panel ──────────────────────────────────────────────────────────
 	if r.AsideControls != nil || r.Aside != nil {
-		aside := Aside(clsAside.AsAttr())
+		aside := Aside().Set(clsAside.AsAttr())
 
 		if r.AsideControls != nil {
-			aside.Add(Div(clsAsideHeader.AsAttr()).Add(r.AsideControls))
+			aside.Child(Div().Set(clsAsideHeader.AsAttr()).Child(r.AsideControls))
 		}
 		if r.Aside != nil {
-			aside.Add(Div(clsAsideContent.AsAttr()).Add(r.Aside))
+			aside.Child(Div().Set(clsAsideContent.AsAttr()).Child(r.Aside))
 		}
 
-		wrapper.Add(aside)
+		wrapper.Child(aside)
 	}
 
 	return wrapper
