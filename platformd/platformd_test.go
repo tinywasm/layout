@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/tinywasm/dom"
+	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
 )
@@ -19,6 +19,7 @@ func TestPlatform_Render(t *testing.T) {
 			{ID: "mod2", Label: "Module 2"},
 		},
 	}
+	p.Init(NilCtx())
 
 	el := p.Render()
 	html := el.String()
@@ -52,7 +53,7 @@ func TestPlatform_Render_DefaultModule(t *testing.T) {
 			{ID: "mod2", Label: "Mod 2", Default: true},
 		},
 	}
-	p.OnMount() // Should activate mod2
+	p.Init(NilCtx()) // Should activate mod2
 
 	html := p.Render().String()
 	// tinywasm/dom uses single quotes for attributes
@@ -69,6 +70,7 @@ func TestPlatform_Activate(t *testing.T) {
 			{ID: "mod2", Label: "Mod 2"},
 		},
 	}
+	p.Init(NilCtx())
 	p.Activate("mod2")
 
 	html := p.Render().String()
@@ -82,23 +84,32 @@ func TestPlatform_Activate(t *testing.T) {
 
 func TestPlatform_Notify_Renders(t *testing.T) {
 	p := &Platform{Element: *Div()}
+	p.Init(NilCtx())
 	p.Notify(Msg.Error, "boom", 0)
 
 	html := p.Render().String()
+	t.Logf("HTML: %s", html)
 
 	// Desktop slot
-	if !contains(html, "id='pd-msg-desktop'") || !contains(html, "pd-msg-error") || !contains(html, "boom") {
-		t.Error("expected notification in desktop slot")
+	if !contains(html, "id='pd-msg-desktop'") {
+		t.Error("expected pd-msg-desktop")
+	}
+	if !contains(html, "pd-msg-error") {
+		t.Error("expected pd-msg-error")
+	}
+	if !contains(html, "boom") {
+		t.Error("expected boom")
 	}
 
 	// Mobile slot
-	if !contains(html, "id='pd-msg-mobile'") || !contains(html, "pd-msg-error") || !contains(html, "boom") {
-		t.Error("expected notification in mobile slot")
+	if !contains(html, "id='pd-msg-mobile'") {
+		t.Error("expected pd-msg-mobile")
 	}
 }
 
 func TestPlatform_Notify_Dismiss(t *testing.T) {
 	p := &Platform{Element: *Div()}
+	p.Init(NilCtx())
 	p.Notify(Msg.Info, "hi", 10) // 10ms
 
 	if p.notificationCount() != 1 {
@@ -122,6 +133,14 @@ func TestRenderCSS_NonEmpty(t *testing.T) {
 	if !contains(css, ".pd-root") {
 		t.Errorf("expected CSS to contain .pd-root")
 	}
+}
+
+type mockCtx struct{}
+
+func (m *mockCtx) OnCleanup(fn func()) {}
+
+func NilCtx() Ctx {
+	return &mockCtx{}
 }
 
 func contains(s, substr string) bool {

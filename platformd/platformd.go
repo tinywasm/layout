@@ -58,12 +58,12 @@ type Platform struct {
 	Modules []Module
 
 	// internal state
-	activeModuleID string
-	menuOpen       bool
-	mounted        bool
+	active        *SignalString
+	menuOpen      *SignalBool
+	notifications *SignalNodes
 
-	notifications []notification
-	mu            sync.Mutex
+	rawNotifications []notification
+	mu               sync.Mutex
 }
 
 type notification struct {
@@ -72,14 +72,11 @@ type notification struct {
 	ID   string
 }
 
-// OnMount implements Mountable. Called on first mount only — re-mounts after
-// Update() are skipped to prevent OnHashChange re-registration and spurious
-// Activate() calls that would reset menuOpen.
-func (p *Platform) OnMount() {
-	if p.mounted {
-		return
-	}
-	p.mounted = true
+// Init initializes the platform state and routing.
+func (p *Platform) Init(ctx Ctx) {
+	p.active = NewString("")
+	p.menuOpen = NewBool(false)
+	p.notifications = NewNodes()
 
 	OnHashChange(func(hash string) {
 		if len(hash) > 0 && hash[0] == '#' {
@@ -107,121 +104,124 @@ func (p *Platform) OnMount() {
 
 // Render builds the DOM tree (implements ViewRenderer).
 func (p *Platform) Render() *Element {
-	root := Div(clsRoot.AsAttr())
-	if p.menuOpen {
-		root.Add(clsMenuOpen.AsAttr())
-	}
-
-	activeLabel := ""
-	for _, mod := range p.Modules {
-		if mod.ID == p.activeModuleID {
-			activeLabel = mod.Label
-			break
-		}
-	}
+	root := Div().Set(clsRoot.AsAttr()).
+		BindClass(string(clsMenuOpen), p.menuOpen)
 
 	// ── header ───────────────────────────────────────────────────────────────
-	header := Header(clsHeader.AsAttr())
+	header := Header().Set(clsHeader.AsAttr())
 
-	userBlock := Div(clsUserBlock.AsAttr())
+	userBlock := Div().Set(clsUserBlock.AsAttr())
 	if p.UserBlock != nil {
-		userBlock.Add(p.UserBlock)
+		userBlock.Child(p.UserBlock)
 	}
-	header.Add(userBlock)
+	header.Child(userBlock)
 
-	msgDesktop := Div(clsMsgDesktop.AsAttr()).ID("pd-msg-desktop")
-	for _, n := range p.notifications {
-		msgDesktop.Add(p.renderNotification(n))
+	msgDesktop := Div().Set(clsMsgDesktop.AsAttr()).ID("pd-msg-desktop").
+		BindChildren(p.notifications)
+	for _, n := range p.notifications.Get() {
+		msgDesktop.Child(n)
 	}
-	header.Add(msgDesktop)
+	header.Child(msgDesktop)
 
-	header.Add(H2(clsArea.AsAttr()).Text(activeLabel))
+	header.Child(H2().Set(clsArea.AsAttr()).
+		BindText(DeriveString(func() string {
+			id := p.active.Get()
+			for _, m := range p.Modules {
+				if m.ID == id {
+					return m.Label
+				}
+			}
+			return ""
+		})))
 
-	root.Add(header)
+	root.Child(header)
 
 	// ── mobile message slot ──────────────────────────────────────────────────
-	msgMobile := Div(clsMsgMobile.AsAttr()).ID("pd-msg-mobile")
-	for _, n := range p.notifications {
-		msgMobile.Add(p.renderNotification(n))
+	msgMobile := Div().Set(clsMsgMobile.AsAttr()).ID("pd-msg-mobile").
+		BindChildren(p.notifications)
+	for _, n := range p.notifications.Get() {
+		msgMobile.Child(n)
 	}
-	root.Add(msgMobile)
+	root.Child(msgMobile)
 
 	// ── hamburger button (mobile only — hidden via CSS on desktop) ───────────
-	hamburger := Button(clsHamburger.AsAttr()).
+	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menú").
-		Add(Span(), Span(), Span())
+		Child(Span(), Span(), Span())
 	hamburger.On("click", func(Event) {
-		p.mu.Lock()
-		p.menuOpen = !p.menuOpen
-		p.mu.Unlock()
-		p.Update()
+		p.menuOpen.Toggle()
 	})
-	root.Add(hamburger)
+	root.Child(hamburger)
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
-	overlay := Div(clsNavOverlay.AsAttr())
+	overlay := Div().Set(clsNavOverlay.AsAttr())
 	overlay.On("click", func(Event) {
-		p.mu.Lock()
-		p.menuOpen = false
-		p.mu.Unlock()
-		p.Update()
+		p.menuOpen.Set(false)
 	})
-	root.Add(overlay)
+	root.Child(overlay)
 
 	// ── navigation menu ──────────────────────────────────────────────────────
-	nav := Nav(clsMenu.AsAttr())
-	navbar := Ul(clsNavbar.AsAttr())
+	nav := Nav().Set(clsMenu.AsAttr())
+	navbar := Ul().Set(clsNavbar.AsAttr())
 
 	for _, mod := range p.Modules {
-		item := Li(clsNavItem.AsAttr())
-		link := A("#"+mod.ID, clsNavLink.AsAttr()).
-			Attr("data-id", mod.ID)
-
-		if mod.ID == p.activeModuleID {
-			link.Add(clsNavActive.AsAttr())
-		}
+		mod := mod
+		link := A("#"+mod.ID).Set(clsNavLink.AsAttr()).
+			Attr("data-id", mod.ID).
+			BindClass(string(clsNavActive), DeriveBool(func() bool {
+				return p.active.Get() == mod.ID
+			}))
 
 		if mod.Icon != nil {
-			link.Add(mod.Icon)
+			link.Child(mod.Icon)
 		}
-		link.Add(Span(clsLinkText.AsAttr()).Text(mod.Label))
+		link.Child(Span().Set(clsLinkText.AsAttr()).Text(mod.Label))
 
-		item.Add(link)
-		navbar.Add(item)
+		navbar.Child(Li().Set(clsNavItem.AsAttr()).Child(link))
 	}
 
-	nav.Add(navbar)
-	root.Add(nav)
+	nav.Child(navbar)
+	root.Child(nav)
 
 	// ── main stage ───────────────────────────────────────────────────────────
-	stage := Main(clsStage.AsAttr())
+	stage := Main().Set(clsStage.AsAttr())
 
 	for _, mod := range p.Modules {
-		panel := Section(clsPanel.AsAttr()).
+		mod := mod
+		panel := Section().Set(clsPanel.AsAttr()).
 			ID(mod.ID).
-			Attr("data-id", mod.ID)
-
-		if mod.ID == p.activeModuleID {
-			panel.Add(clsPanelActive.AsAttr())
-		}
+			Attr("data-id", mod.ID).
+			BindClass(string(clsPanelActive), DeriveBool(func() bool {
+				return p.active.Get() == mod.ID
+			}))
 
 		if mod.View != nil {
-			panel.Add(mod.View)
+			panel.Child(mod.View)
 		}
-		stage.Add(panel)
+		stage.Child(panel)
 	}
 
-	root.Add(stage)
+	root.Child(stage)
 
 	// orientation warning (placeholder as per PLAN.md A.5)
-	root.Add(Div(clsOrientationWarn.AsAttr()))
+	root.Child(Div().Set(clsOrientationWarn.AsAttr()))
 
 	return root
 }
 
-func (p *Platform) renderNotification(n notification) *Element {
-	typeCls := "pd-msg-" + Convert(n.Type.String()).ToLower().String()
-	return Div(clsMsg.AsAttr(), Class(typeCls)).ID(n.ID).Text(n.Msg)
+func (p *Platform) buildToasts() []*Element {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	nodes := make([]*Element, 0, len(p.rawNotifications))
+	for _, n := range p.rawNotifications {
+		typeCls := "pd-msg-" + Convert(n.Type.String()).ToLower().String()
+		nodes = append(nodes, Div().Set(clsMsg.AsAttr(), Class(typeCls).AsAttr()).
+			ID(n.ID).
+			Key(n.ID).
+			Text(n.Msg))
+	}
+	return nodes
 }
 
 // Notify queues a typed notification in the proper viewport slot.
@@ -233,10 +233,10 @@ func (p *Platform) Notify(t MessageType, msg string, durationMs int) {
 		Msg:  msg,
 		ID:   "pd-notification-" + p.GetID() + "-" + Sprint(time.Now()),
 	}
-	p.notifications = append(p.notifications, n)
+	p.rawNotifications = append(p.rawNotifications, n)
 	p.mu.Unlock()
 
-	p.Update()
+	p.notifications.Set(p.buildToasts())
 
 	if durationMs > 0 {
 		time.AfterFunc(durationMs, func() {
@@ -247,11 +247,11 @@ func (p *Platform) Notify(t MessageType, msg string, durationMs int) {
 
 func (p *Platform) dismiss(id string) {
 	p.mu.Lock()
-	for i, n := range p.notifications {
+	for i, n := range p.rawNotifications {
 		if n.ID == id {
-			p.notifications = append(p.notifications[:i], p.notifications[i+1:]...)
+			p.rawNotifications = append(p.rawNotifications[:i], p.rawNotifications[i+1:]...)
 			p.mu.Unlock()
-			p.Update()
+			p.notifications.Set(p.buildToasts())
 			return
 		}
 	}
@@ -261,23 +261,21 @@ func (p *Platform) dismiss(id string) {
 func (p *Platform) notificationCount() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return len(p.notifications)
+	return len(p.rawNotifications)
 }
 
 // Activate programmatically switches to a module by ID
 // (also updates window.location.hash on wasm builds).
 func (p *Platform) Activate(moduleID string) {
-	if p.activeModuleID == moduleID && !p.menuOpen {
+	if p.active.Get() == moduleID && !p.menuOpen.Get() {
 		return
 	}
 
-	p.activeModuleID = moduleID
-	p.menuOpen = false
+	p.active.Set(moduleID)
+	p.menuOpen.Set(false)
 
 	// Update window hash if needed
 	if GetHash() != "#"+moduleID {
 		SetHash("#" + moduleID)
 	}
-
-	p.Update()
 }
