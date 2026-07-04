@@ -6,17 +6,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tinywasm/svg"
+
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
 )
 
+type mockModule struct {
+	id    string
+	label string
+	view  Component
+}
+
+func (m *mockModule) ModelName() string { return m.id }
+func (m *mockModule) Label() string     { return m.label }
+func (m *mockModule) Icon() svg.Icon    { return svg.Icon{} }
+func (m *mockModule) View() Component   { return m.view }
+
 func TestPlatform_Render(t *testing.T) {
 	p := &Platform{
 		AppName: "Test App",
-		Modules: []Module{
-			{ID: "mod1", Label: "Module 1"},
-			{ID: "mod2", Label: "Module 2"},
+		Modules: []UIModule{
+			&mockModule{id: "mod1", label: "Module 1"},
+			&mockModule{id: "mod2", label: "Module 2"},
 		},
 	}
 	p.Init(NilCtx())
@@ -47,10 +60,11 @@ func TestPlatform_Render(t *testing.T) {
 
 func TestPlatform_Render_DefaultModule(t *testing.T) {
 	p := &Platform{
-		Element: *Div(),
-		Modules: []Module{
-			{ID: "mod1", Label: "Mod 1"},
-			{ID: "mod2", Label: "Mod 2", Default: true},
+		Element:   *Div(),
+		DefaultID: "mod2",
+		Modules: []UIModule{
+			&mockModule{id: "mod1", label: "Mod 1"},
+			&mockModule{id: "mod2", label: "Mod 2"},
 		},
 	}
 	p.Init(NilCtx()) // Should activate mod2
@@ -65,9 +79,9 @@ func TestPlatform_Render_DefaultModule(t *testing.T) {
 func TestPlatform_Activate(t *testing.T) {
 	p := &Platform{
 		Element: *Div(),
-		Modules: []Module{
-			{ID: "mod1", Label: "Mod 1"},
-			{ID: "mod2", Label: "Mod 2"},
+		Modules: []UIModule{
+			&mockModule{id: "mod1", label: "Mod 1"},
+			&mockModule{id: "mod2", label: "Mod 2"},
 		},
 	}
 	p.Init(NilCtx())

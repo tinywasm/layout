@@ -3,10 +3,13 @@ package platformd
 import (
 	"sync"
 
+	"github.com/tinywasm/layout"
+
 	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
+	"github.com/tinywasm/svg"
 	"github.com/tinywasm/time"
 )
 
@@ -34,14 +37,14 @@ var (
 	clsMenuOpen        Class = "pd-menu-open"
 )
 
-// Module describes one registered route/page in the shell.
-// Pure data: the consumer creates these and passes them to Platform.
-type Module struct {
-	ID      string    // hash slug, e.g. "products" → routed via "#products"
-	Label   string    // text shown next to icon in expanded rail
-	Icon    Component // icon component (usually a tinywasm/icons Symbol)
-	View    Component // the module's content (often a *rightpanel.RightPanel)
-	Default bool      // if true and no hash set, this module is shown initially
+// UIModule is a module that provides its UI to the platform chassis.
+// The chassis takes id/hash/route from ModelName() and the rest of the
+// presentation from these methods.
+type UIModule interface {
+	layout.Module    // identity: ModelName() → used as ID
+	Label() string   // text in the nav rail
+	Icon() svg.Icon  // icon (unrendered); chassis paints it with ClsNavIcon
+	View() Component // module content (often a *rightpanel.RightPanel)
 }
 
 // Platform is the typed skeleton root.
@@ -55,7 +58,11 @@ type Platform struct {
 	UserBlock Component
 
 	// Modules registered in order — appearance order in the nav rail.
-	Modules []Module
+	Modules []UIModule
+
+	// DefaultID is the ModelName() of the module to show initially.
+	// If empty, the first module is used.
+	DefaultID string
 
 	// internal state
 	active        *SignalString
@@ -88,16 +95,10 @@ func (p *Platform) Init(ctx Ctx) {
 	if hash != "" && len(hash) > 0 && hash[0] == '#' {
 		p.Activate(hash[1:])
 	} else {
-		foundDefault := false
-		for _, m := range p.Modules {
-			if m.Default {
-				p.Activate(m.ID)
-				foundDefault = true
-				break
-			}
-		}
-		if !foundDefault && len(p.Modules) > 0 {
-			p.Activate(p.Modules[0].ID)
+		if p.DefaultID != "" {
+			p.Activate(p.DefaultID)
+		} else if len(p.Modules) > 0 {
+			p.Activate(p.Modules[0].ModelName())
 		}
 	}
 }
@@ -127,8 +128,8 @@ func (p *Platform) Render() *Element {
 		BindText(DeriveString(func() string {
 			id := p.active.Get()
 			for _, m := range p.Modules {
-				if m.ID == id {
-					return m.Label
+				if m.ModelName() == id {
+					return m.Label()
 				}
 			}
 			return ""
@@ -164,18 +165,20 @@ func (p *Platform) Render() *Element {
 	nav := Nav().Set(clsMenu.AsAttr())
 	navbar := Ul().Set(clsNavbar.AsAttr())
 
-	for _, mod := range p.Modules {
-		mod := mod
-		link := A("#"+mod.ID).Set(clsNavLink.AsAttr()).
-			Attr("data-id", mod.ID).
+	for _, m := range p.Modules {
+		m := m
+		id := m.ModelName()
+		link := A("#"+id).Set(clsNavLink.AsAttr()).
+			Attr("data-id", id).
 			BindClass(string(clsNavActive), DeriveBool(func() bool {
-				return p.active.Get() == mod.ID
+				return p.active.Get() == id
 			}))
 
-		if mod.Icon != nil {
-			link.Child(mod.Icon)
+		ico := m.Icon()
+		if ico.ID() != "" {
+			link.Child(ico.Render(string(ClsNavIcon)))
 		}
-		link.Child(Span().Set(clsLinkText.AsAttr()).Text(mod.Label))
+		link.Child(Span().Set(clsLinkText.AsAttr()).Text(m.Label()))
 
 		navbar.Child(Li().Set(clsNavItem.AsAttr()).Child(link))
 	}
@@ -186,17 +189,18 @@ func (p *Platform) Render() *Element {
 	// ── main stage ───────────────────────────────────────────────────────────
 	stage := Main().Set(clsStage.AsAttr())
 
-	for _, mod := range p.Modules {
-		mod := mod
+	for _, m := range p.Modules {
+		m := m
+		id := m.ModelName()
 		panel := Section().Set(clsPanel.AsAttr()).
-			ID(mod.ID).
-			Attr("data-id", mod.ID).
+			ID(id).
+			Attr("data-id", id).
 			BindClass(string(clsPanelActive), DeriveBool(func() bool {
-				return p.active.Get() == mod.ID
+				return p.active.Get() == id
 			}))
 
-		if mod.View != nil {
-			panel.Child(mod.View)
+		if v := m.View(); v != nil {
+			panel.Child(v)
 		}
 		stage.Child(panel)
 	}

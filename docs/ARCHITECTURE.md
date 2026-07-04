@@ -29,11 +29,11 @@ A[New Platform] --> B[Render: build DOM tree with signal bindings]
 B --> C[Init: create signals, register OnHashChange]
 C --> D{hash present?}
 D -- yes --> E[Activate hash module]
-D -- no --> F[Activate default/first module]
+D -- no --> F[Activate DefaultID / first module]
 E & F --> G[Runtime — signals drive all UI updates]
-G --> H[user clicks hamburger] --> I[menuOpen.Toggle → BindClass patches nav]
-G --> J[Notify called] --> K[notifications.Set → BindChildren inserts one row]
-G --> L[hash changes] --> M[active.Set → DeriveBool patches panel classes]
+G --> H[user clicks hamburger] --> I[menuOpen.Toggle <br/> BindClass patches nav]
+G --> J[Notify called] --> K[notifications.Set <br/> BindChildren inserts one row]
+G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel classes]
 ```
 
 ### Signal fields on `Platform`

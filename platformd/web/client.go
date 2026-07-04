@@ -7,45 +7,33 @@ import (
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
+	"github.com/tinywasm/svg"
 )
 
 // Tiny model stub so rightpanel has an ID source.
-type mod struct{ name string }
+type mod struct {
+	name string
+	ico  svg.Icon
+}
 
 func (m mod) ModelName() string { return m.name }
+func (m mod) Label() string     { return m.name }
+func (m mod) Icon() svg.Icon    { return m.ico }
+func (m mod) View() Component {
+	return &rightpanel.RightPanel{
+		Module: m,
+		Title:  m.name,
+	}
+}
 
 func main() {
 	p := &platformd.Platform{
-		AppName: "Demo Platform",
-		Modules: []platformd.Module{
-			{
-				ID:      "mod1",
-				Label:   "Módulo 1",
-				Default: true,
-				Icon:    platformd.IconHome.Render(string(platformd.ClsNavIcon)),
-				View: &rightpanel.RightPanel{
-					Module: mod{"mod1"},
-					Title:  "Módulo 1",
-				},
-			},
-			{
-				ID:    "mod2",
-				Label: "Módulo 2",
-				Icon:  platformd.IconProducts.Render(string(platformd.ClsNavIcon)),
-				View: &rightpanel.RightPanel{
-					Module: mod{"mod2"},
-					Title:  "Módulo 2",
-				},
-			},
-			{
-				ID:    "mod3",
-				Label: "Módulo 3",
-				Icon:  platformd.IconInfo.Render(string(platformd.ClsNavIcon)),
-				View: &rightpanel.RightPanel{
-					Module: mod{"mod3"},
-					Title:  "Módulo 3",
-				},
-			},
+		AppName:   "Demo Platform",
+		DefaultID: "mod1",
+		Modules: []platformd.UIModule{
+			mod{"mod1", platformd.IconHome},
+			mod{"mod2", platformd.IconProducts},
+			mod{"mod3", platformd.IconInfo},
 		},
 	}
 	Append("body", p)
