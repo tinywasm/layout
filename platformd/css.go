@@ -399,7 +399,8 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Left(Zero),
 				Width(Pct(100)),
 				Height(Pct(100)),
-				BorderRadius(Str("0 .4em 0 0")),
+				Background(tokenColorGray),
+				BorderRadius(Str("0 .4em .4em 0")),
 				Animation(Str("pdSlideInLeft"), tokenSlideDur, Str("ease-in-out")),
 			),
 

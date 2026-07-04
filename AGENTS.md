@@ -4,20 +4,39 @@ Constraints for agents working on layout (e.g. `platformd`). Read this before an
 
 ---
 
-## Construction Harness — typed & explicit (the TinyWasm approach)
+## Construction Harness — the TinyWasm way (read first)
 
-This library is part of TinyWasm's **construction harness**: the typed, explicit API is what keeps an
-agent that doesn't know the library from building wrong code. The compiler must reject mistakes; what
-it can't catch becomes a `devMode` warning — never a silent failure.
+The typed, explicit code **is** the harness. Whoever writes against this library is
+often an agent that does **not** know it; they must produce correct code guided only
+by the signatures, and the compiler must **reject** whatever is wrong. Correctness
+lives in the compiler and the signatures, not in a manual you must remember. A
+harness moves correctness to the compiler; a manual moves it to the reader — the
+first is orders of magnitude more reliable for someone with no context.
 
-- **Typed over `any`** — no generic slots; typed builder methods (like `tinywasm/json`), reusing `fmt` types. Anything reactive goes only through a signal binding (`BindText`/`Bind*`), which requires a signal.
-- **Explicit names** — `Text` (static) vs `BindText` (reactive); reading the call states intent.
-- **Illegal states unrepresentable** — dynamic content has ONE path, typed to require a signal.
-- **Minimal public surface** — export only what the author types; engine plumbing stays unexported.
-- **Docs are minimal "how" instructions, not long skills** — if a rule must be *remembered*, close it
-  with types, not prose.
+Every public API must hold to these principles:
 
-(Ecosystem rationale: `tinywasm/docs/ARNES_DE_CONSTRUCCION.md`.)
+1. **Typed over `any`.** No generic holes (`func(...any)`, `interface{}`) in the
+   API — intent-typed methods, like the `tinywasm/json` writer (`String`, `Int`,
+   `Bool`, `Object`, `Array`). `any` is allowed **only** at the I/O edge, never in
+   the data. **Reuse already-declared types** (e.g. `fmt.KeyValue`) instead of
+   inventing new ones. Generics with an `any` constraint are the same hole in
+   disguise: a signature that does not name its real type is not self-describing.
+2. **Explicit over implicit.** The name declares the intent; reading the call is
+   enough to know what it does, without opening the implementation.
+3. **Illegal states unrepresentable.** If something must not happen, it must not be
+   writable. One intent = one path, typed to demand exactly what it needs.
+4. **One way to do each thing.** A single construction pattern, with no alternatives
+   that force a choice or a trip to the docs.
+5. **Minimal public surface.** Export exactly what the author uses; internal
+   machinery stays unexported — you cannot misuse what you cannot see.
+6. **Fail at compile time, not at runtime.** Order of preference to catch an error:
+   compile error → noisy dev-mode diagnostic → (never) silent failure.
+7. **Self-describing signatures.** Autocomplete must be enough to build. If using
+   the API needs a long document, the API is incomplete.
+
+**Litmus test:** if an agent with no context produces correct code guided only by
+autocomplete and a few-line example, the harness is closed. If it needs a manual to
+avoid mistakes, something is still untyped.
 
 ---
 
