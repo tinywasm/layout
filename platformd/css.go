@@ -12,19 +12,10 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		Root(
 			Declare(tokenFontSizeNormal, "1.1rem"),
 			Declare(tokenFontSizeSmall, ".6rem"),
-			Declare(tokenColorPrimary, "#ffffff"),
-			Declare(tokenColorSecondary, "#3f88bf"),
-			Declare(tokenColorTertiary, "#c2c1c1"),
-			Declare(tokenColorQuaternary, "#000000"),
-			Declare(tokenColorGray, "#e9e9e9"),
-			Declare(tokenColorSelection, "#ff9300"),
-			Declare(tokenColorHover, "#ff95008e"),
-			Declare(tokenColorSuccess, "#aadaff7c"),
-			Declare(tokenColorError, "#f20707"),
-			Declare(tokenMenuSize, "6vh"),
-			Declare(tokenHeaderHeight, "5vh"),
-			Declare(tokenContentHeight, "94vh"),
-			Declare(tokenContentWidth, "100vw"),
+			Declare(tokenMenuSize, "4vw"),
+			Declare(tokenHeaderHeight, "3vh"),
+			Declare(tokenContentHeight, "97vh"),
+			Declare(tokenContentWidth, "96vw"),
 			Declare(tokenSlideDur, "0.6s"),
 			Declare(tokenTransitionWait, "0s"),
 		),
@@ -52,7 +43,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 		Rule(clsRoot,
 			FontSize(Rem(0.8)),
-			Background(tokenColorTertiary),
+			Background(ColorMuted),
 			Width(Vw(100)),
 			Height(Vh(100)),
 			Position(Str("relative")),
@@ -67,8 +58,8 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			ZIndex(Str("5")),
 		),
 
-		Rule(Selector("."+string(clsRoot)+" a:link"), Color(tokenColorQuaternary)),
-		Rule(Selector("."+string(clsRoot)+" a:visited"), Color(tokenColorQuaternary)),
+		Rule(Selector("."+string(clsRoot)+" a:link"), Color(ColorOnSurface)),
+		Rule(Selector("."+string(clsRoot)+" a:visited"), Color(ColorOnSurface)),
 
 		// Hamburger button — visible only on mobile
 		Rule(clsHamburger,
@@ -78,7 +69,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			ZIndex(Str("10")),
 			Width(Px(44)),
 			Height(Px(44)),
-			Background(tokenColorSecondary),
+			Background(ColorSecondary),
 			BorderRadius(Px(6)),
 			Display(Flex_),
 			FlexDirection(Column),
@@ -93,13 +84,13 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Display(Block),
 			Width(Pct(100)),
 			Height(Px(2)),
-			Background(tokenColorPrimary),
+			Background(ColorOnSecondary),
 			BorderRadius(Px(2)),
 		),
 
 		// Nav drawer — hidden off-screen right using transform (no reflow, GPU)
 		Rule(clsMenu,
-			Background(tokenColorGray),
+			Background(ColorSurface),
 			Position(Fixed),
 			Top(Zero),
 			Right(Zero),
@@ -138,17 +129,25 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Height(Pct(100)),
 		),
 
+		Rule(Selector("."+string(clsNavbar)+" li:first-child"),
+			AlignSelf(Str("flex-start")),
+		),
+
+		Rule(Selector("."+string(clsNavbar)+" li:last-child"),
+			AlignSelf(Str("flex-end")),
+		),
+
 		Rule(clsNavItem,
 			Width(Pct(100)),
 			Flex(Str("1")),
 		),
 
 		Rule(clsNavActive,
-			Background(tokenColorSelection),
+			Background(ColorSecondary),
 		),
 
 		Rule(Selector("."+string(clsNavActive)+", ."+string(clsNavActive)+" > svg"),
-			Color(tokenColorPrimary),
+			Color(ColorOnSecondary),
 			Transition(Str("0.3s"), Str("all"), Str("ease")),
 		),
 
@@ -162,7 +161,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		),
 
 		Rule(ClsNavIcon,
-			Color(tokenColorSecondary),
+			Color(ColorSecondary),
 			Height(Em(2.5)),
 			Width(Em(2.5)),
 			MinWidth(Em(2.5)),
@@ -171,7 +170,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		),
 
 		Rule(clsLinkText,
-			Color(tokenColorSecondary),
+			Color(ColorSecondary),
 			FontSize(Em(1.1)),
 		),
 
@@ -188,7 +187,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Width(tokenContentWidth),
 			Height(Vh(100)),
 			Position(Absolute),
-			Background(tokenColorSecondary),
+			Background(ColorSecondary),
 			Animation(Str("pdSlideInTop"), tokenSlideDur, Str("ease-in-out")),
 		),
 
@@ -201,7 +200,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 		Rule(clsArea,
 			TextTransform(Uppercase),
-			Color(tokenColorPrimary),
+			Color(ColorOnSecondary),
 			TextAlign(Center),
 			Display(Flex_),
 			AlignItems(Center),
@@ -222,9 +221,9 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			JustifyContent(Center),
 			AlignItems(Center),
 			Display(None),
-			Color(tokenColorPrimary),
+			Color(ColorOnSecondary),
 			TouchAction(None),
-			Background(tokenColorSecondary),
+			Background(ColorSecondary),
 		),
 
 		Rule(clsMsgMobile,
@@ -246,15 +245,15 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Padding(Px(20)),
 			Width(Pct(80)),
 			FontSize(Em(1.3)),
-			TextShadow(Em(0.1), Em(0.1), Em(0.1), Hex("#ffffff")),
+			TextShadow(Em(0.1), Em(0.1), Em(0.1), ColorOnSecondary),
 			Animation(Str("pdFadeIn"), tokenTransitionWait),
 		),
 
 		// Message variants
-		Rule(Selector(".pd-msg-info"), Color(tokenColorTertiary)),
-		Rule(Selector(".pd-msg-error"), Color(tokenColorError)),
-		Rule(Selector(".pd-msg-success"), Color(tokenColorSecondary)),
-		Rule(Selector(".pd-msg-warning"), Color(tokenColorSelection)),
+		Rule(Selector(".pd-msg-info"), Color(ColorMuted)),
+		Rule(Selector(".pd-msg-error"), Color(ColorError)),
+		Rule(Selector(".pd-msg-success"), Color(ColorSecondary)),
+		Rule(Selector(".pd-msg-warning"), Color(ColorSecondary)), // Selection was mapped to ColorSecondary
 
 		Keyframes("pdFadeOut",
 			At("from", Opacity(1.0), Visibility(Visible)),
@@ -284,15 +283,15 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		/************ DESKTOP ************/
 		MediaDesktop(
 			Root(
-				Declare(tokenHeaderHeight, "5vh"),
-				Declare(tokenContentHeight, "95vh"),
-				Declare(tokenMenuSize, "5vw"),
-				Declare(tokenContentWidth, "95vw"),
+				Declare(tokenHeaderHeight, "3vh"),
+				Declare(tokenContentHeight, "97vh"),
+				Declare(tokenMenuSize, "4vw"),
+				Declare(tokenContentWidth, "96vw"),
 			),
 
 			Rule(clsRoot,
 				Overflow(Hidden),
-				Background(tokenColorGray),
+				Background(ColorSurface),
 				FontSize(Px(16)),
 				Height(Vh(100)),
 				// Reset mobile flex centering — critical so grid items stretch to full height
@@ -318,7 +317,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				GridArea(Str("header")),
 				Display(Grid),
 				GridTemplateColumns(Str("1fr 3fr 1fr")),
-				Background(tokenColorGray),
+				Background(ColorSurface),
 			),
 
 			Rule(clsMenu,
@@ -329,7 +328,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Width(tokenMenuSize),
 				Height(tokenContentHeight),
 				MarginLeft(Auto),
-				Background(tokenColorGray),
+				Background(ColorSurface),
 				Transform(Str("none")),
 				Animation(Str("none")),
 				Transition(Str("0.3s"), Str("width"), Str("ease")),
@@ -363,15 +362,15 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(Selector("."+string(clsNavLink)+":hover"),
-				Background(tokenColorHover),
+				Background(ColorHover),
 			),
 
 			Rule(Selector("."+string(clsNavActive)+", ."+string(clsNavActive)+" > ."+string(clsLinkText)),
-				Color(tokenColorPrimary),
+				Color(ColorOnSecondary),
 			),
 
 			Rule(clsLinkText,
-				Color(tokenColorSecondary),
+				Color(ColorSecondary),
 				Display(None),
 			),
 
@@ -399,7 +398,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Left(Zero),
 				Width(Pct(100)),
 				Height(Pct(100)),
-				Background(tokenColorGray),
+				Background(ColorSurface),
 				BorderRadius(Str("0 .4em .4em 0")),
 				Animation(Str("pdSlideInLeft"), tokenSlideDur, Str("ease-in-out")),
 			),

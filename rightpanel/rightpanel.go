@@ -1,6 +1,8 @@
 package rightpanel
 
 import (
+	"github.com/tinywasm/layout"
+
 	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
@@ -17,12 +19,6 @@ var (
 	clsAsideHeader  Class = "rp-aside-header"
 	clsAsideContent Class = "rp-aside-content"
 )
-
-// Module is the interface the consumer must satisfy to provide the layout ID.
-// Any struct with a ModelName() string method qualifies (e.g. ORM model structs).
-type Module interface {
-	ModelName() string
-}
 
 // RightPanel is a two-column layout skeleton:
 //   - Left: main content area with header (title + controls) and article.
@@ -49,7 +45,7 @@ type RightPanel struct {
 	Element
 
 	// Module provides the ID for the root wrapper element.
-	Module Module
+	Module layout.Module
 
 	// Title is rendered as <h1> in the header.
 	Title string

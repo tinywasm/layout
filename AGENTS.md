@@ -82,6 +82,10 @@ gotest
 - Cover frequent use cases: menu toggle patches only the nav class; toasts (keyed list) insert/remove
   a single row; routing activates once; `Init` runs once (no `mounted` guard). Publish with `gopush 'message'`.
 
+## UIModule Contract
+
+The `UIModule` interface is the ONLY way to provide a view to the platform chassis.
+
 ## Documentation First
 
 Update docs **before** code and before `gopush`: `docs/ARCHITECTURE.md` (platform lifecycle:
