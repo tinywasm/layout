@@ -6,22 +6,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tinywasm/svg"
-
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
 )
 
 type mockModule struct {
-	id    string
-	label string
-	view  Component
+	id     string
+	label  string
+	iconID string
+	view   Component
 }
 
 func (m *mockModule) ModelName() string { return m.id }
 func (m *mockModule) Label() string     { return m.label }
-func (m *mockModule) Icon() svg.Icon    { return svg.Icon{} }
+func (m *mockModule) IconID() string    { return m.iconID }
 func (m *mockModule) View() Component   { return m.view }
 
 func TestPlatform_Render(t *testing.T) {

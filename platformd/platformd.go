@@ -9,7 +9,6 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
-	"github.com/tinywasm/svg"
 	"github.com/tinywasm/time"
 )
 
@@ -43,7 +42,7 @@ var (
 type UIModule interface {
 	layout.Module    // identity: ModelName() → used as ID
 	Label() string   // text in the nav rail
-	Icon() svg.Icon  // icon (unrendered); chassis paints it with ClsNavIcon
+	IconID() string  // icon ID; chassis uses IconSvg() to render
 	View() Component // module content (often a *rightpanel.RightPanel)
 }
 
@@ -174,9 +173,13 @@ func (p *Platform) Render() *Element {
 				return p.active.Get() == id
 			}))
 
-		ico := m.Icon()
-		if ico.ID() != "" {
-			link.Child(ico.Render(string(ClsNavIcon)))
+		iconID := m.IconID()
+		if iconID != "" {
+			link.Child(Svg().
+				Attr("aria-hidden", "true").
+				Attr("focusable", "false").
+				Set(ClsNavIcon.AsAttr()).
+				Child(Use().Attr("href", "#"+iconID)))
 		}
 		link.Child(Span().Set(clsLinkText.AsAttr()).Text(m.Label()))
 
