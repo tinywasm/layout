@@ -59,6 +59,9 @@ type Platform struct {
 	// Modules registered in order — appearance order in the nav rail.
 	Modules []UIModule
 
+	// CanView filters which modules the shell presents. nil = show all.
+	CanView func(resource string) bool
+
 	// DefaultID is the ModelName() of the module to show initially.
 	// If empty, the first module is used.
 	DefaultID string
@@ -92,12 +95,34 @@ func (p *Platform) Init(ctx Ctx) {
 
 	hash := GetHash()
 	if hash != "" && len(hash) > 0 && hash[0] == '#' {
-		p.Activate(hash[1:])
+		id := hash[1:]
+		if p.isViewable(id) {
+			p.Activate(id)
+		} else {
+			p.fallback()
+		}
 	} else {
-		if p.DefaultID != "" {
+		if p.DefaultID != "" && p.isViewable(p.DefaultID) {
 			p.Activate(p.DefaultID)
-		} else if len(p.Modules) > 0 {
-			p.Activate(p.Modules[0].ModelName())
+		} else {
+			p.fallback()
+		}
+	}
+}
+
+func (p *Platform) isViewable(id string) bool {
+	if p.CanView == nil {
+		return true
+	}
+	return p.CanView(id)
+}
+
+func (p *Platform) fallback() {
+	for _, m := range p.Modules {
+		id := m.ModelName()
+		if p.isViewable(id) {
+			p.Activate(id)
+			return
 		}
 	}
 }
@@ -167,6 +192,9 @@ func (p *Platform) Render() *Element {
 	for _, m := range p.Modules {
 		m := m
 		id := m.ModelName()
+		if !p.isViewable(id) {
+			continue
+		}
 		link := A("#"+id).Set(clsNavLink.AsAttr()).
 			Attr("data-id", id).
 			BindClass(string(clsNavActive), DeriveBool(func() bool {
@@ -195,6 +223,9 @@ func (p *Platform) Render() *Element {
 	for _, m := range p.Modules {
 		m := m
 		id := m.ModelName()
+		if !p.isViewable(id) {
+			continue
+		}
 		panel := Section().Set(clsPanel.AsAttr()).
 			ID(id).
 			Attr("data-id", id).
@@ -274,6 +305,10 @@ func (p *Platform) notificationCount() int {
 // Activate programmatically switches to a module by ID
 // (also updates window.location.hash on wasm builds).
 func (p *Platform) Activate(moduleID string) {
+	if !p.isViewable(moduleID) {
+		return
+	}
+
 	if p.active.Get() == moduleID && !p.menuOpen.Get() {
 		return
 	}

@@ -70,6 +70,7 @@ internal helpers and anything only this package uses. Struct fields stay unexpor
 - Reactive code in `//go:build wasm`; `!wasm` stubs where called from tag-less code.
 - No Go stdlib: use `github.com/tinywasm/fmt`. DOM only via `github.com/tinywasm/dom`, never
   `syscall/js`. `switch` not `map`. No `defer/recover`. Embed `dom.Element` by value.
+- **No `encoding/json`:** Direct use of the standard library `encoding/json` is prohibited in WASM paths. Use `github.com/tinywasm/json` instead.
 
 ## Testing
 
