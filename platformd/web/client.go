@@ -16,6 +16,7 @@ import (
 type mod struct {
 	name string
 	icon string
+	p    *platformd.Platform
 }
 
 func (m mod) ModelName() string { return m.name }
@@ -40,8 +41,12 @@ func (m mod) View() Component {
 				},
 			},
 			OnSelect: func(it crudview.Item) {
-				// p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000)
+				m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000)
 			},
+			OnNew:    func() { m.p.Notify(Msg.Info, "Nuevo", 2000) },
+			OnSave:   func(done func(err error)) { m.p.Notify(Msg.Success, "Guardado", 2000); done(nil) },
+			OnDelete: func(id string, done func(err error)) { m.p.Notify(Msg.Error, "Eliminado "+id, 2000); done(nil) },
+			OnCancel: func() { m.p.Notify(Msg.Info, "Cancelado", 2000) },
 		}
 	}
 
@@ -54,24 +59,28 @@ func (m mod) View() Component {
 
 type mockCaller struct{}
 
-func (c *mockCaller) Call(op string, args model.Encodable) ([]byte, error) {
-	return nil, nil
+func (c *mockCaller) Call(op string, args model.Encodable, callback func(result []byte, err error)) {
+	callback(nil, nil)
 }
+
+func (c *mockCaller) Dispatch(op string, args model.Encodable) {}
 
 func main() {
 	p := &platformd.Platform{
 		AppName:   "Demo Platform",
 		DefaultID: "crud",
-		Modules: []platformd.UIModule{
-			mod{"crud", "icon-products"},
-			mod{"mod1", "icon-home"},
-			mod{"mod2", "icon-info"},
-			mod{"hidden", "icon-info"},
-		},
 		CanView: func(id string) bool {
 			return id != "hidden"
 		},
 	}
+
+	p.Modules = []platformd.UIModule{
+		mod{"crud", "icon-products", p},
+		mod{"mod1", "icon-home", p},
+		mod{"mod2", "icon-info", p},
+		mod{"hidden", "icon-info", p},
+	}
+
 	Append("body", p)
 
 	p.Notify(Msg.Success, "Plataforma cargada", 3000)
