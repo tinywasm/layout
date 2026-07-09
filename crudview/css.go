@@ -4,7 +4,6 @@ package crudview
 
 import (
 	. "github.com/tinywasm/css"
-	"github.com/tinywasm/svg"
 )
 
 func GenerateCSS() *Stylesheet {
@@ -57,7 +56,7 @@ func GenerateCSS() *Stylesheet {
 		),
 
 		Rule(clsBoxContent,
-			Decl{Prop: "flex-grow", Val: "1"}, // TODO(tinywasm/css): swap for FlexGrow(...) once css/docs/PLAN.md ships
+			FlexGrow(Str("1")),
 			Display(Flex_),
 			MinHeight(Str("0")),
 			Background(Str("var(--color-surface-variant)")),
@@ -67,7 +66,7 @@ func GenerateCSS() *Stylesheet {
 
 		Rule(clsControls,
 			GridArea(Str("controls")),
-			Decl{Prop: "margin-bottom", Val: "var(--cv-mag-pri, .5rem)"}, // TODO(tinywasm/css): swap for MarginBottom(...) once css/docs/PLAN.md ships
+			MarginBottom(Str("var(--cv-mag-pri, .5rem)")),
 		),
 
 		Rule(clsContebuton,
@@ -102,12 +101,12 @@ func GenerateCSS() *Stylesheet {
 
 		Rule(clsAsideList,
 			GridArea(Str("aside-list")),
-			Decl{Prop: "margin-top", Val: "var(--cv-mag-pri, .5rem)"}, // TODO(tinywasm/css): swap for MarginTop(...) once css/docs/PLAN.md ships
+			MarginTop(Str("var(--cv-mag-pri, .5rem)")),
 			Background(Str("var(--color-surface)")),
 			BorderRadius(Str(".4em .4em 0 0")),
 			Display(Flex_),
 			FlexDirection(Column),
-			Decl{Prop: "padding-top", Val: "var(--cv-mag-sec, .2rem)"}, // TODO(tinywasm/css): swap for PaddingTop(...) once css/docs/PLAN.md ships
+			PaddingTop(Str("var(--cv-mag-sec, .2rem)")),
 		),
 
 		Rule(clsListaBox,
@@ -121,7 +120,7 @@ func GenerateCSS() *Stylesheet {
 		),
 
 		Rule(clsLista,
-			Decl{Prop: "flex-grow", Val: "1"}, // TODO(tinywasm/css): swap for FlexGrow(...) once css/docs/PLAN.md ships
+			FlexGrow(Str("1")),
 			Overflow(Auto),
 			MinHeight(Str("0")),
 			Padding(Str(".2em")),
@@ -129,14 +128,14 @@ func GenerateCSS() *Stylesheet {
 		),
 
 		Rule(clsTargetLi,
-			Decl{Prop: "position", Val: "relative"}, // TODO(tinywasm/css): swap for Position(Relative) once css/docs/PLAN.md ships
+			Position(Relative),
 			Display(Flex_),
 			AlignItems(Center),
 			MinHeight(Str("60px")),
 			MaxHeight(Str("60px")),
 			Width(Str("100%")),
 			Padding(Str(".3em")),
-			Decl{Prop: "margin-bottom", Val: "1.2em"}, // TODO(tinywasm/css): swap for MarginBottom(...) once css/docs/PLAN.md ships
+			MarginBottom(Str("1.2em")),
 			Cursor(Pointer),
 			Border(Str("2px solid var(--color-outline-variant)")),
 			BorderRadius(Str(".3em")),
@@ -150,7 +149,7 @@ func GenerateCSS() *Stylesheet {
 		),
 
 		Rule(clsDescriptionTarget,
-			Decl{Prop: "position", Val: "absolute"}, // TODO(tinywasm/css): swap for Position(Absolute) once css/docs/PLAN.md ships
+			Position(Absolute),
 			Right(Px(5)),
 			Bottom(Px(-10)),
 			Background(Str("var(--color-secondary-container)")),
@@ -166,7 +165,7 @@ func GenerateCSS() *Stylesheet {
 			Background(Str("var(--color-surface)")),
 			Padding(Str(".1em")),
 			BorderRadius(Str("0 0 .4em .4em")),
-			Decl{Prop: "margin-bottom", Val: "var(--cv-mag-pri, .5rem)"}, // TODO(tinywasm/css): swap for MarginBottom(...) once css/docs/PLAN.md ships
+			MarginBottom(Str("var(--cv-mag-pri, .5rem)")),
 			AlignItems(Center),
 		),
 
@@ -179,22 +178,18 @@ func GenerateCSS() *Stylesheet {
 		),
 
 		Rule("."+string(clsAsideSearch)+" input",
-			Decl{Prop: "flex-grow", Val: "1"}, // TODO(tinywasm/css): swap for FlexGrow(...) once css/docs/PLAN.md ships
+			FlexGrow(Str("1")),
 			Border(Str("1px solid var(--color-outline-variant)")),
 			Padding(Str(".3em")),
 			BorderRadius(Str("0 .3em .3em 0")),
 		),
+
+		Rule(clsIcon16,
+			Width(Px(16)),
+			Height(Px(16)),
+			Decl{Prop: "fill", Val: "currentColor"},
+		),
 	)
 
 	return s
-}
-
-func IconSvg() *svg.Sprite {
-	return svg.NewSprite(
-		svg.Define("icon-crud-new", "0 0 16 16", svg.Path("M8 1v14M1 8h14")),
-		svg.Define("icon-crud-del", "0 0 16 16", svg.Path("M1 8h14")),
-		svg.Define("icon-crud-cancel", "0 0 16 16", svg.Path("M4 4h-4v-4M0 4c2-4 8-4 10-2s4 8 2 10-8 4-10 2")),
-		svg.Define("icon-crud-save", "0 0 16 16", svg.Path("M2 1h10l3 3v11h-13zM10 1v4h-7v-4M4 15v-5h8v5")),
-		svg.Define("icon-crud-search", "0 0 16 16", svg.Path("M11 11l4 4M1 7a6 6 0 1 0 12 0a6 6 0 1 0-12 0")),
-	)
 }

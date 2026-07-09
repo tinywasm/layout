@@ -4,15 +4,15 @@ package crudview
 
 import (
 	"testing"
-	"github.com/tinywasm/model"
+	"github.com/tinywasm/router/mock"
 )
 
 func TestCrudView_Wasm_Flow(t *testing.T) {
-	mock := &mockCaller{}
+	m := &mock.Caller{}
 	v := &CrudView{
 		Title: "Wasm Test",
 		Source: Source{
-			Caller: mock,
+			Caller: m,
 			ListOp: "list",
 			Decode: func(raw []byte) ([]Item, error) {
 				return []Item{
@@ -48,15 +48,6 @@ func TestCrudView_Wasm_Flow(t *testing.T) {
 	if v.canDelete.Get() {
 		t.Error("expected canDelete to be false")
 	}
-}
-
-type mockCaller struct {
-	calls int
-}
-
-func (c *mockCaller) Call(op string, args model.Encodable) ([]byte, error) {
-	c.calls++
-	return nil, nil
 }
 
 type mockCtxWasm struct{}

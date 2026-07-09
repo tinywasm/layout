@@ -6,6 +6,29 @@ import (
 	. "github.com/tinywasm/html"
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/model"
+	"github.com/tinywasm/router"
+	. "github.com/tinywasm/css"
+)
+
+var (
+	clsModuleContent          Class = "cv-module-content"
+	clsArticleContend         Class = "cv-article-contend"
+	clsArticleContendFullPage Class = "cv-article-contend-full-page"
+	clsAsideContend           Class = "cv-aside-contend"
+	clsTitleContainer         Class = "cv-title-container"
+	clsTitle                  Class = "cv-title"
+	clsBoxContent             Class = "cv-box-content"
+	clsControls               Class = "cv-controls"
+	clsContebuton             Class = "cv-contebuton"
+	clsBtnCrud                Class = "cv-btn-crud"
+	clsAsideList              Class = "cv-aside-list"
+	clsListaBox               Class = "cv-lista-box"
+	clsLista                  Class = "cv-lista"
+	clsTargetLi               Class = "cv-target-li"
+	clsTargetLiOn             Class = "cv-target-li-on"
+	clsDescriptionTarget      Class = "cv-description-target"
+	clsAsideSearch            Class = "cv-aside-search"
+	clsIcon16                 Class = "cv-icon-16"
 )
 
 // Item is one record in the right-hand list.
@@ -15,14 +38,9 @@ type Item struct {
 	Description string // small chip at the card's bottom-right (e.g. an IP)
 }
 
-// Caller is a placeholder for tinywasm/router.Caller
-type Caller interface {
-	Call(op string, args model.Encodable) ([]byte, error)
-}
-
 // Source is the data seam: a fake in tests, a router.Caller adapter in prod.
 type Source struct {
-	Caller Caller
+	Caller router.Caller
 	ListOp string                 // logical operation, e.g. "list_devices"
 	Args   func() model.Encodable // list request args (nil → no args)
 	Decode func(raw []byte) ([]Item, error)
@@ -76,24 +94,25 @@ func (v *CrudView) Reload() {
 		args = v.Source.Args()
 	}
 
-	raw, err := v.Source.Caller.Call(v.Source.ListOp, args)
-	if err != nil {
-		v.handleError(err)
-		return
-	}
+	v.Source.Caller.Call(v.Source.ListOp, args, func(raw []byte, err error) {
+		if err != nil {
+			v.handleError(err)
+			return
+		}
 
-	if v.Source.Decode == nil {
-		return
-	}
+		if v.Source.Decode == nil {
+			return
+		}
 
-	items, err := v.Source.Decode(raw)
-	if err != nil {
-		v.handleError(err)
-		return
-	}
+		items, err := v.Source.Decode(raw)
+		if err != nil {
+			v.handleError(err)
+			return
+		}
 
-	v.allItems = items
-	v.filter()
+		v.allItems = items
+		v.filter()
+	})
 }
 
 func (v *CrudView) filter() {
@@ -104,7 +123,7 @@ func (v *CrudView) filter() {
 		if term != "" {
 			label := Convert(it.Label).ToLower().String()
 			desc := Convert(it.Description).ToLower().String()
-			if !contains(label, term) && !contains(desc, term) {
+			if !Contains(label, term) && !Contains(desc, term) {
 				continue
 			}
 		}
@@ -255,7 +274,7 @@ func (v *CrudView) Render() *Element {
 		asideSearch := Div().Set(clsAsideSearch.AsAttr())
 		asideSearch.Child(Label().Child(renderIcon("icon-crud-search")))
 
-		input := Input("search")
+		input := Input("search").Attr("placeholder", "Buscar...")
 		input.On("input", func(e Event) {
 			v.search.Set(e.TargetValue())
 			v.filter()
@@ -270,19 +289,10 @@ func (v *CrudView) Render() *Element {
 	return root
 }
 
-func contains(s, substr string) bool {
-	if len(substr) == 0 { return true }
-	if len(s) < len(substr) { return false }
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr { return true }
-	}
-	return false
-}
-
 func renderIcon(id string) *Element {
 	return svg.Svg().
 		Attr("aria-hidden", "true").
 		Attr("focusable", "false").
-		Class("icon-16").
+		Set(clsIcon16.AsAttr()).
 		Child(svg.Use().Attr("href", "#"+id))
 }

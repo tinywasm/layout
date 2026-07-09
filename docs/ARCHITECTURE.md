@@ -17,6 +17,7 @@
     tinywasm/layout → tinywasm/svg  (Icon helper, *Sprite)
     tinywasm/layout → tinywasm/dom  (Component, Event, lifecycle)
     tinywasm/layout → tinywasm/css  (Stylesheet, Token)
+	tinywasm/layout → tinywasm/router (Caller interface)
 
 ---
 
@@ -48,9 +49,10 @@ G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel classes]
 
 `Activate(moduleID)` is the single write point for routing:
 1. Early-return if `active == moduleID && !menuOpen` (no-op).
-2. `p.active.Set(moduleID)` — signals patch nav/panel classes reactively.
-3. `p.menuOpen.Set(false)` — closes the mobile overlay.
-4. `SetHash("#" + moduleID)` — keeps the URL in sync.
+2. Check `p.CanView(moduleID)` if provided; fallback to default if denied.
+3. `p.active.Set(moduleID)` — signals patch nav/panel classes reactively.
+4. `p.menuOpen.Set(false)` — closes the mobile overlay.
+5. `SetHash("#" + moduleID)` — keeps the URL in sync.
 
 ### Notification flow (`Notify` / `dismiss`)
 
@@ -59,3 +61,40 @@ G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel classes]
 - `p.mu` protects `rawNotifications` (concurrent goroutines from `time.AfterFunc`).
 
 No `Update()` is called anywhere — all UI changes go through signal `Set`.
+
+---
+
+## CRUD Layout (`crudview`)
+
+Standard two-column layout: Form (left, 66vw) and List (right, 29vw).
+
+### Structure
+
+```flowchart TD
+    CV[CrudView] --> L[Left Column: 66vw]
+    CV --> R[Right Column: 29vw]
+    L --> T[Title: h1]
+    L --> F[Form: dom.Component]
+    L --> B[CRUD Bar: Buttons]
+    R --> LIST[List: SignalNodes]
+    R --> S[Search: local filter]
+```
+
+### Data Flow (Async Source)
+
+The `Source` seam uses `router.Caller` to fetch data asynchronously.
+
+1. `Init` or `Reload` calls `Caller.Call(op, args, callback)`.
+2. Callback receives `[]byte`, decodes it via `Source.Decode`.
+3. `allItems` is updated, `filter()` is called.
+4. `items` (SignalNodes) is updated, triggering a DOM patch.
+
+### Signal Fields
+
+| Field | Type | Role |
+|---|---|---|
+| `items` | `*SignalNodes` | Holds the rendered card elements for the list. |
+| `selected` | `*SignalString` | Holds the ID of the currently selected item. |
+| `search` | `*SignalString` | Holds the current search term; triggers `filter()`. |
+| `canSave` | `*SignalBool` | Controls the enabled state of the Save button. |
+| `canDelete` | `*SignalBool` | Controls the enabled state of the Delete button. |
