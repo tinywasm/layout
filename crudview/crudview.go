@@ -31,6 +31,14 @@ var (
 	clsIcon16                 Class = "cv-icon-16"
 )
 
+const (
+	iconCrudNew    = svg.Icon("icon-crud-new")
+	iconCrudDel    = svg.Icon("icon-crud-del")
+	iconCrudCancel = svg.Icon("icon-crud-cancel")
+	iconCrudSave   = svg.Icon("icon-crud-save")
+	iconCrudSearch = svg.Icon("icon-crud-search")
+)
+
 // Item is one record in the right-hand list.
 type Item struct {
 	ID          string // selection key
@@ -196,7 +204,7 @@ func (v *CrudView) Render() *Element {
 			btn := Button().Set(clsBtnCrud.AsAttr()).
 				Attr("name", "btn_cruddel").
 				BindAttrBool("disabled", DeriveBool(func() bool { return !v.canDelete.Get() })).
-				Child(renderIcon("icon-crud-del"))
+				Child(renderIcon(iconCrudDel))
 			btn.On("click", func(Event) {
 				id := v.selected.Get()
 				if id != "" {
@@ -217,7 +225,7 @@ func (v *CrudView) Render() *Element {
 		if v.OnCancel != nil {
 			btn := Button().Set(clsBtnCrud.AsAttr()).
 				Attr("name", "btn_crudcancel").
-				Child(renderIcon("icon-crud-cancel"))
+				Child(renderIcon(iconCrudCancel))
 			btn.On("click", func(Event) {
 				v.OnCancel()
 			})
@@ -228,7 +236,7 @@ func (v *CrudView) Render() *Element {
 		if v.OnNew != nil {
 			btn := Button().Set(clsBtnCrud.AsAttr()).
 				Attr("name", "btn_crudnew").
-				Child(renderIcon("icon-crud-new"))
+				Child(renderIcon(iconCrudNew))
 			btn.On("click", func(Event) {
 				v.Select("")
 				v.OnNew()
@@ -241,7 +249,7 @@ func (v *CrudView) Render() *Element {
 			btn := Button().Set(clsBtnCrud.AsAttr()).
 				Attr("name", "btn_crudsave").
 				BindAttrBool("disabled", DeriveBool(func() bool { return !v.canSave.Get() })).
-				Child(renderIcon("icon-crud-save"))
+				Child(renderIcon(iconCrudSave))
 			btn.On("click", func(Event) {
 				v.OnSave(func(err error) {
 					if err == nil {
@@ -272,7 +280,7 @@ func (v *CrudView) Render() *Element {
 
 		// Search
 		asideSearch := Div().Set(clsAsideSearch.AsAttr())
-		asideSearch.Child(Label().Child(renderIcon("icon-crud-search")))
+		asideSearch.Child(Label().Child(renderIcon(iconCrudSearch)))
 
 		input := Input("search").Attr("placeholder", "Buscar...")
 		input.On("input", func(e Event) {
@@ -289,10 +297,6 @@ func (v *CrudView) Render() *Element {
 	return root
 }
 
-func renderIcon(id string) *Element {
-	return svg.Svg().
-		Attr("aria-hidden", "true").
-		Attr("focusable", "false").
-		Set(clsIcon16.AsAttr()).
-		Child(svg.Use().Attr("href", "#"+id))
+func renderIcon(icon svg.Icon) *Element {
+	return icon.Render(string(clsIcon16))
 }

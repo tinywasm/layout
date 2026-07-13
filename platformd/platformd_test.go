@@ -9,18 +9,19 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
+	"github.com/tinywasm/svg"
 )
 
 type mockModule struct {
-	id     string
-	label  string
-	iconID string
-	view   Component
+	id    string
+	label string
+	icon  svg.Icon
+	view  Component
 }
 
 func (m *mockModule) ModelName() string { return m.id }
 func (m *mockModule) Label() string     { return m.label }
-func (m *mockModule) IconID() string    { return m.iconID }
+func (m *mockModule) Icon() svg.Icon    { return m.icon }
 func (m *mockModule) View() Component   { return m.view }
 
 func TestPlatform_Render(t *testing.T) {
@@ -96,15 +97,15 @@ func TestPlatform_Activate(t *testing.T) {
 }
 
 func TestPlatform_NewUIModule(t *testing.T) {
-	m := NewUIModule("test", "Label", "icon", Div())
+	m := NewUIModule("test", "Label", svg.Icon("icon"), Div())
 	if m.ModelName() != "test" {
 		t.Errorf("expected test, got %s", m.ModelName())
 	}
 	if m.Label() != "Label" {
 		t.Errorf("expected Label, got %s", m.Label())
 	}
-	if m.IconID() != "icon" {
-		t.Errorf("expected icon, got %s", m.IconID())
+	if m.Icon() != svg.Icon("icon") {
+		t.Errorf("expected icon, got %s", m.Icon())
 	}
 	if m.View() == nil {
 		t.Error("expected view to be non-nil")

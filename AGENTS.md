@@ -87,6 +87,35 @@ gotest
 
 The `UIModule` interface is the ONLY way to provide a view to the platform chassis.
 
+---
+
+## Build tags belong to the consumer
+
+The isomorphic Go ecosystem means files compile to both backend and browser. We use build tags to control what goes into the WASM binary.
+
+| File tag | Target | Purpose |
+|---|---|---|
+| (untagged) | Both | Shared logic, constants, `svg.Icon` references. Ships to WASM. |
+| `//go:build wasm` | Browser | Browser-only logic, `syscall/js` interactions (rare, via `dom`). |
+| `//go:build !wasm` | Backend/SSR | SSR asset collection, `sprite.Define`. NEVER ships to WASM. |
+
+> [!IMPORTANT]
+> `tinywasm/svg` is split by PACKAGE, not by build tag inside the library.
+> - `github.com/tinywasm/svg`: Shared reference (safe for untagged code).
+> - `github.com/tinywasm/svg/sprite`: Backend-only definition.
+>
+> `svg/sprite` compiles for WASM too. You MUST use the `!wasm` tag on your `svg.go` file to keep it out of the browser bundle. Stage 5 leak-check is mandatory.
+
+## SVG icons — name is shared, drawing is backend-only
+
+1. **Declare** the reference in an **untagged** file using `svg.Icon("name")`.
+2. **Define** the drawing in a `//go:build !wasm` file (typically `svg.go`) using `sprite.Define(iconConst, "viewBox", sprite.Path("d..."))`.
+3. **Render** using `icon.Render("class")`. This is the ONLY supported render path.
+
+Do NOT hand-build `<svg><use href="#id"/></svg>` blocks using `svg.Svg()` or `svg.Use()`.
+
+---
+
 ## Documentation First
 
 Update docs **before** code and before `gopush`: `docs/ARCHITECTURE.md` (platform lifecycle:

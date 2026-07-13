@@ -9,6 +9,8 @@ require (
 	github.com/tinywasm/html v0.0.5
 	github.com/tinywasm/model v0.0.8
 	github.com/tinywasm/router v0.1.7
-	github.com/tinywasm/svg v0.1.0
+	github.com/tinywasm/svg v0.1.3
 	github.com/tinywasm/time v0.5.0
 )
+
+require github.com/tinywasm/json v0.5.11 // indirect
