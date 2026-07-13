@@ -6,11 +6,11 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
-	"github.com/tinywasm/svg"
 	"github.com/tinywasm/layout/crudview"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
 	"github.com/tinywasm/model"
+	"github.com/tinywasm/svg"
 )
 
 // Tiny model stub so layouts have an ID source.

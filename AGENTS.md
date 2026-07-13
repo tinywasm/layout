@@ -104,7 +104,14 @@ The isomorphic Go ecosystem means files compile to both backend and browser. We 
 > - `github.com/tinywasm/svg`: Shared reference (safe for untagged code).
 > - `github.com/tinywasm/svg/sprite`: Backend-only definition.
 >
-> `svg/sprite` compiles for WASM too. You MUST use the `!wasm` tag on your `svg.go` file to keep it out of the browser bundle. Stage 5 leak-check is mandatory.
+> `svg/sprite` compiles for WASM too, so forgetting the `!wasm` tag on your
+> `svg.go` does NOT fail the build — it silently ships every path `d` string
+> into the browser bundle. Only the dependency-graph check catches it:
+>
+> ```bash
+> GOOS=js GOARCH=wasm go list -deps ./platformd | grep tinywasm/svg/sprite  # MUST be empty
+> GOOS=js GOARCH=wasm go list -deps ./crudview | grep tinywasm/svg/sprite   # MUST be empty
+> ```
 
 ## SVG icons — name is shared, drawing is backend-only
 
