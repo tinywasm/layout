@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/tinywasm/layout"
+	"github.com/tinywasm/svg"
 
 	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
@@ -36,13 +37,19 @@ var (
 	clsMenuOpen        Class = "pd-menu-open"
 )
 
+const (
+	IconHome     = svg.Icon("home")
+	IconProducts = svg.Icon("products")
+	IconInfo     = svg.Icon("info")
+)
+
 // UIModule is a module that provides its UI to the platform chassis.
 // The chassis takes id/hash/route from ModelName() and the rest of the
 // presentation from these methods.
 type UIModule interface {
 	layout.Module    // identity: ModelName() → used as ID
 	Label() string   // text in the nav rail
-	IconID() string  // icon ID; chassis uses IconSvg() to render
+	Icon() svg.Icon  // chassis renders via the sprite
 	View() Component // module content (often a *rightpanel.RightPanel)
 }
 
@@ -201,13 +208,8 @@ func (p *Platform) Render() *Element {
 				return p.active.Get() == id
 			}))
 
-		iconID := m.IconID()
-		if iconID != "" {
-			link.Child(Svg().
-				Attr("aria-hidden", "true").
-				Attr("focusable", "false").
-				Set(ClsNavIcon.AsAttr()).
-				Child(Use().Attr("href", "#"+iconID)))
+		if icon := m.Icon(); icon != "" {
+			link.Child(icon.Render(string(ClsNavIcon)))
 		}
 		link.Child(Span().Set(clsLinkText.AsAttr()).Text(m.Label()))
 

@@ -10,18 +10,19 @@ import (
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
 	"github.com/tinywasm/model"
+	"github.com/tinywasm/svg"
 )
 
 // Tiny model stub so layouts have an ID source.
 type mod struct {
 	name string
-	icon string
+	icon svg.Icon
 	p    *platformd.Platform
 }
 
 func (m mod) ModelName() string { return m.name }
 func (m mod) Label() string     { return m.name }
-func (m mod) IconID() string    { return m.icon }
+func (m mod) Icon() svg.Icon    { return m.icon }
 func (m mod) View() Component {
 	if m.name == "crud" {
 		return &crudview.CrudView{
@@ -75,10 +76,10 @@ func main() {
 	}
 
 	p.Modules = []platformd.UIModule{
-		mod{"crud", "icon-products", p},
-		mod{"mod1", "icon-home", p},
-		mod{"mod2", "icon-info", p},
-		mod{"hidden", "icon-info", p},
+		mod{"crud", platformd.IconProducts, p},
+		mod{"mod1", platformd.IconHome, p},
+		mod{"mod2", platformd.IconInfo, p},
+		mod{"hidden", platformd.IconInfo, p},
 	}
 
 	Append("body", p)
