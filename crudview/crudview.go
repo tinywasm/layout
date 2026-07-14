@@ -32,11 +32,12 @@ var (
 )
 
 const (
-	iconCrudNew    = svg.Icon("icon-crud-new")
-	iconCrudDel    = svg.Icon("icon-crud-del")
-	iconCrudCancel = svg.Icon("icon-crud-cancel")
-	iconCrudSave   = svg.Icon("icon-crud-save")
-	iconCrudSearch = svg.Icon("icon-crud-search")
+	iconCrudNew              = svg.Icon("icon-crud-new")
+	iconCrudDel              = svg.Icon("icon-crud-del")
+	iconCrudCancel           = svg.Icon("icon-crud-cancel")
+	iconCrudSave             = svg.Icon("icon-crud-save")
+	iconCrudSearch           = svg.Icon("icon-crud-search")
+	defaultSearchPlaceholder = "Search…"
 )
 
 // Item is one record in the right-hand list.
@@ -70,6 +71,8 @@ type CrudView struct {
 	OnDelete func(id string, done func(err error)) // (−) pressed on selection
 	OnCancel func()                              // (↺) pressed → undo current edit
 	OnError  func(err error)                     // list load/decode failures; nil = drop
+
+	SearchPlaceholder string
 
 	// internal state
 	items     *SignalNodes
@@ -282,7 +285,11 @@ func (v *CrudView) Render() *Element {
 		asideSearch := Div().Set(clsAsideSearch.AsAttr())
 		asideSearch.Child(Label().Child(renderIcon(iconCrudSearch)))
 
-		input := Input("search").Attr("placeholder", "Buscar...")
+		placeholder := v.SearchPlaceholder
+		if placeholder == "" {
+			placeholder = defaultSearchPlaceholder
+		}
+		input := Input("search").Attr("placeholder", placeholder)
 		input.On("input", func(e Event) {
 			v.search.Set(e.TargetValue())
 			v.filter()

@@ -13,4 +13,7 @@ require (
 	github.com/tinywasm/time v0.5.0
 )
 
-require github.com/tinywasm/json v0.5.11 // indirect
+require (
+	github.com/tinywasm/form v0.2.14 // indirect
+	github.com/tinywasm/json v0.5.11 // indirect
+)
