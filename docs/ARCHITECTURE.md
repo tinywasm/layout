@@ -98,3 +98,17 @@ The `Source` seam uses `router.Caller` to fetch data asynchronously.
 | `search` | `*SignalString` | Holds the current search term; triggers `filter()`. |
 | `canSave` | `*SignalBool` | Controls the enabled state of the Save button. |
 | `canDelete` | `*SignalBool` | Controls the enabled state of the Delete button. |
+
+### El pegamento vive aquí
+
+The high-level pattern for constructing a CRUD view is `crudview.New(Config)`. This constructor is the single place where the standard CRUD view and form↔list↔transport loop is wired:
+
+- A module configures `crudview.Config` once.
+- All callbacks (`OnSelect`, `OnNew`, `OnSave`, `OnDelete`, `OnCancel`) are automatically wired.
+- Form inputs are automatically populated on selection using `form.LoadValues` with records returned by `Fill`.
+- Saves are validated and synced via `form.SyncValues` before shipping to `Caller`.
+- Empty search string placeholders default to `"Search…"`, but can be customized with `SearchPlaceholder`.
+
+#### Principle: Standard-shaped tests
+
+As a policy established in this layer (C4), no public high-level API should be published without a consumer-shaped test (like `crudview/consumer_test.go`) validating the entire integration of forms, models, and transport logic within this library.
