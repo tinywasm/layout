@@ -9,7 +9,7 @@ require (
 	github.com/tinywasm/form v0.2.14
 	github.com/tinywasm/html v0.0.6
 	github.com/tinywasm/model v0.0.15
-	github.com/tinywasm/router v0.1.11
+	github.com/tinywasm/router v0.1.12
 	github.com/tinywasm/svg v0.1.3
 	github.com/tinywasm/time v0.5.0
 )
