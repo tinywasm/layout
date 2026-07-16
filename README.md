@@ -8,7 +8,6 @@ Predefined UI layouts for tinywasm modules
 - [Architecture](docs/ARCHITECTURE.md) — package layout, platform lifecycle, signal fields, activation and notification flows
 - [Reverse Engineering](docs/IE_LAYOUT.md) — Reference from pa100t shell
 - [Reverse Engineering Module](docs/IE_MODULE_CONTENT.md) — Reference from pa100t crud module
-- [Implementation Plan](docs/PLAN.md) — Strategy for UIModule and theme parity
 
 ## Packages
 
