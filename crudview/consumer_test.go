@@ -7,6 +7,7 @@ import (
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/form/input"
 	"github.com/tinywasm/model"
+	"github.com/tinywasm/view"
 )
 
 // fakeCtx is a simple implementation of Ctx for testing
@@ -77,32 +78,63 @@ func (d *DeviceNoWidgets) DecodeFields(r model.FieldReader) {
 
 var _ model.Model = (*DeviceNoWidgets)(nil) // Verify compile-time implementation
 
-// fakeCaller registers called operations, arguments and returns stubbed values.
-type fakeCaller struct {
-	ops  []string
-	args []model.Encodable
-	resp []byte
-	err  error
+type fakePresenter struct {
+	title             string
+	searchPlaceholder string
+	record            model.Model
+	items             []view.Item
+	selected          string
+	canSave           bool
+	canDelete         bool
+
+	onReload func() error
+	onSelect func(id string) model.Model
+	onSave   func(m model.Model) error
+	onDelete func(id string) error
+
+	reloaded bool
 }
 
-func (c *fakeCaller) Call(op string, args model.Encodable, cb func([]byte, error)) {
-	c.ops = append(c.ops, op)
-	c.args = append(c.args, args)
-	cb(c.resp, c.err)
+func (f *fakePresenter) Title() string             { return f.title }
+func (f *fakePresenter) SearchPlaceholder() string { return f.searchPlaceholder }
+func (f *fakePresenter) Record() model.Model       { return f.record }
+func (f *fakePresenter) Items() []view.Item        { return f.items }
+func (f *fakePresenter) Reload() error {
+	f.reloaded = true
+	if f.onReload != nil {
+		return f.onReload()
+	}
+	return nil
 }
-
-func (c *fakeCaller) Dispatch(op string, args model.Encodable) {
-	c.Call(op, args, func([]byte, error) {})
+func (f *fakePresenter) Selected() string { return f.selected }
+func (f *fakePresenter) Select(id string) model.Model {
+	f.selected = id
+	if f.onSelect != nil {
+		return f.onSelect(id)
+	}
+	return nil
+}
+func (f *fakePresenter) CanSave() bool { return f.canSave }
+func (f *fakePresenter) Save(payload model.Model) error {
+	if f.onSave != nil {
+		return f.onSave(payload)
+	}
+	return nil
+}
+func (f *fakePresenter) CanDelete() bool { return f.canDelete }
+func (f *fakePresenter) Delete(id string) error {
+	if f.onDelete != nil {
+		return f.onDelete(id)
+	}
+	return nil
 }
 
 // Case 1: New with a model without widgets fails
 func TestConsumer_NewNoWidgets(t *testing.T) {
-	caller := &fakeCaller{}
+	p := &fakePresenter{record: &DeviceNoWidgets{}}
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &DeviceNoWidgets{},
-		ListOp:   "list_devices",
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err == nil {
@@ -113,14 +145,12 @@ func TestConsumer_NewNoWidgets(t *testing.T) {
 	}
 }
 
-// Case 2: The list operation on wiring is ListOp
+// Case 2: The list operation on wiring is ListOp (reloaded on Init)
 func TestConsumer_ListOp(t *testing.T) {
-	caller := &fakeCaller{}
+	p := &fakePresenter{record: &Device{}}
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -128,29 +158,22 @@ func TestConsumer_ListOp(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	if len(caller.ops) != 1 || caller.ops[0] != "list_devices" {
-		t.Errorf("expected ListOp 'list_devices' to be called on Init, got %v", caller.ops)
+	if !p.reloaded {
+		t.Errorf("expected Presenter to be reloaded on Init")
 	}
 }
 
-// Case 3: The list renders cards returned by Decode
+// Case 3: The list renders cards returned by Items
 func TestConsumer_ListRendersCards(t *testing.T) {
-	caller := &fakeCaller{resp: []byte("some-raw-data")}
-	decoded := []Item{
+	decoded := []view.Item{
 		{ID: "12", Label: "Device One", Description: "192.168.1.1"},
 		{ID: "23", Label: "Device Two", Description: "192.168.1.2"},
 	}
+	p := &fakePresenter{record: &Device{}, items: decoded}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
-		Decode: func(raw []byte) ([]Item, error) {
-			if string(raw) != "some-raw-data" {
-				t.Errorf("unexpected raw data to decode: %s", string(raw))
-			}
-			return decoded, nil
-		},
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -158,8 +181,8 @@ func TestConsumer_ListRendersCards(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	if len(v.allItems) != 2 {
-		t.Errorf("expected 2 items, got %d", len(v.allItems))
+	if len(v.Presenter.Items()) != 2 {
+		t.Errorf("expected 2 items, got %d", len(v.Presenter.Items()))
 	}
 	if len(v.items.Get()) != 2 {
 		t.Errorf("expected 2 rendered cards, got %d", len(v.items.Get()))
@@ -168,19 +191,22 @@ func TestConsumer_ListRendersCards(t *testing.T) {
 
 // Case 4: Selecting a card populates the form using form.LoadValues
 func TestConsumer_SelectPopulatesForm(t *testing.T) {
-	caller := &fakeCaller{}
 	devices := map[string]*Device{
 		"12": {Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		"23": {Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
 	}
+	p := &fakePresenter{record: &Device{}}
+	p.onSelect = func(id string) model.Model {
+		dev := devices[id]
+		if dev == nil {
+			return nil
+		}
+		return dev
+	}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
-		Fill: func(id string) model.Model {
-			return devices[id]
-		},
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -188,7 +214,7 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	v.OnSelect(Item{ID: "12"})
+	v.OnSelect(view.Item{ID: "12"})
 
 	// Check form values
 	f := v.Form.(*form.Form)
@@ -207,32 +233,31 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 	}
 
 	// Nil record on Fill should reset the form
-	v.OnSelect(Item{ID: "unknown"})
+	v.OnSelect(view.Item{ID: "unknown"})
 	if len(idInput.GetValues()) != 0 && idInput.GetValues()[0] != "" {
 		t.Errorf("expected id input to be reset/empty, got %v", idInput.GetValues())
 	}
 }
 
-// Case 5: Save calls SaveOp with form data, not original Record
+// Case 5: Save calls Save with form data, not original Record
 func TestConsumer_SaveWithFormData(t *testing.T) {
-	caller := &fakeCaller{}
 	rec := &Device{Id: "12", Name: "Original Name", Ip: "192.168.1.1"}
+	p := &fakePresenter{record: rec, canSave: true}
+	var savedDevice *Device
+	p.onSave = func(m model.Model) error {
+		savedDevice = m.(*Device)
+		return nil
+	}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   rec,
-		ListOp:   "list_devices",
-		SaveOp:   "save_device",
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	v.Init(&fakeCtx{})
-
-	// Clear Init calls to focus on OnSave operations
-	caller.ops = nil
-	caller.args = nil
 
 	f := v.Form.(*form.Form)
 	f.SetValues("id", "12")
@@ -253,42 +278,36 @@ func TestConsumer_SaveWithFormData(t *testing.T) {
 		t.Fatalf("expected no save error, got: %v", saveErr)
 	}
 
-	if len(caller.ops) != 1 || caller.ops[0] != "save_device" {
-		t.Fatalf("expected SaveOp 'save_device' to be called, got %v", caller.ops)
+	if savedDevice == nil {
+		t.Fatal("expected save to be called on presenter")
 	}
-
-	sentDev, ok := caller.args[0].(*Device)
-	if !ok {
-		t.Fatalf("expected sent arg to be *Device, got %T", caller.args[0])
+	if savedDevice.Name != "New Name" {
+		t.Errorf("expected sent device name to be 'New Name', got '%s'", savedDevice.Name)
 	}
-	if sentDev.Name != "New Name" {
-		t.Errorf("expected sent device name to be 'New Name', got '%s'", sentDev.Name)
-	}
-	if sentDev.Ip != "10.0.0.1" {
-		t.Errorf("expected sent device ip to be '10.0.0.1', got '%s'", sentDev.Ip)
+	if savedDevice.Ip != "10.0.0.1" {
+		t.Errorf("expected sent device ip to be '10.0.0.1', got '%s'", savedDevice.Ip)
 	}
 }
 
-// Case 6: Save with invalid form doesn't call caller and returns error
+// Case 6: Save with invalid form doesn't call presenter and returns error
 func TestConsumer_SaveInvalidForm(t *testing.T) {
-	caller := &fakeCaller{}
 	rec := &Device{Id: "12", Name: "Original Name", Ip: "192.168.1.1"}
+	p := &fakePresenter{record: rec, canSave: true}
+	var saveCalled bool
+	p.onSave = func(m model.Model) error {
+		saveCalled = true
+		return nil
+	}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   rec,
-		ListOp:   "list_devices",
-		SaveOp:   "save_device",
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	v.Init(&fakeCtx{})
-
-	// Clear Init calls to focus on OnSave operations
-	caller.ops = nil
-	caller.args = nil
 
 	f := v.Form.(*form.Form)
 	f.SetValues("id", "12")
@@ -308,36 +327,29 @@ func TestConsumer_SaveInvalidForm(t *testing.T) {
 	if saveErr == nil {
 		t.Error("expected validation error, got nil")
 	}
-	if len(caller.ops) != 0 {
-		t.Errorf("expected no caller operations, but got %v", caller.ops)
+	if saveCalled {
+		t.Errorf("expected no save to be called on presenter because form was invalid")
 	}
 }
 
-// Case 7: Delete calls DeleteOp with selected record
+// Case 7: Delete calls Delete on presenter
 func TestConsumer_DeleteSelected(t *testing.T) {
-	caller := &fakeCaller{}
-	devices := map[string]*Device{
-		"123": {Id: "123", Name: "My Device", Ip: "10.10.10.10"},
+	p := &fakePresenter{record: &Device{}, canDelete: true}
+	var deletedID string
+	p.onDelete = func(id string) error {
+		deletedID = id
+		return nil
 	}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
-		DeleteOp: "delete_device",
-		Fill: func(id string) model.Model {
-			return devices[id]
-		},
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	v.Init(&fakeCtx{})
-
-	// Clear Init calls to focus on OnDelete operations
-	caller.ops = nil
-	caller.args = nil
 
 	var deleteDoneCalled bool
 	var deleteErr error
@@ -353,41 +365,27 @@ func TestConsumer_DeleteSelected(t *testing.T) {
 		t.Errorf("expected no delete error, got: %v", deleteErr)
 	}
 
-	if len(caller.ops) != 1 || caller.ops[0] != "delete_device" {
-		t.Fatalf("expected DeleteOp 'delete_device' to be called, got %v", caller.ops)
-	}
-
-	sentDev, ok := caller.args[0].(*Device)
-	if !ok {
-		t.Fatalf("expected sent arg to be *Device, got %T", caller.args[0])
-	}
-	if sentDev.Id != "123" || sentDev.Name != "My Device" {
-		t.Errorf("unexpected sent device fields: %+v", sentDev)
+	if deletedID != "123" {
+		t.Errorf("expected deleted id on presenter to be '123', got '%s'", deletedID)
 	}
 }
 
-// Case 8: Delete without selection returns error without calling caller
+// Case 8: Delete can return error from presenter
 func TestConsumer_DeleteNoSelection(t *testing.T) {
-	caller := &fakeCaller{}
+	p := &fakePresenter{record: &Device{}, canDelete: true}
+	p.onDelete = func(id string) error {
+		return fmt.Errf("no selection")
+	}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
-		DeleteOp: "delete_device",
-		Fill: func(id string) model.Model {
-			return nil
-		},
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	v.Init(&fakeCtx{})
-
-	// Clear Init calls to focus on OnDelete operations
-	caller.ops = nil
-	caller.args = nil
 
 	var deleteDoneCalled bool
 	var deleteErr error
@@ -400,26 +398,21 @@ func TestConsumer_DeleteNoSelection(t *testing.T) {
 		t.Error("expected delete callback to be called")
 	}
 	if deleteErr == nil {
-		t.Error("expected delete error because of no selection, got nil")
-	}
-	if len(caller.ops) != 0 {
-		t.Errorf("expected no caller operations, but got %v", caller.ops)
+		t.Error("expected delete error because presenter returned error, got nil")
 	}
 }
 
-// Case 9: Caller error on list is propagated to OnError
+// Case 9: Presenter error on list is propagated to Reload caller
 func TestConsumer_ListErrorPropagated(t *testing.T) {
 	expectedErr := fmt.Errf("network connection failed")
-	caller := &fakeCaller{err: expectedErr}
-	var receivedErr error
+	p := &fakePresenter{record: &Device{}}
+	p.onReload = func() error {
+		return expectedErr
+	}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
-		OnError: func(err error) {
-			receivedErr = err
-		},
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -427,8 +420,9 @@ func TestConsumer_ListErrorPropagated(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
+	receivedErr := v.Reload()
 	if receivedErr == nil {
-		t.Error("expected OnError to receive the caller error, but got nil")
+		t.Error("expected Reload to return the presenter error, but got nil")
 	} else if receivedErr.Error() != expectedErr.Error() {
 		t.Errorf("expected error '%s', got '%s'", expectedErr.Error(), receivedErr.Error())
 	}
@@ -436,27 +430,23 @@ func TestConsumer_ListErrorPropagated(t *testing.T) {
 
 // Case 10: Search filters cards by Label and Description (case-insensitive)
 func TestConsumer_SearchFiltering(t *testing.T) {
-	caller := &fakeCaller{}
-	decoded := []Item{
+	decoded := []view.Item{
 		{ID: "12", Label: "Frontend Device", Description: "192.168.1.10"},
 		{ID: "23", Label: "Backend Server", Description: "10.0.0.5"},
 		{ID: "34", Label: "Database Instance", Description: "mysql-production"},
 	}
+	p := &fakePresenter{record: &Device{}, items: decoded}
+
 	cfg := Config{
-		ParentID: "my-id",
-		Caller:   caller,
-		Record:   &Device{},
-		ListOp:   "list_devices",
-		Decode: func(raw []byte) ([]Item, error) {
-			return decoded, nil
-		},
+		ParentID:  "my-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	v.Init(&fakeCtx{})
-	v.Reload() // fetch and populate items
+	_ = v.Reload() // fetch and populate items
 
 	// 1. Initial state (no search term) - expect all 3 items
 	if len(v.items.Get()) != 3 {
