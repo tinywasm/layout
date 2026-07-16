@@ -4,28 +4,27 @@ package crudview
 
 import (
 	"testing"
-	"github.com/tinywasm/router/mock"
+	"github.com/tinywasm/view"
 )
 
 func TestCrudView_Wasm_Flow(t *testing.T) {
-	m := &mock.Caller{}
+	p := &fakePresenter{
+		title: "Wasm Test",
+		record: &Device{},
+		items: []view.Item{
+			{ID: "1", Label: "Item One", Description: "Desc One"},
+			{ID: "2", Label: "Item Two", Description: "Desc Two"},
+		},
+	}
+
 	v := &CrudView{
 		Title: "Wasm Test",
-		Source: Source{
-			Caller: m,
-			ListOp: "list",
-			Decode: func(raw []byte) ([]Item, error) {
-				return []Item{
-					{ID: "1", Label: "Item One", Description: "Desc One"},
-					{ID: "2", Label: "Item Two", Description: "Desc Two"},
-				}, nil
-			},
-		},
+		Presenter: p,
 	}
 	v.Init(&mockCtxWasm{})
 
-	if len(v.allItems) != 2 {
-		t.Errorf("expected 2 items, got %d", len(v.allItems))
+	if len(v.Presenter.Items()) != 2 {
+		t.Errorf("expected 2 items, got %d", len(v.Presenter.Items()))
 	}
 
 	// Test filtering

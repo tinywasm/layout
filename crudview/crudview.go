@@ -5,9 +5,8 @@ import (
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
 	"github.com/tinywasm/svg"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
 	. "github.com/tinywasm/css"
+	"github.com/tinywasm/view"
 )
 
 var (
@@ -40,46 +39,26 @@ const (
 	defaultSearchPlaceholder = "Search…"
 )
 
-// Item is one record in the right-hand list.
-type Item struct {
-	ID          string // selection key
-	Label       string // main text of the card
-	Description string // small chip at the card's bottom-right (e.g. an IP)
-}
-
-// Source is the data seam: a fake in tests, a router.Caller adapter in prod.
-type Source struct {
-	Caller router.Caller
-	ListOp string                 // logical operation, e.g. "list_devices"
-	Args   func() model.Encodable // list request args (nil → no args)
-	Decode func(raw []byte) ([]Item, error)
-}
-
 type CrudView struct {
 	Element // value embed — NEVER *dom.Element
 
-	Title  string        // h1, top-left corner of the panel (white on accent bar)
-	Form   Component     // LEFT slot, the protagonist (typically *form.Form)
-	Source Source        // feeds the right-hand list; zero Source = full-page
-	                     // variant: no list/search/CRUD bar (title + form only)
+	Title             string
+	Form              Component
+	Presenter         view.Presenter
 
-	// Interaction callbacks — the composition root wires these to the form
-	// and transport ONCE per app; modules never re-implement them.
-	OnSelect func(it Item)                       // list card clicked → load into form
-	OnNew    func()                              // (+) pressed → reset form for create
-	OnSave   func(done func(err error))          // (💾) pressed; done(nil) reloads list
-	OnDelete func(id string, done func(err error)) // (−) pressed on selection
-	OnCancel func()                              // (↺) pressed → undo current edit
-	OnError  func(err error)                     // list load/decode failures; nil = drop
+	OnSelect          func(it view.Item)
+	OnNew             func()
+	OnSave            func(done func(err error))
+	OnDelete          func(id string, done func(err error))
+	OnCancel          func()
 
 	SearchPlaceholder string
 
 	// internal state
-	items     *SignalNodes
-	allItems  []Item
-	selected  *SignalString
-	search    *SignalString
-	canSave   *SignalBool
+	items             *SignalNodes
+	selected          *SignalString
+	search            *SignalString
+	canSave           *SignalBool
 	canDelete *SignalBool
 }
 
@@ -90,47 +69,29 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.canSave = NewBool(true)   // enabled by default in Pa100T capture
 	v.canDelete = NewBool(false)
 
-	if v.Source.Caller != nil {
-		v.Reload()
+	if v.Presenter != nil {
+		if err := v.Reload(); err != nil {
+			Log(err.Error())
+		}
 	}
 }
 
-func (v *CrudView) Reload() {
-	if v.Source.Caller == nil {
-		return
+func (v *CrudView) Reload() error {
+	if v.Presenter == nil {
+		return nil
 	}
-
-	var args model.Encodable
-	if v.Source.Args != nil {
-		args = v.Source.Args()
+	if err := v.Presenter.Reload(); err != nil {
+		return err
 	}
-
-	v.Source.Caller.Call(v.Source.ListOp, args, func(raw []byte, err error) {
-		if err != nil {
-			v.handleError(err)
-			return
-		}
-
-		if v.Source.Decode == nil {
-			return
-		}
-
-		items, err := v.Source.Decode(raw)
-		if err != nil {
-			v.handleError(err)
-			return
-		}
-
-		v.allItems = items
-		v.filter()
-	})
+	v.filter()
+	return nil
 }
 
 func (v *CrudView) filter() {
 	term := Convert(v.search.Get()).ToLower().String()
 	nodes := make([]*Element, 0)
 
-	for _, it := range v.allItems {
+	for _, it := range v.Presenter.Items() {
 		if term != "" {
 			label := Convert(it.Label).ToLower().String()
 			desc := Convert(it.Description).ToLower().String()
@@ -166,14 +127,8 @@ func (v *CrudView) Select(id string) {
 	v.canDelete.Set(id != "")
 }
 
-func (v *CrudView) handleError(err error) {
-	if v.OnError != nil {
-		v.OnError(err)
-	}
-}
-
 func (v *CrudView) Render() *Element {
-	hasSource := v.Source.Caller != nil
+	hasSource := v.Presenter != nil
 
 	root := Div().Set(clsModuleContent.AsAttr())
 
@@ -214,9 +169,9 @@ func (v *CrudView) Render() *Element {
 					v.OnDelete(id, func(err error) {
 						if err == nil {
 							v.Select("")
-							v.Reload()
+							_ = v.Reload()
 						} else {
-							v.handleError(err)
+							Log(err.Error())
 						}
 					})
 				}
@@ -256,9 +211,9 @@ func (v *CrudView) Render() *Element {
 			btn.On("click", func(Event) {
 				v.OnSave(func(err error) {
 					if err == nil {
-						v.Reload()
+						_ = v.Reload()
 					} else {
-						v.handleError(err)
+						Log(err.Error())
 					}
 				})
 			})

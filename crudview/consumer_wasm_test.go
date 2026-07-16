@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tinywasm/form"
+	"github.com/tinywasm/fmt"
 )
 
 type mockCtxWasmConsumer struct{}
@@ -13,13 +14,14 @@ type mockCtxWasmConsumer struct{}
 func (m *mockCtxWasmConsumer) OnCleanup(fn func()) {}
 
 func TestConsumer_Wasm_Render(t *testing.T) {
-	caller := &fakeCaller{}
+	p := &fakePresenter{
+		title: "Custom Search Title",
+		record: &Device{},
+		searchPlaceholder: "Custom Search...",
+	}
 	cfg := Config{
 		ParentID:          "my-wasm-id",
-		Caller:            caller,
-		Record:            &Device{},
-		ListOp:            "list_devices",
-		SearchPlaceholder: "Custom Search...",
+		Presenter:         p,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -44,21 +46,7 @@ func TestConsumer_Wasm_Render(t *testing.T) {
 	}
 
 	html := root.String()
-	if !github_com_tinywasm_fmt_Contains(html, "list_devices") && !github_com_tinywasm_fmt_Contains(html, "Custom Search...") {
-		// Wait, let's just make sure the custom placeholder is present in the rendered HTML
-		if !github_com_tinywasm_fmt_Contains(html, "Custom Search...") {
-			t.Errorf("expected html to contain custom search placeholder, got: %s", html)
-		}
+	if !fmt.Contains(html, "Custom Search...") {
+		t.Errorf("expected html to contain custom search placeholder, got: %s", html)
 	}
-}
-
-// Simple local helper to avoid unused package or syntax issues
-func github_com_tinywasm_fmt_Contains(s, sub string) bool {
-	// A basic implementation of substring search
-	for i := 0; i <= len(s)-len(sub); i++ {
-		if s[i:i+len(sub)] == sub {
-			return true
-		}
-	}
-	return false
 }

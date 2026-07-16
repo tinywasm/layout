@@ -80,14 +80,21 @@ Standard two-column layout: Form (left, 66vw) and List (right, 29vw).
     R --> S[Search: local filter]
 ```
 
-### Data Flow (Async Source)
+### Data Flow (`view.Presenter`)
 
-The `Source` seam uses `router.Caller` to fetch data asynchronously.
+`crudview` is a pure renderer: it never talks to a `router.Caller` and holds no data of its own.
+A domain module builds a `view.Presenter` (via `view.New(caller, record, listOp, newList, project,
+opts...)`, importing `view`+`model`+`router`, never `layout`) and hands it to `crudview.New(Config{
+Presenter: p})`.
 
-1. `Init` or `Reload` calls `Caller.Call(op, args, callback)`.
-2. Callback receives `[]byte`, decodes it via `Source.Decode`.
-3. `allItems` is updated, `filter()` is called.
-4. `items` (SignalNodes) is updated, triggering a DOM patch.
+1. `Init` (or a save/delete callback) calls `Presenter.Reload()`, which invokes the list op and
+   decodes into `Presenter.Items()` synchronously.
+2. `filter()` reads straight from `Presenter.Items()` (no local `allItems` copy).
+3. `items` (SignalNodes) is updated, triggering a DOM patch.
+
+Save/Delete follow the same shape: `crudview` syncs form values into `Presenter.Record()`, then
+calls `Presenter.Save(record)` / `Presenter.Delete(id)` — both synchronous, both returning `error`
+directly.
 
 ### Signal Fields
 
@@ -101,13 +108,14 @@ The `Source` seam uses `router.Caller` to fetch data asynchronously.
 
 ### El pegamento vive aquí
 
-The high-level pattern for constructing a CRUD view is `crudview.New(Config)`. This constructor is the single place where the standard CRUD view and form↔list↔transport loop is wired:
+The high-level pattern for constructing a CRUD view is `crudview.New(Config)`. This constructor is the single place where the standard CRUD view↔form↔`Presenter` loop is wired:
 
-- A module configures `crudview.Config` once.
+- A module builds a `view.Presenter` (owns list/select/save/delete against a `router.Caller`) and passes it once via `Config{ParentID, Presenter}`.
 - All callbacks (`OnSelect`, `OnNew`, `OnSave`, `OnDelete`, `OnCancel`) are automatically wired.
-- Form inputs are automatically populated on selection using `form.LoadValues` with records returned by `Fill`.
-- Saves are validated and synced via `form.SyncValues` before shipping to `Caller`.
-- Empty search string placeholders default to `"Search…"`, but can be customized with `SearchPlaceholder`.
+- Form inputs are automatically populated on selection using `form.LoadValues` with records returned by `Presenter.Select(id)`.
+- Saves are validated and synced via `form.SyncValues` before shipping to `Presenter.Save`.
+- `OnSave`/`OnDelete` are only wired when `Presenter.CanSave()`/`CanDelete()` are true.
+- Empty search string placeholders default to `"Search…"`, but can be customized via `Presenter.SearchPlaceholder()`.
 
 #### Principle: Standard-shaped tests
 

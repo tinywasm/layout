@@ -11,6 +11,7 @@ import (
 	"github.com/tinywasm/layout/rightpanel"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/svg"
+	"github.com/tinywasm/view"
 )
 
 // Tiny model stub so layouts have an ID source.
@@ -23,32 +24,59 @@ type mod struct {
 func (m mod) ModelName() string { return m.name }
 func (m mod) Label() string     { return m.name }
 func (m mod) Icon() svg.Icon    { return m.icon }
+
+type mockModel struct{}
+func (m *mockModel) ModelName() string { return "device" }
+func (m *mockModel) IsNil() bool { return m == nil }
+func (m *mockModel) Schema() []model.Field {
+	return []model.Field{
+		{Name: "id", Type: model.Text()},
+	}
+}
+func (m *mockModel) Pointers() []any { return []any{new(string)} }
+func (m *mockModel) EncodeFields(w model.FieldWriter) {}
+func (m *mockModel) DecodeFields(r model.FieldReader) {}
+
+type mockPresenter struct {
+	items []view.Item
+}
+
+func (p *mockPresenter) Title() string             { return "Computadores" }
+func (p *mockPresenter) SearchPlaceholder() string { return "Buscar..." }
+func (p *mockPresenter) Record() model.Model       { return &mockModel{} }
+func (p *mockPresenter) Items() []view.Item        { return p.items }
+func (p *mockPresenter) Reload() error             { return nil }
+func (p *mockPresenter) Selected() string          { return "" }
+func (p *mockPresenter) Select(id string) model.Model { return &mockModel{} }
+func (p *mockPresenter) CanSave() bool             { return true }
+func (p *mockPresenter) Save(payload model.Model) error { return nil }
+func (p *mockPresenter) CanDelete() bool           { return true }
+func (p *mockPresenter) Delete(id string) error    { return nil }
+
 func (m mod) View() Component {
 	if m.name == "crud" {
-		return &crudview.CrudView{
-			Title: "Computadores",
-			Form:  Div().Text("Formulario de edición"),
-			Source: crudview.Source{
-				Caller: &mockCaller{},
-				ListOp: "list",
-				Decode: func(raw []byte) ([]crudview.Item, error) {
-					// Minimal hand-rolled decoder since we can't use encoding/json
-					// and we don't have model generation for Item here.
-					return []crudview.Item{
-						{ID: "1", Label: "Pc Administracion", Description: "192.168.122.10"},
-						{ID: "2", Label: "Pc Ventas", Description: "192.168.122.11"},
-						{ID: "3", Label: "Servidor Web", Description: "192.168.122.20"},
-					}, nil
-				},
+		pres := &mockPresenter{
+			items: []view.Item{
+				{ID: "1", Label: "Pc Administracion", Description: "192.168.122.10"},
+				{ID: "2", Label: "Pc Ventas", Description: "192.168.122.11"},
+				{ID: "3", Label: "Servidor Web", Description: "192.168.122.20"},
 			},
-			OnSelect: func(it crudview.Item) {
-				m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000)
-			},
-			OnNew:    func() { m.p.Notify(Msg.Info, "Nuevo", 2000) },
-			OnSave:   func(done func(err error)) { m.p.Notify(Msg.Success, "Guardado", 2000); done(nil) },
-			OnDelete: func(id string, done func(err error)) { m.p.Notify(Msg.Error, "Eliminado "+id, 2000); done(nil) },
-			OnCancel: func() { m.p.Notify(Msg.Info, "Cancelado", 2000) },
 		}
+		cv, err := crudview.New(crudview.Config{
+			ParentID:  "crud",
+			Presenter: pres,
+		})
+		if err != nil {
+			panic(err)
+		}
+		cv.OnSelect = func(it view.Item) {
+			m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000)
+		}
+		cv.OnNew = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
+		cv.OnSave = func(done func(err error)) { m.p.Notify(Msg.Success, "Guardado", 2000); done(nil) }
+		cv.OnDelete = func(id string, done func(err error)) { m.p.Notify(Msg.Error, "Eliminado "+id, 2000); done(nil) }
+		cv.OnCancel = func() { m.p.Notify(Msg.Info, "Cancelado", 2000) }
+		return cv
 	}
 
 	return &rightpanel.RightPanel{

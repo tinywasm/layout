@@ -7,7 +7,6 @@ import (
 
 	. "github.com/tinywasm/html"
 	. "github.com/tinywasm/fmt"
-	"github.com/tinywasm/router/mock"
 )
 
 func TestCrudView_Render_Basic(t *testing.T) {
@@ -25,7 +24,7 @@ func TestCrudView_Render_Basic(t *testing.T) {
 	if !Contains(html, "The Form") {
 		t.Error("expected form")
 	}
-	// Full page variant (no source)
+	// Full page variant (no presenter)
 	if !Contains(html, "cv-article-contend-full-page") {
 		t.Error("expected full page class")
 	}
@@ -35,11 +34,10 @@ func TestCrudView_Render_Basic(t *testing.T) {
 }
 
 func TestCrudView_Render_WithSource(t *testing.T) {
+	p := &fakePresenter{title: "CRUD with List", record: &Device{}, canDelete: false}
 	v := &CrudView{
 		Title: "CRUD with List",
-		Source: Source{
-			Caller: &mock.Caller{},
-		},
+		Presenter: p,
 		OnNew: func() {},
 	}
 	v.Init(&mockCtx{})
