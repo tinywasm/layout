@@ -6,7 +6,7 @@ require (
 	github.com/tinywasm/css v0.1.4
 	github.com/tinywasm/dom v0.11.2
 	github.com/tinywasm/fmt v0.25.3
-	github.com/tinywasm/form v0.2.14
+	github.com/tinywasm/form v0.2.17
 	github.com/tinywasm/html v0.0.6
 	github.com/tinywasm/model v0.0.16
 	github.com/tinywasm/svg v0.1.3
