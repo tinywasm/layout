@@ -2,11 +2,11 @@ package crudview
 
 import (
 	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
 	"github.com/tinywasm/svg"
 	. "github.com/tinywasm/css"
 	"github.com/tinywasm/view"
+	"github.com/tinywasm/form"
 )
 
 var (
@@ -43,22 +43,24 @@ type CrudView struct {
 	Element // value embed — NEVER *dom.Element
 
 	Title             string
-	Form              Component
+	Form              Component      // what Render paints (may stay nil in standalone mode)
 	Presenter         view.Presenter
-
-	OnSelect          func(it view.Item)
-	OnNew             func()
-	OnSave            func(done func(err error))
-	OnDelete          func(id string, done func(err error))
-	OnCancel          func()
-
 	SearchPlaceholder string
 
-	// internal state
-	items             *SignalNodes
-	selected          *SignalString
-	search            *SignalString
-	canSave           *SignalBool
+	// Additive user hooks — called AFTER the built-in behavior. Assigning them
+	// can never disable list→form fill, save or delete wiring.
+	OnSelect  func(it view.Item)
+	OnNew     func()
+	OnSaved   func(err error)
+	OnDeleted func(id string, err error)
+	OnCancel  func()
+
+	// internal
+	form      *form.Form // typed handle set by New; nil when standalone
+	items     *SignalNodes
+	selected  *SignalString
+	search    *SignalString
+	canSave   *SignalBool
 	canDelete *SignalBool
 }
 
@@ -87,19 +89,80 @@ func (v *CrudView) Reload() error {
 	return nil
 }
 
-func (v *CrudView) filter() {
-	term := Convert(v.search.Get()).ToLower().String()
-	nodes := make([]*Element, 0)
+// selectAction: card click / driver Select
+func (v *CrudView) selectAction(it view.Item) {
+	v.selected.Set(it.ID)
+	v.canDelete.Set(it.ID != "")
+	rec := v.Presenter.Select(it.ID)
+	if v.form != nil {
+		_ = v.form.LoadValues(rec) // nil record → LoadValues resets; not an error
+	}
+	if v.OnSelect != nil {
+		v.OnSelect(it)
+	}
+}
 
-	for _, it := range v.Presenter.Items() {
-		if term != "" {
-			label := Convert(it.Label).ToLower().String()
-			desc := Convert(it.Description).ToLower().String()
-			if !Contains(label, term) && !Contains(desc, term) {
-				continue
+// newAction: "+" button
+func (v *CrudView) newAction() {
+	v.selected.Set("")
+	v.canDelete.Set(false)
+	v.Presenter.Deselect()
+	if v.form != nil {
+		v.form.Reset()
+	}
+	if v.OnNew != nil {
+		v.OnNew()
+	}
+}
+
+// cancelAction: "↺" button
+func (v *CrudView) cancelAction() {
+	if v.form != nil {
+		v.form.Reset()
+	}
+	if v.OnCancel != nil {
+		v.OnCancel()
+	}
+}
+
+// saveAction: save button / driver Save. Only reachable when saver != nil.
+func (v *CrudView) saveAction(saver view.Saver) {
+	err := v.form.Validate()
+	if err == nil {
+		record := v.Presenter.Record()
+		if err = v.form.SyncValues(record); err == nil {
+			if err = saver.Save(record); err == nil {
+				_ = v.Reload()
 			}
 		}
+	}
+	if err != nil {
+		Log(err.Error())
+	}
+	if v.OnSaved != nil {
+		v.OnSaved(err)
+	}
+}
 
+// deleteAction: delete button / driver Delete. Only reachable when deleter != nil.
+func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
+	err := deleter.Delete(id)
+	if err == nil {
+		v.selected.Set("")
+		v.canDelete.Set(false)
+		_ = v.Reload()
+	} else {
+		Log(err.Error())
+	}
+	if v.OnDeleted != nil {
+		v.OnDeleted(id, err)
+	}
+}
+
+func (v *CrudView) filter() {
+	nodes := make([]*Element, 0)
+
+	for _, it := range v.Presenter.Filter(v.search.Get()) {
 		it := it
 		id := it.ID
 		card := Li().Set(clsTargetLi.AsAttr()).
@@ -110,10 +173,7 @@ func (v *CrudView) filter() {
 			Child(Span().Set(clsDescriptionTarget.AsAttr()).Text(it.Description))
 
 		card.On("click", func(Event) {
-			v.Select(id)
-			if v.OnSelect != nil {
-				v.OnSelect(it)
-			}
+			v.selectAction(it)
 		})
 
 		nodes = append(nodes, card)
@@ -122,13 +182,15 @@ func (v *CrudView) filter() {
 	v.items.Set(nodes)
 }
 
-func (v *CrudView) Select(id string) {
-	v.selected.Set(id)
-	v.canDelete.Set(id != "")
-}
-
 func (v *CrudView) Render() *Element {
 	hasSource := v.Presenter != nil
+
+	var saver view.Saver
+	var deleter view.Deleter
+	if hasSource {
+		saver, _ = v.Presenter.(view.Saver)
+		deleter, _ = v.Presenter.(view.Deleter)
+	}
 
 	root := Div().Set(clsModuleContent.AsAttr())
 
@@ -158,7 +220,7 @@ func (v *CrudView) Render() *Element {
 		contebuton := Div().Set(clsContebuton.AsAttr())
 
 		// Delete (−)
-		if v.OnDelete != nil {
+		if deleter != nil {
 			btn := Button().Set(clsBtnCrud.AsAttr()).
 				Attr("name", "btn_cruddel").
 				BindAttrBool("disabled", DeriveBool(func() bool { return !v.canDelete.Get() })).
@@ -166,56 +228,38 @@ func (v *CrudView) Render() *Element {
 			btn.On("click", func(Event) {
 				id := v.selected.Get()
 				if id != "" {
-					v.OnDelete(id, func(err error) {
-						if err == nil {
-							v.Select("")
-							_ = v.Reload()
-						} else {
-							Log(err.Error())
-						}
-					})
+					v.deleteAction(deleter, id)
 				}
 			})
 			contebuton.Child(btn)
 		}
 
 		// Cancel (↺)
-		if v.OnCancel != nil {
-			btn := Button().Set(clsBtnCrud.AsAttr()).
-				Attr("name", "btn_crudcancel").
-				Child(renderIcon(iconCrudCancel))
-			btn.On("click", func(Event) {
-				v.OnCancel()
-			})
-			contebuton.Child(btn)
-		}
+		btnCancel := Button().Set(clsBtnCrud.AsAttr()).
+			Attr("name", "btn_crudcancel").
+			Child(renderIcon(iconCrudCancel))
+		btnCancel.On("click", func(Event) {
+			v.cancelAction()
+		})
+		contebuton.Child(btnCancel)
 
 		// New (+)
-		if v.OnNew != nil {
-			btn := Button().Set(clsBtnCrud.AsAttr()).
-				Attr("name", "btn_crudnew").
-				Child(renderIcon(iconCrudNew))
-			btn.On("click", func(Event) {
-				v.Select("")
-				v.OnNew()
-			})
-			contebuton.Child(btn)
-		}
+		btnNew := Button().Set(clsBtnCrud.AsAttr()).
+			Attr("name", "btn_crudnew").
+			Child(renderIcon(iconCrudNew))
+		btnNew.On("click", func(Event) {
+			v.newAction()
+		})
+		contebuton.Child(btnNew)
 
 		// Save (💾)
-		if v.OnSave != nil {
+		if saver != nil {
 			btn := Button().Set(clsBtnCrud.AsAttr()).
 				Attr("name", "btn_crudsave").
 				BindAttrBool("disabled", DeriveBool(func() bool { return !v.canSave.Get() })).
 				Child(renderIcon(iconCrudSave))
 			btn.On("click", func(Event) {
-				v.OnSave(func(err error) {
-					if err == nil {
-						_ = v.Reload()
-					} else {
-						Log(err.Error())
-					}
-				})
+				v.saveAction(saver)
 			})
 			contebuton.Child(btn)
 		}

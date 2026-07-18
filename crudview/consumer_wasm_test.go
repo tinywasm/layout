@@ -7,6 +7,9 @@ import (
 
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/fmt"
+	"github.com/tinywasm/view"
+	"github.com/tinywasm/view/conformance"
+	"github.com/tinywasm/model"
 )
 
 type mockCtxWasmConsumer struct{}
@@ -14,11 +17,12 @@ type mockCtxWasmConsumer struct{}
 func (m *mockCtxWasmConsumer) OnCleanup(fn func()) {}
 
 func TestConsumer_Wasm_Render(t *testing.T) {
-	p := &fakePresenter{
-		title: "Custom Search Title",
-		record: &Device{},
-		searchPlaceholder: "Custom Search...",
-	}
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithTitle("Custom Search Title"),
+		view.WithSearchPlaceholder("Custom Search..."))
+
 	cfg := Config{
 		ParentID:          "my-wasm-id",
 		Presenter:         p,

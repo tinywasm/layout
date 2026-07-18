@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/form"
 	"github.com/tinywasm/form/input"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
+	"github.com/tinywasm/view/conformance"
 )
 
 // fakeCtx is a simple implementation of Ctx for testing
@@ -46,7 +46,30 @@ func (d *Device) DecodeFields(r model.FieldReader) {
 	d.Ip, _ = r.String("ip")
 }
 
+func (d *Device) Item() view.Item {
+	return view.Item{ID: d.Id, Label: d.Name, Description: d.Ip}
+}
+
 var _ model.Model = (*Device)(nil) // Verify compile-time implementation
+var _ view.Itemizer = (*Device)(nil)
+
+type DeviceList struct {
+	Items []*Device
+}
+
+func (l *DeviceList) IsNil() bool { return l == nil }
+func (l *DeviceList) DecodeFields(r model.FieldReader) {}
+func (l *DeviceList) Schema() []model.Field { return nil }
+func (l *DeviceList) Pointers() []any { return nil }
+func (l *DeviceList) Len() int { return len(l.Items) }
+func (l *DeviceList) At(i int) model.Fielder { return l.Items[i] }
+func (l *DeviceList) Append() model.Fielder {
+	d := &Device{}
+	l.Items = append(l.Items, d)
+	return d
+}
+
+var _ model.ModelSlice = (*DeviceList)(nil)
 
 // deviceNoWidgetsModel is a model without widgets
 var deviceNoWidgetsModel = model.Definition{
@@ -78,60 +101,23 @@ func (d *DeviceNoWidgets) DecodeFields(r model.FieldReader) {
 
 var _ model.Model = (*DeviceNoWidgets)(nil) // Verify compile-time implementation
 
-type fakePresenter struct {
-	title             string
-	searchPlaceholder string
-	record            model.Model
-	items             []view.Item
-	selected          string
-	canSave           bool
-	canDelete         bool
-
-	onReload func() error
-	onSelect func(id string) model.Model
-	onSave   func(m model.Model) error
-	onDelete func(id string) error
-
-	reloaded bool
+type fakeNoWidgetsPresenter struct {
+	record model.Model
 }
 
-func (f *fakePresenter) Title() string             { return f.title }
-func (f *fakePresenter) SearchPlaceholder() string { return f.searchPlaceholder }
-func (f *fakePresenter) Record() model.Model       { return f.record }
-func (f *fakePresenter) Items() []view.Item        { return f.items }
-func (f *fakePresenter) Reload() error {
-	f.reloaded = true
-	if f.onReload != nil {
-		return f.onReload()
-	}
-	return nil
-}
-func (f *fakePresenter) Selected() string { return f.selected }
-func (f *fakePresenter) Select(id string) model.Model {
-	f.selected = id
-	if f.onSelect != nil {
-		return f.onSelect(id)
-	}
-	return nil
-}
-func (f *fakePresenter) CanSave() bool { return f.canSave }
-func (f *fakePresenter) Save(payload model.Model) error {
-	if f.onSave != nil {
-		return f.onSave(payload)
-	}
-	return nil
-}
-func (f *fakePresenter) CanDelete() bool { return f.canDelete }
-func (f *fakePresenter) Delete(id string) error {
-	if f.onDelete != nil {
-		return f.onDelete(id)
-	}
-	return nil
-}
+func (f *fakeNoWidgetsPresenter) Title() string             { return "No Widgets" }
+func (f *fakeNoWidgetsPresenter) SearchPlaceholder() string { return "Search" }
+func (f *fakeNoWidgetsPresenter) Record() model.Model       { return f.record }
+func (f *fakeNoWidgetsPresenter) Items() []view.Item        { return nil }
+func (f *fakeNoWidgetsPresenter) Filter(term string) []view.Item { return nil }
+func (f *fakeNoWidgetsPresenter) Reload() error             { return nil }
+func (f *fakeNoWidgetsPresenter) Selected() string          { return "" }
+func (f *fakeNoWidgetsPresenter) Select(id string) model.Model { return nil }
+func (f *fakeNoWidgetsPresenter) Deselect()                 {}
 
 // Case 1: New with a model without widgets fails
 func TestConsumer_NewNoWidgets(t *testing.T) {
-	p := &fakePresenter{record: &DeviceNoWidgets{}}
+	p := &fakeNoWidgetsPresenter{record: &DeviceNoWidgets{}}
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
@@ -147,7 +133,15 @@ func TestConsumer_NewNoWidgets(t *testing.T) {
 
 // Case 2: The list operation on wiring is ListOp (reloaded on Init)
 func TestConsumer_ListOp(t *testing.T) {
-	p := &fakePresenter{record: &Device{}}
+	var reloaded bool
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			reloaded = true
+		},
+	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
@@ -158,18 +152,29 @@ func TestConsumer_ListOp(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	if !p.reloaded {
+	if !reloaded {
 		t.Errorf("expected Presenter to be reloaded on Init")
 	}
 }
 
 // Case 3: The list renders cards returned by Items
 func TestConsumer_ListRendersCards(t *testing.T) {
-	decoded := []view.Item{
-		{ID: "12", Label: "Device One", Description: "192.168.1.1"},
-		{ID: "23", Label: "Device Two", Description: "192.168.1.2"},
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Device One"
+			d1.Ip = "192.168.1.1"
+
+			d2 := dl.Append().(*Device)
+			d2.Id = "23"
+			d2.Name = "Device Two"
+			d2.Ip = "192.168.1.2"
+		},
 	}
-	p := &fakePresenter{record: &Device{}, items: decoded}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -191,18 +196,22 @@ func TestConsumer_ListRendersCards(t *testing.T) {
 
 // Case 4: Selecting a card populates the form using form.LoadValues
 func TestConsumer_SelectPopulatesForm(t *testing.T) {
-	devices := map[string]*Device{
-		"12": {Id: "12", Name: "Device One", Ip: "192.168.1.1"},
-		"23": {Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Device One"
+			d1.Ip = "192.168.1.1"
+
+			d2 := dl.Append().(*Device)
+			d2.Id = "23"
+			d2.Name = "Device Two"
+			d2.Ip = "192.168.1.2"
+		},
 	}
-	p := &fakePresenter{record: &Device{}}
-	p.onSelect = func(id string) model.Model {
-		dev := devices[id]
-		if dev == nil {
-			return nil
-		}
-		return dev
-	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -214,10 +223,10 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	v.OnSelect(view.Item{ID: "12"})
+	v.selectAction(view.Item{ID: "12"})
 
 	// Check form values
-	f := v.Form.(*form.Form)
+	f := v.form
 	idInput := f.Input("id")
 	nameInput := f.Input("name")
 	ipInput := f.Input("ip")
@@ -233,7 +242,7 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 	}
 
 	// Nil record on Fill should reset the form
-	v.OnSelect(view.Item{ID: "unknown"})
+	v.selectAction(view.Item{ID: "unknown"})
 	if len(idInput.GetValues()) != 0 && idInput.GetValues()[0] != "" {
 		t.Errorf("expected id input to be reset/empty, got %v", idInput.GetValues())
 	}
@@ -241,13 +250,18 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 
 // Case 5: Save calls Save with form data, not original Record
 func TestConsumer_SaveWithFormData(t *testing.T) {
-	rec := &Device{Id: "12", Name: "Original Name", Ip: "192.168.1.1"}
-	p := &fakePresenter{record: rec, canSave: true}
 	var savedDevice *Device
-	p.onSave = func(m model.Model) error {
-		savedDevice = m.(*Device)
-		return nil
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			if op == "device_save" {
+				// Handled in WithSaveOp or similar, but Caller gets Called
+				// and we want to capture what was sent. FakeCaller.Calls can capture this.
+			}
+		},
 	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithSaveOp("device_save"))
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -259,28 +273,47 @@ func TestConsumer_SaveWithFormData(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	f := v.Form.(*form.Form)
+	f := v.form
 	f.SetValues("id", "12")
 	f.SetValues("name", "New Name")
 	f.SetValues("ip", "10.0.0.1")
 
 	var saveDoneCalled bool
 	var saveErr error
-	v.OnSave(func(err error) {
+	v.OnSaved = func(err error) {
 		saveDoneCalled = true
 		saveErr = err
-	})
+	}
+
+	saver, ok := p.(view.Saver)
+	if !ok {
+		t.Fatal("expected view.Presenter to implement view.Saver")
+	}
+	v.saveAction(saver)
 
 	if !saveDoneCalled {
-		t.Fatal("expected save callback (done) to be called")
+		t.Fatal("expected OnSaved hook to be called")
 	}
 	if saveErr != nil {
 		t.Fatalf("expected no save error, got: %v", saveErr)
 	}
 
-	if savedDevice == nil {
-		t.Fatal("expected save to be called on presenter")
+	// Read from FakeCaller.Calls
+	if len(caller.Calls) == 0 {
+		t.Fatal("expected save call on fake caller")
 	}
+	// The first call should be "device_list" on Init, the second should be "device_save"
+	var saveCall *conformance.FakeCall
+	for _, c := range caller.Calls {
+		if c.Op == "device_save" {
+			saveCall = &c
+			break
+		}
+	}
+	if saveCall == nil {
+		t.Fatal("expected device_save call to be recorded")
+	}
+	savedDevice = saveCall.Args.(*Device)
 	if savedDevice.Name != "New Name" {
 		t.Errorf("expected sent device name to be 'New Name', got '%s'", savedDevice.Name)
 	}
@@ -291,13 +324,10 @@ func TestConsumer_SaveWithFormData(t *testing.T) {
 
 // Case 6: Save with invalid form doesn't call presenter and returns error
 func TestConsumer_SaveInvalidForm(t *testing.T) {
-	rec := &Device{Id: "12", Name: "Original Name", Ip: "192.168.1.1"}
-	p := &fakePresenter{record: rec, canSave: true}
-	var saveCalled bool
-	p.onSave = func(m model.Model) error {
-		saveCalled = true
-		return nil
-	}
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithSaveOp("device_save"))
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -309,37 +339,54 @@ func TestConsumer_SaveInvalidForm(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	f := v.Form.(*form.Form)
+	f := v.form
 	f.SetValues("id", "12")
 	f.SetValues("name", "") // empty name violates NotNull
 	f.SetValues("ip", "10.0.0.1")
 
 	var saveDoneCalled bool
 	var saveErr error
-	v.OnSave(func(err error) {
+	v.OnSaved = func(err error) {
 		saveDoneCalled = true
 		saveErr = err
-	})
+	}
+
+	saver, ok := p.(view.Saver)
+	if !ok {
+		t.Fatal("expected view.Presenter to implement view.Saver")
+	}
+	v.saveAction(saver)
 
 	if !saveDoneCalled {
-		t.Error("expected save callback (done) to be called")
+		t.Error("expected OnSaved hook to be called")
 	}
 	if saveErr == nil {
 		t.Error("expected validation error, got nil")
 	}
-	if saveCalled {
-		t.Errorf("expected no save to be called on presenter because form was invalid")
+	// Verify device_save was never called on caller
+	for _, c := range caller.Calls {
+		if c.Op == "device_save" {
+			t.Error("device_save was called on fake caller but form was invalid")
+		}
 	}
 }
 
 // Case 7: Delete calls Delete on presenter
 func TestConsumer_DeleteSelected(t *testing.T) {
-	p := &fakePresenter{record: &Device{}, canDelete: true}
-	var deletedID string
-	p.onDelete = func(id string) error {
-		deletedID = id
-		return nil
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			if op == "device_list" {
+				dl := into.(*DeviceList)
+				d1 := dl.Append().(*Device)
+				d1.Id = "123"
+				d1.Name = "Device One"
+				d1.Ip = "192.168.1.1"
+			}
+		},
 	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithDeleteOp("device_delete"))
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -351,31 +398,68 @@ func TestConsumer_DeleteSelected(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
+	// Select the loaded device so the presenter indexes and registers selection
+	v.selectAction(view.Item{ID: "123"})
+
 	var deleteDoneCalled bool
 	var deleteErr error
-	v.OnDelete("123", func(err error) {
+	var deletedID string
+	v.OnDeleted = func(id string, err error) {
 		deleteDoneCalled = true
 		deleteErr = err
-	})
+		deletedID = id
+	}
+
+	deleter, ok := p.(view.Deleter)
+	if !ok {
+		t.Fatal("expected view.Presenter to implement view.Deleter")
+	}
+	v.deleteAction(deleter, "123")
 
 	if !deleteDoneCalled {
-		t.Error("expected delete callback to be called")
+		t.Error("expected OnDeleted hook to be called")
 	}
 	if deleteErr != nil {
 		t.Errorf("expected no delete error, got: %v", deleteErr)
 	}
-
 	if deletedID != "123" {
-		t.Errorf("expected deleted id on presenter to be '123', got '%s'", deletedID)
+		t.Errorf("expected hook deleted id to be '123', got '%s'", deletedID)
+	}
+
+	// Verify delete op was called on caller
+	var deleteCall *conformance.FakeCall
+	for _, c := range caller.Calls {
+		if c.Op == "device_delete" {
+			deleteCall = &c
+			break
+		}
+	}
+	if deleteCall == nil {
+		t.Fatal("expected device_delete call to be recorded")
+	}
+	// Check identity field of the passed model
+	argsDev := deleteCall.Args.(*Device)
+	if argsDev.Id != "123" {
+		t.Errorf("expected deleted id on presenter to be '123', got '%s'", argsDev.Id)
 	}
 }
 
 // Case 8: Delete can return error from presenter
 func TestConsumer_DeleteNoSelection(t *testing.T) {
-	p := &fakePresenter{record: &Device{}, canDelete: true}
-	p.onDelete = func(id string) error {
-		return fmt.Errf("no selection")
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			if op == "device_list" {
+				dl := into.(*DeviceList)
+				d1 := dl.Append().(*Device)
+				d1.Id = "non-existent"
+				d1.Name = "Device One"
+				d1.Ip = "192.168.1.1"
+			}
+		},
 	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithDeleteOp("device_delete"))
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -387,28 +471,42 @@ func TestConsumer_DeleteNoSelection(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
+	// Select the item so it is registered
+	v.selectAction(view.Item{ID: "non-existent"})
+
+	// Set caller.Err *after* successful Init/Reload
+	expectedErr := fmt.Errf("no selection")
+	caller.Err = expectedErr
+
 	var deleteDoneCalled bool
 	var deleteErr error
-	v.OnDelete("non-existent", func(err error) {
+	v.OnDeleted = func(id string, err error) {
 		deleteDoneCalled = true
 		deleteErr = err
-	})
+	}
+
+	deleter, ok := p.(view.Deleter)
+	if !ok {
+		t.Fatal("expected view.Presenter to implement view.Deleter")
+	}
+	v.deleteAction(deleter, "non-existent")
 
 	if !deleteDoneCalled {
-		t.Error("expected delete callback to be called")
+		t.Error("expected OnDeleted hook to be called")
 	}
 	if deleteErr == nil {
-		t.Error("expected delete error because presenter returned error, got nil")
+		t.Error("expected delete error because presenter/caller returned error, got nil")
 	}
 }
 
 // Case 9: Presenter error on list is propagated to Reload caller
 func TestConsumer_ListErrorPropagated(t *testing.T) {
 	expectedErr := fmt.Errf("network connection failed")
-	p := &fakePresenter{record: &Device{}}
-	p.onReload = func() error {
-		return expectedErr
+	caller := &conformance.FakeCaller{
+		Err: expectedErr,
 	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
 
 	cfg := Config{
 		ParentID:  "my-id",
@@ -430,12 +528,27 @@ func TestConsumer_ListErrorPropagated(t *testing.T) {
 
 // Case 10: Search filters cards by Label and Description (case-insensitive)
 func TestConsumer_SearchFiltering(t *testing.T) {
-	decoded := []view.Item{
-		{ID: "12", Label: "Frontend Device", Description: "192.168.1.10"},
-		{ID: "23", Label: "Backend Server", Description: "10.0.0.5"},
-		{ID: "34", Label: "Database Instance", Description: "mysql-production"},
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Frontend Device"
+			d1.Ip = "192.168.1.10"
+
+			d2 := dl.Append().(*Device)
+			d2.Id = "23"
+			d2.Name = "Backend Server"
+			d2.Ip = "10.0.0.5"
+
+			d3 := dl.Append().(*Device)
+			d3.Id = "34"
+			d3.Name = "Database Instance"
+			d3.Ip = "mysql-production"
+		},
 	}
-	p := &fakePresenter{record: &Device{}, items: decoded}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
 
 	cfg := Config{
 		ParentID:  "my-id",
