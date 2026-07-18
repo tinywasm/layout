@@ -12,6 +12,7 @@ import (
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/view"
+	"github.com/tinywasm/form/input"
 )
 
 // Tiny model stub so layouts have an ID source.
@@ -25,43 +26,101 @@ func (m mod) ModelName() string { return m.name }
 func (m mod) Label() string     { return m.name }
 func (m mod) Icon() svg.Icon    { return m.icon }
 
-type mockModel struct{}
-func (m *mockModel) ModelName() string { return "device" }
-func (m *mockModel) IsNil() bool { return m == nil }
-func (m *mockModel) Schema() []model.Field {
-	return []model.Field{
-		{Name: "id", Type: model.Text()},
+// deviceModel is a model with real widgets (input.Text() is a model.Kind)
+var deviceDef = model.Definition{
+	Name: "device",
+	Fields: model.Fields{
+		{Name: "id", Type: input.Text()},
+		{Name: "name", Type: input.Text(), NotNull: true},
+		{Name: "ip", Type: input.Text()},
+	},
+}
+
+type Device struct {
+	Id, Name, Ip string
+}
+
+func (d *Device) ModelName() string     { return "device" }
+func (d *Device) Schema() []model.Field { return deviceDef.Fields }
+func (d *Device) Pointers() []any       { return []any{&d.Id, &d.Name, &d.Ip} }
+func (d *Device) IsNil() bool           { return d == nil }
+
+func (d *Device) EncodeFields(w model.FieldWriter) {
+	w.String("id", d.Id)
+	w.String("name", d.Name)
+	w.String("ip", d.Ip)
+}
+
+func (d *Device) DecodeFields(r model.FieldReader) {
+	d.Id, _ = r.String("id")
+	d.Name, _ = r.String("name")
+	d.Ip, _ = r.String("ip")
+}
+
+func (d *Device) Item() view.Item {
+	return view.Item{ID: d.Id, Label: d.Name, Description: d.Ip}
+}
+
+var _ model.Model = (*Device)(nil) // Verify compile-time implementation
+var _ view.Itemizer = (*Device)(nil)
+
+type DeviceList struct {
+	Items []*Device
+}
+
+func (l *DeviceList) IsNil() bool { return l == nil }
+func (l *DeviceList) DecodeFields(r model.FieldReader) {}
+func (l *DeviceList) Schema() []model.Field { return nil }
+func (l *DeviceList) Pointers() []any { return nil }
+func (l *DeviceList) Len() int { return len(l.Items) }
+func (l *DeviceList) At(i int) model.Fielder { return l.Items[i] }
+func (l *DeviceList) Append() model.Fielder {
+	d := &Device{}
+	l.Items = append(l.Items, d)
+	return d
+}
+
+var _ model.ModelSlice = (*DeviceList)(nil)
+
+type demoCaller struct{}
+
+func (c *demoCaller) Call(op string, args model.Encodable, into model.Decodable, done func(err error)) {
+	if op == "device_list" {
+		dl, ok := into.(*DeviceList)
+		if ok {
+			// Pc Administracion
+			d1 := dl.Append().(*Device)
+			d1.Id = "10"
+			d1.Name = "Pc Administracion"
+			d1.Ip = "192.168.122.10"
+
+			// Pc Ventas
+			d2 := dl.Append().(*Device)
+			d2.Id = "11"
+			d2.Name = "Pc Ventas"
+			d2.Ip = "192.168.122.11"
+
+			// Servidor Web
+			d3 := dl.Append().(*Device)
+			d3.Id = "12"
+			d3.Name = "Servidor Web"
+			d3.Ip = "192.168.122.20"
+		}
 	}
-}
-func (m *mockModel) Pointers() []any { return []any{new(string)} }
-func (m *mockModel) EncodeFields(w model.FieldWriter) {}
-func (m *mockModel) DecodeFields(r model.FieldReader) {}
-
-type mockPresenter struct {
-	items []view.Item
+	done(nil)
 }
 
-func (p *mockPresenter) Title() string             { return "Computadores" }
-func (p *mockPresenter) SearchPlaceholder() string { return "Buscar..." }
-func (p *mockPresenter) Record() model.Model       { return &mockModel{} }
-func (p *mockPresenter) Items() []view.Item        { return p.items }
-func (p *mockPresenter) Reload() error             { return nil }
-func (p *mockPresenter) Selected() string          { return "" }
-func (p *mockPresenter) Select(id string) model.Model { return &mockModel{} }
-func (p *mockPresenter) CanSave() bool             { return true }
-func (p *mockPresenter) Save(payload model.Model) error { return nil }
-func (p *mockPresenter) CanDelete() bool           { return true }
-func (p *mockPresenter) Delete(id string) error    { return nil }
+func (c *demoCaller) Dispatch(op string, args model.Encodable) {}
 
 func (m mod) View() Component {
 	if m.name == "crud" {
-		pres := &mockPresenter{
-			items: []view.Item{
-				{ID: "1", Label: "Pc Administracion", Description: "192.168.122.10"},
-				{ID: "2", Label: "Pc Ventas", Description: "192.168.122.11"},
-				{ID: "3", Label: "Servidor Web", Description: "192.168.122.20"},
-			},
-		}
+		pres := view.New(&demoCaller{}, &Device{}, "device_list",
+			func() model.ModelSlice { return &DeviceList{} },
+			view.WithTitle("Computadores"),
+			view.WithSearchPlaceholder("Buscar..."),
+			view.WithSaveOp("device_save"),
+			view.WithDeleteOp("device_delete"),
+		)
 		cv, err := crudview.New(crudview.Config{
 			ParentID:  "crud",
 			Presenter: pres,
@@ -69,13 +128,11 @@ func (m mod) View() Component {
 		if err != nil {
 			panic(err)
 		}
-		cv.OnSelect = func(it view.Item) {
-			m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000)
-		}
-		cv.OnNew = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
-		cv.OnSave = func(done func(err error)) { m.p.Notify(Msg.Success, "Guardado", 2000); done(nil) }
-		cv.OnDelete = func(id string, done func(err error)) { m.p.Notify(Msg.Error, "Eliminado "+id, 2000); done(nil) }
-		cv.OnCancel = func() { m.p.Notify(Msg.Info, "Cancelado", 2000) }
+		cv.OnSelect  = func(it view.Item) { m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000) }
+		cv.OnNew     = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
+		cv.OnSaved   = func(err error) { if err == nil { m.p.Notify(Msg.Success, "Guardado", 2000) } }
+		cv.OnDeleted = func(id string, err error) { if err == nil { m.p.Notify(Msg.Error, "Eliminado "+id, 2000) } }
+		cv.OnCancel  = func() { m.p.Notify(Msg.Info, "Cancelado", 2000) }
 		return cv
 	}
 
@@ -85,14 +142,6 @@ func (m mod) View() Component {
 		Article: Div().Text("Contenido de " + m.name),
 	}
 }
-
-type mockCaller struct{}
-
-func (c *mockCaller) Call(op string, args model.Encodable, callback func(result []byte, err error)) {
-	callback(nil, nil)
-}
-
-func (c *mockCaller) Dispatch(op string, args model.Encodable) {}
 
 func main() {
 	p := &platformd.Platform{

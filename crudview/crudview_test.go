@@ -7,6 +7,9 @@ import (
 
 	. "github.com/tinywasm/html"
 	. "github.com/tinywasm/fmt"
+	"github.com/tinywasm/view"
+	"github.com/tinywasm/view/conformance"
+	"github.com/tinywasm/model"
 )
 
 func TestCrudView_Render_Basic(t *testing.T) {
@@ -34,7 +37,10 @@ func TestCrudView_Render_Basic(t *testing.T) {
 }
 
 func TestCrudView_Render_WithSource(t *testing.T) {
-	p := &fakePresenter{title: "CRUD with List", record: &Device{}, canDelete: false}
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+
 	v := &CrudView{
 		Title: "CRUD with List",
 		Presenter: p,
@@ -53,7 +59,7 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 	if !Contains(html, "name='btn_crudnew'") {
 		t.Error("expected new button")
 	}
-	// OnDelete is nil, so no delete button
+	// view.New doesn't implement view.Deleter by default (only if WithDeleteOp is provided)
 	if Contains(html, "name='btn_cruddel'") {
 		t.Error("did not expect delete button")
 	}

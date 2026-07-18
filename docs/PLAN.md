@@ -2,8 +2,9 @@
 PLAN: "feat: migrate crudview to view v0.2.0, self-wired CRUD behavior, conformance adoption, fix platformd demo"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11691698272361580726
+PR: https://github.com/tinywasm/layout/pull/15
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
