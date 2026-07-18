@@ -30,21 +30,6 @@ func New(cfg Config) (*CrudView, error) {
 	}
 	f.HideSubmit() // the CRUD bar owns save — the form must not paint its own submit
 
-	if cfg.ParentID == "conformance" {
-		// During conformance tests, skip validation because MockRecord fields
-		// (like "Bob" with ID "2" or "X" with Name "X") violate standard form validations
-		// (like Text's default 2-character minimum).
-		for _, inp := range f.Inputs {
-			if skipper, ok := inp.(interface{ SetSkipValidation(bool) }); ok {
-				skipper.SetSkipValidation(true)
-			}
-		}
-	} else if idInput := f.Input("id"); idInput != nil {
-		if skipper, ok := idInput.(interface{ SetSkipValidation(bool) }); ok {
-			skipper.SetSkipValidation(true)
-		}
-	}
-
 	return &CrudView{
 		Title:             cfg.Presenter.Title(),
 		Form:              f,
