@@ -704,3 +704,50 @@ func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
 		t.Errorf("expected exactly 1 device_delete call after confirming, got %d", countDeleteCalls())
 	}
 }
+
+// Case 13: pressing "+" must flip the toggle to its "↺" (cancel) state even
+// though nothing is selected — active() (not v.selected alone) is what the
+// icon/toggleAction branch reads. Regression test for the reported bug: the
+// button stayed on "+" after pressing it.
+func TestConsumer_NewFlipsToggleActive(t *testing.T) {
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Device One"
+			d1.Ip = "192.168.1.1"
+		},
+	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+
+	cfg := Config{ParentID: "my-id", Presenter: p}
+	v, err := New(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	v.Init(&fakeCtx{})
+
+	if v.active() {
+		t.Error("expected idle state (nothing selected, nothing composing) to be inactive")
+	}
+
+	v.newAction()
+	if !v.active() {
+		t.Error("expected \"+\" to flip active() to true so the toggle shows cancel/undo")
+	}
+
+	// toggleAction must read active(), not v.selected alone, or it would call
+	// newAction again (idempotent, but the wrong branch) instead of undoAction.
+	v.toggleAction()
+	if v.active() {
+		t.Error("expected toggling while composing (nothing selected yet) to undo, not re-enter new")
+	}
+
+	// Selecting an existing row is the other source of active().
+	v.selectAction(view.Item{ID: "12"})
+	if !v.active() {
+		t.Error("expected selecting a row to flip active() to true")
+	}
+}

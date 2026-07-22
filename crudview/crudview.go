@@ -66,6 +66,16 @@ type CrudView struct {
 	canDelete     *SignalBool
 	deleteID      *SignalString // record pending confirmation (⋮ → Eliminar)
 	deleteLabel   *SignalString // its label, for the confirmation message
+	composing     *SignalBool   // "+" was pressed and nothing saved/cancelled yet (see active())
+}
+
+// active reports whether the toggle button should show "↺" (cancel/undo):
+// either an existing row is selected, or the user is mid-composing a new one
+// (pressed "+", hasn't saved or cancelled). Nothing else should read
+// v.selected/v.composing directly to decide the icon/branch — this is the
+// single place that combines them.
+func (v *CrudView) active() bool {
+	return v.selected.Get() != "" || v.composing.Get()
 }
 
 func (v *CrudView) Init(ctx Ctx) {
@@ -74,6 +84,7 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.canDelete = NewBool(false)
 	v.deleteID = NewString("")
 	v.deleteLabel = NewString("")
+	v.composing = NewBool(false)
 
 	// The list is a targetlist component: it owns row rendering + the ⋮ menu and
 	// shares the selected signal so its highlight follows the form.
@@ -184,6 +195,9 @@ func (v *CrudView) detailPanelID() string {
 func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
+	if it.ID != "" {
+		v.composing.Set(false) // picking an existing row abandons any new-record draft
+	}
 	rec := v.Presenter.Select(it.ID)
 	if v.form != nil {
 		_ = v.form.LoadValues(rec) // nil record → LoadValues resets; not an error
@@ -202,6 +216,9 @@ func (v *CrudView) selectAction(it view.Item) {
 // newAction: the toggle button in its "+" state (nothing selected). Idempotent —
 // safe to call even when already in the "new" state. Focuses the first field —
 // standard behavior, see the view/conformance "new_focuses_first_field" clause.
+// Marks composing=true: the button switches to "↺" for the rest of the draft
+// (until saved-and-cancelled or explicitly undone), the same as selecting an
+// existing row does — see active().
 func (v *CrudView) newAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
@@ -211,32 +228,38 @@ func (v *CrudView) newAction() {
 		v.form.SetLocked(false)
 		v.form.Focus()
 	}
+	v.composing.Set(true)
 	if v.OnNew != nil {
 		v.OnNew()
 	}
 }
 
-// undoAction: the toggle button in its "↺" state (a row is selected). Undoes
-// everything — deselects, clears the form — and returns the button to "+".
-// Leaves the form in the same focused, editable state newAction does.
+// undoAction: the toggle button in its "↺" state (active() — a row is
+// selected, or a new-record draft is in progress). Undoes everything —
+// deselects, clears the form, drops the draft — and returns the button to
+// "+". Deliberately does NOT call Form.Focus(): cancelling must leave nothing
+// selected/focused (standard behavior, see the view/conformance
+// "cancel_clears_focus" clause) — unlike newAction/editAction, which enter an
+// editable state and focus the first field on purpose.
 func (v *CrudView) undoAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
+	v.composing.Set(false)
 	v.Presenter.Deselect()
 	if v.form != nil {
-		v.form.Reset()
+		v.form.Reset() // also clears the tracked FocusedFieldID()
 		v.form.SetLocked(false)
-		v.form.Focus()
 	}
 	if v.OnCancel != nil {
 		v.OnCancel()
 	}
 }
 
-// toggleAction: the single crud button's click handler. "+"→create nothing
-// selected; "↺"→undo when a row is selected.
+// toggleAction: the single crud button's click handler. "↺"→undo whenever
+// active() (a row is selected, or a new-record draft is in progress);
+// "+"→create otherwise.
 func (v *CrudView) toggleAction() {
-	if v.selected.Get() != "" {
+	if v.active() {
 		v.undoAction()
 	} else {
 		v.newAction()
@@ -355,11 +378,11 @@ func (v *CrudView) Render() *Element {
 			Child(
 				iconCrudNew.Render(string(clsIcon16)).
 					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
-						return v.selected.Get() != ""
+						return v.active()
 					})),
 				iconCrudCancel.Render(string(clsIcon16)).
 					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
-						return v.selected.Get() == ""
+						return !v.active()
 					})),
 			)
 		toggle.On("click", func(Event) { v.toggleAction() })

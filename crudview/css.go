@@ -37,10 +37,14 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 			Padding(Str("var(--cv-mag-pri, .5rem)")),
 			BorderRadius(Str(".4em")),
 			// Fill the stage and split it 2:1 (form : list) with fractions instead
-			// of viewport units, so the view fits any container width.
+			// of viewport units, so the view fits any container width. The row
+			// track must be 1fr, not none/auto — an auto row only grows to its
+			// content's intrinsic height, leaving the rest of the container's
+			// height as bare background instead of stretching the columns to
+			// fill it.
 			// NOTE: adjacent RawRules are concatenated without a separator, so
 			// grid-template and gap MUST share one RawRule with an explicit ';'.
-			RawRule("grid-template: none / 2fr 1fr; gap: var(--cv-mag-pri, .5rem)"),
+			RawRule("grid-template: 1fr / 2fr 1fr; gap: var(--cv-mag-pri, .5rem)"),
 		),
 
 		Rule(clsArticleContend,

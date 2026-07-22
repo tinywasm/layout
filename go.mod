@@ -7,9 +7,11 @@ require (
 	github.com/tinywasm/css v0.1.4
 	github.com/tinywasm/dom v0.11.4
 	github.com/tinywasm/fmt v0.25.5
-	github.com/tinywasm/form v0.2.22
+	github.com/tinywasm/form v0.2.23
 	github.com/tinywasm/html v0.0.8
 	github.com/tinywasm/model v0.1.0
+	github.com/tinywasm/orm v0.11.4
+	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.2

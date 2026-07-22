@@ -3,20 +3,23 @@
 package main
 
 import (
+	"github.com/tinywasm/components/themetoggle"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
-	"github.com/tinywasm/components/themetoggle"
 	// Global form skin: one import at the composition root makes EVERY form in the
 	// app render as labeled fieldset boxes (CSS-only, collected via SSR).
 	_ "github.com/tinywasm/components/fieldset"
+	"github.com/tinywasm/form/input"
 	"github.com/tinywasm/layout/crudview"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
 	"github.com/tinywasm/model"
+	"github.com/tinywasm/orm"
+	"github.com/tinywasm/storage"
+	"github.com/tinywasm/storage/mem"
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/view"
-	"github.com/tinywasm/form/input"
 )
 
 // Tiny model stub so layouts have an ID source.
@@ -72,12 +75,12 @@ type DeviceList struct {
 	Items []*Device
 }
 
-func (l *DeviceList) IsNil() bool { return l == nil }
+func (l *DeviceList) IsNil() bool                      { return l == nil }
 func (l *DeviceList) DecodeFields(r model.FieldReader) {}
-func (l *DeviceList) Schema() []model.Field { return nil }
-func (l *DeviceList) Pointers() []any { return nil }
-func (l *DeviceList) Len() int { return len(l.Items) }
-func (l *DeviceList) At(i int) model.Fielder { return l.Items[i] }
+func (l *DeviceList) Schema() []model.Field            { return nil }
+func (l *DeviceList) Pointers() []any                  { return nil }
+func (l *DeviceList) Len() int                         { return len(l.Items) }
+func (l *DeviceList) At(i int) model.Fielder           { return l.Items[i] }
 func (l *DeviceList) Append() model.Fielder {
 	d := &Device{}
 	l.Items = append(l.Items, d)
@@ -86,39 +89,76 @@ func (l *DeviceList) Append() model.Fielder {
 
 var _ model.ModelSlice = (*DeviceList)(nil)
 
-type demoCaller struct{}
+// deviceDB is a real (in-memory) CRUD backend for the demo, so the UI's actual
+// behavior — save-on-blur, the new item landing in the list, delete removing
+// it — can be exercised for real instead of against a static 3-item fixture.
+// Package-level and built once: it must survive across View() calls (switching
+// tabs and back) so the demo doesn't lose its data every time the module is
+// re-rendered. It DOES reset on a full page reload/process restart — that is
+// the expected trade-off of an in-memory store, not a bug.
+var deviceDB = newSeededDeviceDB()
 
-func (c *demoCaller) Call(op string, args model.Encodable, into model.Decodable, done func(err error)) {
-	if op == "device_list" {
-		dl, ok := into.(*DeviceList)
-		if ok {
-			// Pc Administracion
-			d1 := dl.Append().(*Device)
-			d1.Id = "10"
-			d1.Name = "Pc Administracion"
-			d1.Ip = "192.168.122.10"
-
-			// Pc Ventas
-			d2 := dl.Append().(*Device)
-			d2.Id = "11"
-			d2.Name = "Pc Ventas"
-			d2.Ip = "192.168.122.11"
-
-			// Servidor Web
-			d3 := dl.Append().(*Device)
-			d3.Id = "12"
-			d3.Name = "Servidor Web"
-			d3.Ip = "192.168.122.20"
-		}
+func newSeededDeviceDB() *orm.DB {
+	db := orm.New(mem.New())
+	for _, d := range []*Device{
+		{Id: "10", Name: "Pc Administracion", Ip: "192.168.122.10"},
+		{Id: "11", Name: "Pc Ventas", Ip: "192.168.122.11"},
+		{Id: "12", Name: "Servidor Web", Ip: "192.168.122.20"},
+	} {
+		_ = db.Create(d)
 	}
-	done(nil)
+	return db
 }
 
-func (c *demoCaller) Dispatch(op string, args model.Encodable) {}
+// memCaller adapts deviceDB (an *orm.DB over storage/mem) to router.Caller —
+// the seam view.Presenter drives. Device-specific (type-asserts *Device)
+// rather than generic: this is app/demo wiring, not a shared library.
+type memCaller struct{ db *orm.DB }
+
+func (c *memCaller) Call(op string, args model.Encodable, into model.Decodable, done func(err error)) {
+	var err error
+	switch op {
+	case "device_list":
+		if dl, ok := into.(*DeviceList); ok {
+			var rows []*Device
+			err = c.db.Query(&Device{}).ReadAll(
+				func() model.Model { return &Device{} },
+				func(m model.Model) { rows = append(rows, m.(*Device)) },
+			)
+			// Newest first: mem has no timestamp/sequence column, so this just
+			// reverses creation order — the same order Create() appended in.
+			for i := len(rows) - 1; i >= 0 && err == nil; i-- {
+				dst := dl.Append().(*Device)
+				*dst = *rows[i]
+			}
+		}
+	case "device_save":
+		d, ok := args.(*Device)
+		if !ok {
+			err = Errf("memCaller: device_save: unexpected payload type")
+			break
+		}
+		if findErr := c.db.Query(&Device{}).Where("id").Eq(d.Id).ReadOne(); findErr != nil {
+			err = c.db.Create(d) // no existing row with this id — new record
+		} else {
+			err = c.db.Update(d, storage.Eq("id", d.Id))
+		}
+	case "device_delete":
+		d, ok := args.(*Device)
+		if !ok {
+			err = Errf("memCaller: device_delete: unexpected payload type")
+			break
+		}
+		err = c.db.Delete(d, storage.Eq("id", d.Id))
+	}
+	done(err)
+}
+
+func (c *memCaller) Dispatch(op string, args model.Encodable) {}
 
 func (m mod) View() Component {
 	if m.name == "crud" {
-		pres := view.New(&demoCaller{}, &Device{}, "device_list",
+		pres := view.New(&memCaller{db: deviceDB}, &Device{}, "device_list",
 			func() model.ModelSlice { return &DeviceList{} },
 			view.WithTitle("Computadores"),
 			view.WithSearchPlaceholder("Buscar..."),
@@ -132,11 +172,19 @@ func (m mod) View() Component {
 		if err != nil {
 			panic(err)
 		}
-		cv.OnSelect  = func(it view.Item) { m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000) }
-		cv.OnNew     = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
-		cv.OnSaved   = func(err error) { if err == nil { m.p.Notify(Msg.Success, "Guardado", 2000) } }
-		cv.OnDeleted = func(id string, err error) { if err == nil { m.p.Notify(Msg.Error, "Eliminado "+id, 2000) } }
-		cv.OnCancel  = func() { m.p.Notify(Msg.Info, "Cancelado", 2000) }
+		cv.OnSelect = func(it view.Item) { m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000) }
+		cv.OnNew = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
+		cv.OnSaved = func(err error) {
+			if err == nil {
+				m.p.Notify(Msg.Success, "Guardado", 2000)
+			}
+		}
+		cv.OnDeleted = func(id string, err error) {
+			if err == nil {
+				m.p.Notify(Msg.Error, "Eliminado "+id, 2000)
+			}
+		}
+		cv.OnCancel = func() { m.p.Notify(Msg.Info, "Cancelado", 2000) }
 		return cv
 	}
 

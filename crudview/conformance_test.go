@@ -43,8 +43,9 @@ func TestViewConformance(t *testing.T) {
 						v.deleteAction(d, v.selected.Get())
 					}
 				},
-				New:  func() { v.newAction() },
-				Edit: func(id string) { v.editAction(id) },
+				New:    func() { v.newAction() },
+				Edit:   func(id string) { v.editAction(id) },
+				Cancel: func() { v.undoAction() },
 				FocusedFieldID: func() string {
 					if v.form == nil {
 						return ""
