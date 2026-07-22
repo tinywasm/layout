@@ -121,11 +121,14 @@ func (v *CrudView) renderDeleteConfirm() *Element {
 
 // editAction (⋮ → Editar): load the record and unlock the form for editing.
 // selectAction already loaded+locked it (read-only) if this wasn't already the
-// selected row.
+// selected row. Focuses the first field so the user can start typing right
+// away — standard behavior, see the view/conformance "edit_focuses_first_field"
+// clause.
 func (v *CrudView) editAction(id string) {
 	v.selectAction(view.Item{ID: id})
 	if v.form != nil {
 		v.form.SetLocked(false)
+		v.form.Focus()
 	}
 }
 
@@ -197,7 +200,8 @@ func (v *CrudView) selectAction(it view.Item) {
 }
 
 // newAction: the toggle button in its "+" state (nothing selected). Idempotent —
-// safe to call even when already in the "new" state.
+// safe to call even when already in the "new" state. Focuses the first field —
+// standard behavior, see the view/conformance "new_focuses_first_field" clause.
 func (v *CrudView) newAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
@@ -205,6 +209,7 @@ func (v *CrudView) newAction() {
 	if v.form != nil {
 		v.form.Reset()
 		v.form.SetLocked(false)
+		v.form.Focus()
 	}
 	if v.OnNew != nil {
 		v.OnNew()
@@ -213,6 +218,7 @@ func (v *CrudView) newAction() {
 
 // undoAction: the toggle button in its "↺" state (a row is selected). Undoes
 // everything — deselects, clears the form — and returns the button to "+".
+// Leaves the form in the same focused, editable state newAction does.
 func (v *CrudView) undoAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
@@ -220,6 +226,7 @@ func (v *CrudView) undoAction() {
 	if v.form != nil {
 		v.form.Reset()
 		v.form.SetLocked(false)
+		v.form.Focus()
 	}
 	if v.OnCancel != nil {
 		v.OnCancel()

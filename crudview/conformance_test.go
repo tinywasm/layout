@@ -29,15 +29,27 @@ func TestViewConformance(t *testing.T) {
 			}
 
 			return conformance.Driver{
-				Mount:  func() { _ = v.Reload() },
-				Labels: func() []string { return cardLabels(v) },
-				Select: func(id string) { v.selectAction(view.Item{ID: id}) },
+				Mount:    func() { _ = v.Reload() },
+				Labels:   func() []string { return cardLabels(v) },
+				Select:   func(id string) { v.selectAction(view.Item{ID: id}) },
 				SetField: func(name, value string) { v.form.SetValues(name, value) },
 				Save: func() {
-					if s, ok := p.(view.Saver); ok { v.saveAction(s) }
+					if s, ok := p.(view.Saver); ok {
+						v.saveAction(s)
+					}
 				},
 				Delete: func() {
-					if d, ok := p.(view.Deleter); ok { v.deleteAction(d, v.selected.Get()) }
+					if d, ok := p.(view.Deleter); ok {
+						v.deleteAction(d, v.selected.Get())
+					}
+				},
+				New:  func() { v.newAction() },
+				Edit: func(id string) { v.editAction(id) },
+				FocusedFieldID: func() string {
+					if v.form == nil {
+						return ""
+					}
+					return v.form.FocusedFieldID()
 				},
 			}
 		},

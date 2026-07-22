@@ -128,6 +128,50 @@ theme-aware selection) is merged — do NOT redo it.
       982×690 — two columns, blank/editable "+" form, 3-row list, no console
       errors (`browser_get_errors` clean throughout the session).
 
+## Post-roadmap fixes and additions
+Found/requested after the checklist above was already complete; same
+components, same conventions.
+
+- **⋮ menu didn't close.** Native `<details>` only closes on a summary click or
+  an explicit attribute removal — never on an outside click, and picking
+  Editar/Eliminar didn't close it either. Fixed in `targetlist`
+  (`components`): every row's `<details>` now shares one `name="tl-menu-group"`
+  (native HTML "exclusive accordion" — opening one auto-closes any other, no
+  JS); a new `closeAllMenus()` removes the `open` attribute from every row and
+  is wired to the Editar/Eliminar click handlers AND to a full-page
+  `.tl-menu-backdrop` click-catcher shown only while a menu is open (CSS
+  `:has()`: `.tl-wrap:has(.tl-menu[open]) .tl-menu-backdrop { display:block }`).
+  The backdrop had to become a plain sibling of the `<ul>` (a new `.tl-wrap`
+  wrapper), never a static child mixed into it — `BindChildren`'s keyed
+  reconcile assumes it owns every child of the element it's bound to, and
+  fights a statically-added one.
+- **Last row's dropdown got clipped.** The list container must clip overflow
+  to scroll, so the last row's ⋮ menu — opening downward with no room below —
+  got cut off. Fixed with `.tl-row:last-child .tl-menu-list { top:auto;
+  bottom:calc(100% + 2px) }`, flipping just that row's menu to open upward.
+- **Locked-field color too dark.** The read-only tint used `ColorMuted`
+  (`#6E6E73` fallback) — a "disabled button" gray, too dark to read/select
+  text through comfortably. Changed to `ColorSurface` (`#F2F2F7` fallback, a
+  hair off white) and dropped the `Opacity(0.7)` dimming entirely (it faded
+  the text too, which must stay fully legible/selectable — "frosted glass",
+  not "grayed out"). `fieldset/css.go`.
+- **"+"/Editar now focus the first field** — standard behavior, added to the
+  `view/conformance` suite so every renderer must implement it identically,
+  not just crudview. `tinywasm/form` gained `Form.Focus()` (moves focus to
+  `Inputs[0]`'s DOM id via `dom.Get(id).Focus()` — imperative, not reactive:
+  the form's DOM already exists by the time a host unlocks it) and
+  `FocusedFieldID()` (returns the id last targeted — makes the INTENT
+  observable in a backend/non-WASM test, since real focus movement is a
+  WASM-only DOM side effect, a no-op in the SSR stub). `crudview.newAction`,
+  `.undoAction`, and `.editAction` all call it after unlocking.
+  `view/conformance.Driver` gained `New`, `Edit`, `FocusedFieldID` fields and
+  two clauses (`new_focuses_first_field`, `edit_focuses_first_field`);
+  `view/mock.Renderer` (the headless reference renderer) and
+  `crudview`'s own conformance test both implement them. Required a new TEMP
+  `replace github.com/tinywasm/view` in `layout/go.mod` (previously view had
+  no local checkout wired in). Verified live via MCP + `browser_evaluate_js`
+  (`document.activeElement`) in both the "+" and Editar paths.
+
 ## Known issue
 - ~~Some module icons (crudview `+`/`↺`/search, targetlist `⋮`) render blank/inconsistently
   in the served sprite.~~ FIXED upstream in `tinywasm/app` (2026-07-22): assetmin's
@@ -141,6 +185,6 @@ theme-aware selection) is merged — do NOT redo it.
 ## Notes for the next agent
 - Hot reload auto-compiles — never `go build`/restart to see a change (AGENTS.md);
   go.mod `replace` changes DO need a relink.
-- `replace` points dom, css, form, components at local checkouts.
+- `replace` points dom, css, form, components, view at local checkouts.
 - SRP for css: a component's look lives IN that component; crudview holds only the
   layout + slide. Adjacent `RawRule`s need their own `;`.

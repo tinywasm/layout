@@ -7,7 +7,7 @@ require (
 	github.com/tinywasm/css v0.1.4
 	github.com/tinywasm/dom v0.11.4
 	github.com/tinywasm/fmt v0.25.5
-	github.com/tinywasm/form v0.2.17
+	github.com/tinywasm/form v0.2.22
 	github.com/tinywasm/html v0.0.8
 	github.com/tinywasm/model v0.1.0
 	github.com/tinywasm/svg v0.1.8
@@ -35,3 +35,7 @@ replace github.com/tinywasm/form => /home/cesar/Dev/Project/tinywasm/form
 // TEMP: local css checkout — brand palette set to the Pa100T reference (steel
 // blue + white text).
 replace github.com/tinywasm/css => /home/cesar/Dev/Project/tinywasm/css
+
+// TEMP: local view checkout — conformance.Driver gained New/Edit/FocusedFieldID
+// for the "+ / Editar focuses the first field" behavior.
+replace github.com/tinywasm/view => /home/cesar/Dev/Project/tinywasm/view
