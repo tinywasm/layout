@@ -1,12 +1,14 @@
 package crudview
 
 import (
+	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
-	"github.com/tinywasm/svg"
-	. "github.com/tinywasm/css"
-	"github.com/tinywasm/view"
+
+	"github.com/tinywasm/components/targetlist"
 	"github.com/tinywasm/form"
+	"github.com/tinywasm/svg"
+	"github.com/tinywasm/view"
 )
 
 var (
@@ -17,24 +19,20 @@ var (
 	clsTitleContainer         Class = "cv-title-container"
 	clsTitle                  Class = "cv-title"
 	clsBoxContent             Class = "cv-box-content"
-	clsControls               Class = "cv-controls"
-	clsContebuton             Class = "cv-contebuton"
+	clsAsideActions           Class = "cv-aside-actions"
 	clsBtnCrud                Class = "cv-btn-crud"
+	clsBtnCrudIconHidden      Class = "cv-btn-crud-icon-hidden"
 	clsAsideList              Class = "cv-aside-list"
 	clsListaBox               Class = "cv-lista-box"
-	clsLista                  Class = "cv-lista"
-	clsTargetLi               Class = "cv-target-li"
-	clsTargetLiOn             Class = "cv-target-li-on"
-	clsDescriptionTarget      Class = "cv-description-target"
 	clsAsideSearch            Class = "cv-aside-search"
 	clsIcon16                 Class = "cv-icon-16"
 )
 
 const (
-	iconCrudNew              = svg.Icon("icon-crud-new")
-	iconCrudDel              = svg.Icon("icon-crud-del")
-	iconCrudCancel           = svg.Icon("icon-crud-cancel")
-	iconCrudSave             = svg.Icon("icon-crud-save")
+	// The single toggle button swaps between these two icons reactively — see
+	// the "toggle" block in Render().
+	iconCrudNew              = svg.Icon("icon-crud-new")    // "+"  — nothing selected
+	iconCrudCancel           = svg.Icon("icon-crud-cancel") // "↺" — a row is selected (undo)
 	iconCrudSearch           = svg.Icon("icon-crud-search")
 	defaultSearchPlaceholder = "Search…"
 )
@@ -56,25 +54,51 @@ type CrudView struct {
 	OnCancel  func()
 
 	// internal
-	form      *form.Form // typed handle set by New; nil when standalone
-	items     *SignalNodes
+	form      *form.Form             // typed handle set by New; nil when standalone
+	list      *targetlist.TargetList // owns the row rendering + ⋮ menu
 	selected  *SignalString
 	search    *SignalString
-	canSave   *SignalBool
 	canDelete *SignalBool
 }
 
 func (v *CrudView) Init(ctx Ctx) {
-	v.items = NewNodes()
 	v.selected = NewString("")
 	v.search = NewString("")
-	v.canSave = NewBool(true)   // enabled by default in Pa100T capture
 	v.canDelete = NewBool(false)
+
+	// The list is a targetlist component: it owns row rendering + the ⋮ menu and
+	// shares the selected signal so its highlight follows the form.
+	v.list = &targetlist.TargetList{
+		Selected: v.selected,
+		OnSelect: func(it targetlist.Item) {
+			v.selectAction(view.Item{ID: it.ID, Label: it.Label, Description: it.Description})
+		},
+		OnEdit:   func(id string) { v.editAction(id) },
+		OnDelete: func(id string) { v.deleteRequest(id) },
+	}
 
 	if v.Presenter != nil {
 		if err := v.Reload(); err != nil {
 			Log(err.Error())
 		}
+	}
+}
+
+// editAction (⋮ → Editar): load the record and unlock the form for editing.
+// selectAction already loaded+locked it (read-only) if this wasn't already the
+// selected row.
+func (v *CrudView) editAction(id string) {
+	v.selectAction(view.Item{ID: id})
+	if v.form != nil {
+		v.form.SetLocked(false)
+	}
+}
+
+// deleteRequest (⋮ → Eliminar): delete the record. Modal confirmation is a
+// follow-up step; this performs the delete when the presenter supports it.
+func (v *CrudView) deleteRequest(id string) {
+	if deleter, ok := v.Presenter.(view.Deleter); ok && id != "" {
+		v.deleteAction(deleter, id)
 	}
 }
 
@@ -89,43 +113,62 @@ func (v *CrudView) Reload() error {
 	return nil
 }
 
-// selectAction: card click / driver Select
+// selectAction: card click / driver Select. Selecting an existing row shows it
+// read-only — only the ⋮ → Editar path (editAction) unlocks it.
 func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
 	rec := v.Presenter.Select(it.ID)
 	if v.form != nil {
 		_ = v.form.LoadValues(rec) // nil record → LoadValues resets; not an error
+		v.form.SetLocked(it.ID != "")
 	}
 	if v.OnSelect != nil {
 		v.OnSelect(it)
 	}
 }
 
-// newAction: "+" button
+// newAction: the toggle button in its "+" state (nothing selected). Idempotent —
+// safe to call even when already in the "new" state.
 func (v *CrudView) newAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
 	v.Presenter.Deselect()
 	if v.form != nil {
 		v.form.Reset()
+		v.form.SetLocked(false)
 	}
 	if v.OnNew != nil {
 		v.OnNew()
 	}
 }
 
-// cancelAction: "↺" button
-func (v *CrudView) cancelAction() {
+// undoAction: the toggle button in its "↺" state (a row is selected). Undoes
+// everything — deselects, clears the form — and returns the button to "+".
+func (v *CrudView) undoAction() {
+	v.selected.Set("")
+	v.canDelete.Set(false)
+	v.Presenter.Deselect()
 	if v.form != nil {
 		v.form.Reset()
+		v.form.SetLocked(false)
 	}
 	if v.OnCancel != nil {
 		v.OnCancel()
 	}
 }
 
-// saveAction: save button / driver Save. Only reachable when saver != nil.
+// toggleAction: the single crud button's click handler. "+"→create nothing
+// selected; "↺"→undo when a row is selected.
+func (v *CrudView) toggleAction() {
+	if v.selected.Get() != "" {
+		v.undoAction()
+	} else {
+		v.newAction()
+	}
+}
+
+// saveAction persists the current form values. Only reachable when saver != nil.
 func (v *CrudView) saveAction(saver view.Saver) {
 	err := v.form.Validate()
 	if err == nil {
@@ -141,6 +184,15 @@ func (v *CrudView) saveAction(saver view.Saver) {
 	}
 	if v.OnSaved != nil {
 		v.OnSaved(err)
+	}
+}
+
+// autoSaveAction is the Form.OnFieldChange hook: every field commit (blur/change)
+// persists immediately — there is no explicit Save button. A no-op when the
+// presenter cannot save (standalone/read-only views).
+func (v *CrudView) autoSaveAction() {
+	if saver, ok := v.Presenter.(view.Saver); ok && v.form != nil {
+		v.saveAction(saver)
 	}
 }
 
@@ -160,37 +212,16 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 }
 
 func (v *CrudView) filter() {
-	nodes := make([]*Element, 0)
-
-	for _, it := range v.Presenter.Filter(v.search.Get()) {
-		it := it
-		id := it.ID
-		card := Li().Set(clsTargetLi.AsAttr()).
-			BindClass(string(clsTargetLiOn), DeriveBool(func() bool {
-				return v.selected.Get() == id
-			})).
-			Text(it.Label).
-			Child(Span().Set(clsDescriptionTarget.AsAttr()).Text(it.Description))
-
-		card.On("click", func(Event) {
-			v.selectAction(it)
-		})
-
-		nodes = append(nodes, card)
+	src := v.Presenter.Filter(v.search.Get())
+	items := make([]targetlist.Item, 0, len(src))
+	for _, it := range src {
+		items = append(items, targetlist.Item{ID: it.ID, Label: it.Label, Description: it.Description})
 	}
-
-	v.items.Set(nodes)
+	v.list.SetItems(items)
 }
 
 func (v *CrudView) Render() *Element {
 	hasSource := v.Presenter != nil
-
-	var saver view.Saver
-	var deleter view.Deleter
-	if hasSource {
-		saver, _ = v.Presenter.(view.Saver)
-		deleter, _ = v.Presenter.(view.Deleter)
-	}
 
 	root := Div().Set(clsModuleContent.AsAttr())
 
@@ -214,73 +245,13 @@ func (v *CrudView) Render() *Element {
 	}
 	articleCont.Child(Article().Child(boxContent))
 
-	// Controls
-	if hasSource {
-		controls := Div().Set(clsControls.AsAttr())
-		contebuton := Div().Set(clsContebuton.AsAttr())
-
-		// Delete (−)
-		if deleter != nil {
-			btn := Button().Set(clsBtnCrud.AsAttr()).
-				Attr("name", "btn_cruddel").
-				BindAttrBool("disabled", DeriveBool(func() bool { return !v.canDelete.Get() })).
-				Child(renderIcon(iconCrudDel))
-			btn.On("click", func(Event) {
-				id := v.selected.Get()
-				if id != "" {
-					v.deleteAction(deleter, id)
-				}
-			})
-			contebuton.Child(btn)
-		}
-
-		// Cancel (↺)
-		btnCancel := Button().Set(clsBtnCrud.AsAttr()).
-			Attr("name", "btn_crudcancel").
-			Child(renderIcon(iconCrudCancel))
-		btnCancel.On("click", func(Event) {
-			v.cancelAction()
-		})
-		contebuton.Child(btnCancel)
-
-		// New (+)
-		btnNew := Button().Set(clsBtnCrud.AsAttr()).
-			Attr("name", "btn_crudnew").
-			Child(renderIcon(iconCrudNew))
-		btnNew.On("click", func(Event) {
-			v.newAction()
-		})
-		contebuton.Child(btnNew)
-
-		// Save (💾)
-		if saver != nil {
-			btn := Button().Set(clsBtnCrud.AsAttr()).
-				Attr("name", "btn_crudsave").
-				BindAttrBool("disabled", DeriveBool(func() bool { return !v.canSave.Get() })).
-				Child(renderIcon(iconCrudSave))
-			btn.On("click", func(Event) {
-				v.saveAction(saver)
-			})
-			contebuton.Child(btn)
-		}
-
-		controls.Child(contebuton)
-		articleCont.Child(controls)
-	}
-
 	root.Child(articleCont)
 
 	// ── Right Column ─────────────────────────────────────────────────────────
 	if hasSource {
 		asideCont := Aside().Set(clsAsideContend.AsAttr())
 
-		// List
-		asideList := Div().Set(clsAsideList.AsAttr()).
-			Child(Div().Set(clsListaBox.AsAttr()).
-				Child(Ul().Set(clsLista.AsAttr()).BindChildren(v.items)))
-		asideCont.Child(asideList)
-
-		// Search
+		// Search (TOP) — filters the targetlist below.
 		asideSearch := Div().Set(clsAsideSearch.AsAttr())
 		asideSearch.Child(Label().Child(renderIcon(iconCrudSearch)))
 
@@ -294,8 +265,31 @@ func (v *CrudView) Render() *Element {
 			v.filter()
 		})
 		asideSearch.Child(input)
-
 		asideCont.Child(asideSearch)
+
+		// List — the targetlist component owns rows + the ⋮ menu.
+		asideList := Div().Set(clsAsideList.AsAttr()).
+			Child(Div().Set(clsListaBox.AsAttr()).Child(v.list))
+		asideCont.Child(asideList)
+
+		// Single toggle button (BOTTOM) — "+" when nothing is selected, "↺" when a
+		// row is; Editar/Eliminar live in the targetlist row's ⋮ menu instead.
+		actions := Div().Set(clsAsideActions.AsAttr())
+		toggle := Button().Set(clsBtnCrud.AsAttr()).
+			Attr("name", "btn_crudtoggle").
+			Child(
+				iconCrudNew.Render(string(clsIcon16)).
+					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
+						return v.selected.Get() != ""
+					})),
+				iconCrudCancel.Render(string(clsIcon16)).
+					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
+						return v.selected.Get() == ""
+					})),
+			)
+		toggle.On("click", func(Event) { v.toggleAction() })
+		actions.Child(toggle)
+		asideCont.Child(actions)
 
 		root.Child(asideCont)
 	}

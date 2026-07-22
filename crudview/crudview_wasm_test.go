@@ -43,8 +43,8 @@ func TestCrudView_Wasm_Flow(t *testing.T) {
 	// Test filtering
 	v.search.Set("one")
 	v.filter()
-	if len(v.items.Get()) != 1 {
-		t.Errorf("expected 1 filtered item, got %d", len(v.items.Get()))
+	if v.list.Count() != 1 {
+		t.Errorf("expected 1 filtered item, got %d", v.list.Count())
 	}
 
 	// Test selection

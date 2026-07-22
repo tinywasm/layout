@@ -20,8 +20,11 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Declare(tokenTransitionWait, "0s"),
 		),
 
-		// Universal reset for platform elements
-		Rule(Selector("."+string(clsRoot)+" *"),
+		// Universal reset. Selector is a plain `*` (specificity 0,0,0), NOT
+		// `.pd-root *` (0,1,0): the scoped form ties with every component's
+		// single-class rule and, being later in the bundle, silently zeroed their
+		// padding/margin. A bare `*` lets any component class override the reset.
+		Rule(Selector("*"),
 			RawRule("-webkit-box-sizing: border-box;"),
 			RawRule("-moz-box-sizing: border-box;"),
 			Margin(Zero),
@@ -142,12 +145,17 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Flex(Str("1")),
 		),
 
+		// Selection highlight — same --color-selection token as crudview list rows
+		// so "selected" reads identically across menu and list.
 		Rule(clsNavActive,
-			Background(ColorSecondary),
+			Background(ColorSelection),
 		),
 
+		// The active nav ICON is always white: a dark glyph reads poorly on the
+		// orange highlight (worse in light mode). This is intentionally NOT
+		// --color-on-selection (which is dark in light mode for readable list text).
 		Rule(Selector("."+string(clsNavActive)+", ."+string(clsNavActive)+" > svg"),
-			Color(ColorOnSecondary),
+			Color(Str("#ffffff")),
 			Transition(Str("0.3s"), Str("all"), Str("ease")),
 		),
 
@@ -161,7 +169,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		),
 
 		Rule(ClsNavIcon,
-			Color(ColorSecondary),
+			Color(ColorPrimary),
 			Height(Em(2.5)),
 			Width(Em(2.5)),
 			MinWidth(Em(2.5)),
@@ -170,7 +178,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		),
 
 		Rule(clsLinkText,
-			Color(ColorSecondary),
+			Color(ColorPrimary),
 			FontSize(Em(1.1)),
 		),
 
@@ -209,6 +217,40 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		Rule(clsUserBlock,
 			Display(Flex_),
 			AlignItems(Center),
+		),
+
+		Rule(clsHeaderRight,
+			Display(Flex_),
+			AlignItems(Center),
+			JustifyContent(Str("flex-end")),
+			RawRule("gap: .6rem"),
+		),
+
+		// Neutralize a fixed-positioned action (e.g. the theme toggle) so it sits
+		// inline in the header instead of floating over the nav rail. !important
+		// because the component's own `position: fixed` has equal specificity.
+		Rule(Selector("."+string(clsHeaderRight)+" > *"),
+			RawRule("position: static !important; top: auto; right: auto"),
+		),
+
+		// A header action rendered as a button (the theme toggle) shows as a bare
+		// icon here — strip the component's floating-button chrome (circle/fill)
+		// so it isn't an out-of-place blob next to the area name.
+		Rule(Selector("."+string(clsHeaderRight)+" button"),
+			Background(Str("transparent")),
+			Border(None),
+			RawRule("box-shadow: none"),
+			RawRule("width: auto; height: auto"),
+			Padding(Zero),
+			FontSize(Rem(1.4)),
+			Cursor(Pointer),
+		),
+		// Keep it a bare icon on hover too — the component's :hover re-adds a
+		// filled circle + scale; a plain opacity change is the only affordance.
+		Rule(Selector("."+string(clsHeaderRight)+" button:hover"),
+			Background(Str("transparent")),
+			RawRule("transform: none; box-shadow: none"),
+			Opacity(0.7),
 		),
 
 		Rule(clsOrientationWarn,
@@ -283,9 +325,15 @@ func (p *Platform) RenderCSS() *Stylesheet {
 		/************ DESKTOP ************/
 		MediaDesktop(
 			Root(
-				Declare(tokenHeaderHeight, "3vh"),
-				Declare(tokenContentHeight, "97vh"),
-				Declare(tokenMenuSize, "4vw"),
+				// Fixed header tall enough for the user name + area + theme toggle
+				// (a 3vh strip was too short for the 2.4rem toggle). Content fills
+				// the remainder.
+				Declare(tokenHeaderHeight, "2.8rem"),
+				Declare(tokenContentHeight, "calc(100vh - 2.8rem)"),
+				// Fixed em rail: 4vw collapsed below the icon width (2.5em) at
+				// narrow widths, so icons overflowed and overlapped the content.
+				// An em value always fits the icons regardless of viewport.
+				Declare(tokenMenuSize, "3.6em"),
 				Declare(tokenContentWidth, "96vw"),
 			),
 
@@ -300,7 +348,7 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Display(Grid),
 				GridTemplate(Str(`"header         header" `+tokenHeaderHeight.Var()+`
 					"module-content menu-container" `+tokenContentHeight.Var()+` /
-					`+tokenContentWidth.Var()+` `+tokenMenuSize.Var())),
+					1fr `+tokenMenuSize.Var())),
 			),
 
 			// Hide hamburger and overlay on desktop
@@ -342,6 +390,15 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Display(Block),
 			),
 
+			// When the rail expands on hover, left-align the link and give the icon
+			// breathing room so the label is not flush against it.
+			Rule(Selector("."+string(clsMenu)+":hover ."+string(clsNavLink)),
+				JustifyContent(Str("flex-start")),
+			),
+			Rule(Selector("."+string(clsMenu)+":hover ."+string(ClsNavIcon)),
+				MarginRight(Rem(0.8)),
+			),
+
 			Rule(clsNavbar,
 				FlexDirection(Column),
 				JustifyContent(SpaceAround),
@@ -356,7 +413,9 @@ func (p *Platform) RenderCSS() *Stylesheet {
 
 			Rule(clsNavLink,
 				FlexDirection(Row),
-				JustifyContent(Unset),
+				// Collapsed rail shows the icon only — keep it centered in the
+				// narrow rail; hover switches to flex-start (see rule above).
+				JustifyContent(Center),
 				Height(Pct(100)),
 				Padding(Zero, Em(0.5)),
 			),
@@ -366,11 +425,11 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(Selector("."+string(clsNavActive)+", ."+string(clsNavActive)+" > ."+string(clsLinkText)),
-				Color(ColorOnSecondary),
+				Color(Str("#ffffff")),
 			),
 
 			Rule(clsLinkText,
-				Color(ColorSecondary),
+				Color(ColorPrimary),
 				Display(None),
 			),
 
@@ -411,14 +470,15 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			),
 
 			Rule(clsUserBlock,
-				FontSize(Calc(".5em + .5vh")),
-				MarginLeft(Rem(0.4)),
+				FontSize(Rem(0.95)),
+				FontWeight(Str("600")),
+				Color(Str("var(--color-on-surface, #1c1c1e)")),
+				MarginLeft(Rem(0.8)),
 			),
 
 			Rule(clsArea,
-				FontSize(Calc(".5em + .5vh")),
-				MarginLeft(Auto),
-				MarginRight(Rem(0.4)),
+				FontSize(Rem(0.9)),
+				Color(Str("var(--color-on-surface, #1c1c1e)")),
 				TextAlign(RightText),
 			),
 

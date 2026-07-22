@@ -189,8 +189,8 @@ func TestConsumer_ListRendersCards(t *testing.T) {
 	if len(v.Presenter.Items()) != 2 {
 		t.Errorf("expected 2 items, got %d", len(v.Presenter.Items()))
 	}
-	if len(v.items.Get()) != 2 {
-		t.Errorf("expected 2 rendered cards, got %d", len(v.items.Get()))
+	if v.list.Count() != 2 {
+		t.Errorf("expected 2 rendered cards, got %d", v.list.Count())
 	}
 }
 
@@ -562,28 +562,85 @@ func TestConsumer_SearchFiltering(t *testing.T) {
 	_ = v.Reload() // fetch and populate items
 
 	// 1. Initial state (no search term) - expect all 3 items
-	if len(v.items.Get()) != 3 {
-		t.Errorf("expected 3 items initially, got %d", len(v.items.Get()))
+	if v.list.Count() != 3 {
+		t.Errorf("expected 3 items initially, got %d", v.list.Count())
 	}
 
 	// 2. Search by Label ("backend") case-insensitive - expect only 1 item
 	v.search.Set("backend")
 	v.filter()
-	if len(v.items.Get()) != 1 {
-		t.Errorf("expected 1 item for 'backend', got %d", len(v.items.Get()))
+	if v.list.Count() != 1 {
+		t.Errorf("expected 1 item for 'backend', got %d", v.list.Count())
 	}
 
 	// 3. Search by Description ("mysql") case-insensitive - expect only 1 item
 	v.search.Set("MYSQL")
 	v.filter()
-	if len(v.items.Get()) != 1 {
-		t.Errorf("expected 1 item for 'MYSQL', got %d", len(v.items.Get()))
+	if v.list.Count() != 1 {
+		t.Errorf("expected 1 item for 'MYSQL', got %d", v.list.Count())
 	}
 
 	// 4. Search with no matches ("invalid-term") - expect 0 items
 	v.search.Set("invalid-term")
 	v.filter()
-	if len(v.items.Get()) != 0 {
-		t.Errorf("expected 0 items for 'invalid-term', got %d", len(v.items.Get()))
+	if v.list.Count() != 0 {
+		t.Errorf("expected 0 items for 'invalid-term', got %d", v.list.Count())
+	}
+}
+
+// Case 11: selecting a row shows the form read-only; ⋮ → Editar unlocks it;
+// "+"/undo (new/undoAction) always leave it editable.
+func TestConsumer_ReadOnlyGating(t *testing.T) {
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Device One"
+			d1.Ip = "192.168.1.1"
+		},
+	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+
+	cfg := Config{ParentID: "my-id", Presenter: p}
+	v, err := New(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	v.Init(&fakeCtx{})
+
+	// New/blank form (nothing selected): editable.
+	html := v.form.Render().String()
+	if fmt.Contains(html, "disabled") {
+		t.Error("expected the blank/new form to be editable, got disabled fields")
+	}
+
+	// Selecting an existing row: read-only.
+	v.selectAction(view.Item{ID: "12"})
+	html = v.form.Render().String()
+	if !fmt.Contains(html, "disabled") {
+		t.Error("expected selecting a row to lock the form (disabled fields)")
+	}
+
+	// ⋮ -> Editar: unlocked again.
+	v.editAction("12")
+	html = v.form.Render().String()
+	if fmt.Contains(html, "disabled") {
+		t.Error("expected editAction to unlock the form")
+	}
+
+	// Re-select the same row (simulating a fresh row click): locked again.
+	v.selectAction(view.Item{ID: "12"})
+	html = v.form.Render().String()
+	if !fmt.Contains(html, "disabled") {
+		t.Error("expected re-selecting the row to lock the form again")
+	}
+
+	// undoAction ("↺"): back to editable.
+	v.undoAction()
+	html = v.form.Render().String()
+	if fmt.Contains(html, "disabled") {
+		t.Error("expected undoAction to leave the form editable")
 	}
 }

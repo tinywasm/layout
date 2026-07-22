@@ -3,7 +3,6 @@ package crudview
 import (
 	"testing"
 
-	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
 )
@@ -45,25 +44,12 @@ func TestViewConformance(t *testing.T) {
 	})
 }
 
-// cardLabels extracts the visible label of each rendered card. A card renders as
-// <li class='…'>LABEL<span class='…'>DESC</span></li>; the label is the text
-// between the first '>' and the following '<' of el.String().
+// cardLabels returns the label of each row the targetlist is currently showing.
 func cardLabels(v *CrudView) []string {
-	els := v.items.Get()
-	labels := make([]string, 0, len(els))
-	for _, el := range els {
-		s := el.String()
-		start := fmt.Index(s, ">")
-		end := -1
-		for i := start + 1; i < len(s); i++ {
-			if s[i] == '<' {
-				end = i
-				break
-			}
-		}
-		if start >= 0 && end > start {
-			labels = append(labels, s[start+1:end])
-		}
+	items := v.list.Items()
+	labels := make([]string, 0, len(items))
+	for _, it := range items {
+		labels = append(labels, it.Label)
 	}
 	return labels
 }

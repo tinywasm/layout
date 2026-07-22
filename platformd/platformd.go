@@ -17,6 +17,7 @@ var (
 	clsRoot            Class = "pd-root"
 	clsHeader          Class = "pd-header"
 	clsUserBlock       Class = "pd-user-block"
+	clsHeaderRight     Class = "pd-header-right"
 	clsMsgDesktop      Class = "pd-msg-desktop"
 	clsArea            Class = "pd-area"
 	clsMsgMobile       Class = "pd-msg-mobile"
@@ -60,8 +61,12 @@ type Platform struct {
 	// AppName appears in the header (left side, near UserBlock).
 	AppName string
 
-	// UserBlock slot — usually an avatar/name/logout link. Optional.
+	// UserBlock slot — the logged-in user (name/avatar), shown at the header LEFT.
 	UserBlock Component
+
+	// HeaderActions slot — shown at the header RIGHT, next to the work-area name
+	// (e.g. the light/dark theme toggle). Optional.
+	HeaderActions Component
 
 	// Modules registered in order — appearance order in the nav rail.
 	Modules []UIModule
@@ -155,7 +160,9 @@ func (p *Platform) Render() *Element {
 	}
 	header.Child(msgDesktop)
 
-	header.Child(H2().Set(clsArea.AsAttr()).
+	// header right: work-area name + actions (theme toggle) grouped together.
+	right := Div().Set(clsHeaderRight.AsAttr())
+	right.Child(H2().Set(clsArea.AsAttr()).
 		BindText(DeriveString(func() string {
 			id := p.active.Get()
 			for _, m := range p.Modules {
@@ -165,6 +172,10 @@ func (p *Platform) Render() *Element {
 			}
 			return ""
 		})))
+	if p.HeaderActions != nil {
+		right.Child(p.HeaderActions)
+	}
+	header.Child(right)
 
 	root.Child(header)
 

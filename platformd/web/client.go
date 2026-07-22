@@ -6,6 +6,10 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
+	"github.com/tinywasm/components/themetoggle"
+	// Global form skin: one import at the composition root makes EVERY form in the
+	// app render as labeled fieldset boxes (CSS-only, collected via SSR).
+	_ "github.com/tinywasm/components/fieldset"
 	"github.com/tinywasm/layout/crudview"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/rightpanel"
@@ -145,8 +149,10 @@ func (m mod) View() Component {
 
 func main() {
 	p := &platformd.Platform{
-		AppName:   "Demo Platform",
-		DefaultID: "crud",
+		AppName:       "Demo Platform",
+		DefaultID:     "crud",
+		UserBlock:     Div().Text("Thor Odinson"),
+		HeaderActions: &themetoggle.ThemeToggle{},
 		CanView: func(id string) bool {
 			return id != "hidden"
 		},

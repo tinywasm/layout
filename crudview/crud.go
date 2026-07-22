@@ -28,13 +28,20 @@ func New(cfg Config) (*CrudView, error) {
 	if err != nil {
 		return nil, err // a record with no widgets fails HERE, loudly
 	}
-	f.HideSubmit() // the CRUD bar owns save — the form must not paint its own submit
+	f.HideSubmit() // there is no Save button — auto-save (OnFieldChange) replaces it
 
-	return &CrudView{
+	v := &CrudView{
 		Title:             cfg.Presenter.Title(),
 		Form:              f,
 		form:              f,
 		Presenter:         cfg.Presenter,
 		SearchPlaceholder: cfg.Presenter.SearchPlaceholder(),
-	}, nil
+	}
+
+	// Auto-save: every field commit (blur/change) persists immediately — see
+	// docs/ROADMAP.md "Save: auto-save". Only wired when the presenter can save;
+	// autoSaveAction is a no-op otherwise.
+	f.OnFieldChange(func() { v.autoSaveAction() })
+
+	return v, nil
 }

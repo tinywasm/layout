@@ -3,13 +3,14 @@ module github.com/tinywasm/layout
 go 1.25.2
 
 require (
+	github.com/tinywasm/components v0.1.8
 	github.com/tinywasm/css v0.1.4
-	github.com/tinywasm/dom v0.11.2
+	github.com/tinywasm/dom v0.11.3
 	github.com/tinywasm/fmt v0.25.5
 	github.com/tinywasm/form v0.2.17
-	github.com/tinywasm/html v0.0.6
+	github.com/tinywasm/html v0.0.8
 	github.com/tinywasm/model v0.1.0
-	github.com/tinywasm/svg v0.1.3
+	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.2
 )
@@ -18,3 +19,19 @@ require (
 	github.com/tinywasm/json v0.5.12 // indirect
 	github.com/tinywasm/router v0.1.13 // indirect
 )
+
+// TEMP: local dom checkout carries the BindChildren initial-row wiring fix
+// (rows present at first render now get their nested bindings wired). Remove
+// once that fix is released and this go.mod bumps to the published version.
+replace github.com/tinywasm/dom => /home/cesar/Dev/Project/tinywasm/dom
+
+// TEMP: local components checkout so demo edits render live via the dev server.
+replace github.com/tinywasm/components => /home/cesar/Dev/Project/tinywasm/components
+
+// TEMP: local form checkout — fixes the field-wrapper/input id collision that
+// stopped the input from displaying loaded values.
+replace github.com/tinywasm/form => /home/cesar/Dev/Project/tinywasm/form
+
+// TEMP: local css checkout — brand palette set to the Pa100T reference (steel
+// blue + white text).
+replace github.com/tinywasm/css => /home/cesar/Dev/Project/tinywasm/css

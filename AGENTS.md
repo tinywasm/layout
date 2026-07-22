@@ -4,6 +4,17 @@ Constraints for agents working on layout (e.g. `platformd`). Read this before an
 
 ---
 
+## Hot reload — do NOT compile manually
+
+The TinyWasm dev server has hot reload: every source change (Go, CSS in `css.go`,
+SSR assets) is recompiled and re-served automatically. Do **not** run `go build`,
+`GOOS=js GOARCH=wasm go build`, or re-run `start_development` to "pick up" a change,
+and do not poll the wasm endpoint waiting for a rebuild. Just edit the file, then
+look at the running app (reload the browser / screenshot). The only reason to build
+by hand is a one-off compile check; the running app never needs it.
+
+---
+
 ## Construction Harness — the TinyWasm way (read first)
 
 The typed, explicit code **is** the harness. Whoever writes against this library is
@@ -120,6 +131,27 @@ The isomorphic Go ecosystem means files compile to both backend and browser. We 
 3. **Render** using `icon.Render("class")`. This is the ONLY supported render path.
 
 Do NOT hand-build `<svg><use href="#id"/></svg>` blocks using `svg.Svg()` or `svg.Use()`.
+
+## SSR asset provider names are matched by regex — the name must be EXACT
+
+`tinywasm/ssr` collects a package's SSR output by scanning `css.go`/`js.go`/`svg.go`/`html.go`
+for functions whose names match **exactly**: `RenderCSS`, `RootCSS`, `RenderHTML`, `RenderJS`,
+`IconSvg`. A CSS builder named anything else (e.g. `GenerateCSS`) is **silently never emitted** —
+the component renders with **zero styling** and nothing fails at build time.
+
+Two rules keep a package detectable:
+
+- **Exact name.** The CSS entry point MUST be `RenderCSS` (not `GenerateCSS`, `Styles`, …). Because
+  the dot-imported `css` package already exports a free `RenderCSS`, declare it as a **method**
+  (`func (v *CrudView) RenderCSS() *Stylesheet`) to avoid the name collision, matching
+  `platformd`/`rightpanel`.
+- **One receiver per package.** `ssr` requires all providers in a package to share ONE receiver
+  (or all be free functions). So `RenderCSS` and `IconSvg` in the same package must both be methods
+  on the same type — never mix a method with a free function, or receiver detection produces code
+  that calls a method that doesn't exist.
+
+Symptom to recognize: a component renders unstyled while its icons appear giant/black (icons emitted
+via `IconSvg`, CSS not emitted because of a wrong name).
 
 ---
 

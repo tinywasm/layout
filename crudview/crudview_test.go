@@ -56,12 +56,13 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 	if !Contains(html, "cv-aside-contend") {
 		t.Error("expected aside with source")
 	}
-	if !Contains(html, "name='btn_crudnew'") {
-		t.Error("expected new button")
+	if !Contains(html, "name='btn_crudtoggle'") {
+		t.Error("expected the single crud toggle button (+/↺)")
 	}
-	// view.New doesn't implement view.Deleter by default (only if WithDeleteOp is provided)
+	// Delete/Edit no longer render as buttons here — they live in each
+	// targetlist row's ⋮ menu (Editar/Eliminar).
 	if Contains(html, "name='btn_cruddel'") {
-		t.Error("did not expect delete button")
+		t.Error("did not expect a separate delete button")
 	}
 }
 

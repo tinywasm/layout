@@ -136,6 +136,10 @@ func (r *RightPanel) RenderCSS() *Stylesheet {
 			BorderRadius(RadiusSm),
 		),
 
+		// NOTE: form-field appearance is NOT defined here. It lives in the global
+		// form skin `github.com/tinywasm/components/fieldset`, which the consumer
+		// opts into once. rightpanel only styles its own panel structure.
+
 		Media("(max-width: 640px)",
 			Rule(clsWrapper,
 				RawRule("grid-template-rows: "+tokenTitleHeight.Var()+" auto"),
