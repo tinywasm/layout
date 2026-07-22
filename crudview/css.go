@@ -11,10 +11,10 @@ import (
 // page) stays visible even when the active theme leaves these tokens undefined —
 // which is exactly what made the view render flat and unreadable before.
 const (
-	cPanel   = "var(--color-background, #ffffff)"        // white cards / bars
-	cInset   = "var(--color-surface-variant, #d7d7dd)"   // gray inset frame
-	cBorder  = "var(--color-outline-variant, #cfcfd6)"   // hairline borders
-	cAccent  = "var(--color-primary, #3f88bf)"           // title band / buttons
+	cPanel  = "var(--color-background, #ffffff)"      // white cards / bars
+	cInset  = "var(--color-surface-variant, #d7d7dd)" // gray inset frame
+	cBorder = "var(--color-outline-variant, #cfcfd6)" // hairline borders
+	cAccent = "var(--color-primary, #3f88bf)"         // title band / buttons
 	// White text/icons on the saturated accent band. Not --color-on-primary:
 	// some themes (e.g. the light Apple-style default) set on-primary to a near
 	// black that is unreadable on the primary fill; white is the safe universal.
@@ -204,6 +204,52 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 			Width(Px(16)),
 			Height(Px(16)),
 			Decl{Prop: "fill", Val: "currentColor"},
+		),
+
+		// ── Delete confirmation modal body ──────────────────────────────────────
+		Rule(clsDelConfirmActions,
+			Display(Flex_),
+			JustifyContent(Str("flex-end")),
+			RawRule("gap: var(--cv-mag-sec, .3rem); margin-top: var(--cv-mag-pri, .5rem)"),
+		),
+		Rule(clsDelConfirmBtn,
+			Padding(Str(".4em .8em")),
+			BorderRadius(Str(".3em")),
+			Border(Str("1px solid "+cBorder)),
+			Background(Str(cPanel)),
+			Cursor(Pointer),
+		),
+		Rule(clsDelConfirmBtnDanger,
+			Background(Str("var(--color-error, #c0392b)")),
+			Color(Str(cOnAcc)),
+			Border(Str("none")),
+		),
+
+		// ── Mobile master-detail (horizontal scroll-snap) ──────────────────────
+		// Below the breakpoint, the two-column grid becomes a horizontal
+		// scroll-snap strip: the list panel (100vw) then the form panel
+		// (--cv-detail-width, 90vw — a single token so the peek is easy to
+		// tune). DOM order stays article-then-aside (desktop semantics
+		// unchanged); `order` reverses the VISUAL sequence to list-first
+		// without touching markup. Selecting a row snaps the strip to the
+		// form (crudview.go's selectAction calls dom Reference.ScrollIntoView()
+		// on the form panel); swiping back to the list is a plain native
+		// scroll, no JS required. Zeroing gap/padding here keeps the
+		// 100vw/90vw math exact — the base rule's gap+padding are for the
+		// desktop grid.
+		Media("(max-width: 640px)",
+			Rule(clsModuleContent,
+				Display(Flex_),
+				Padding(Zero),
+				RawRule("flex-direction:row; overflow-x:auto; overflow-y:hidden; "+
+					"scroll-snap-type:x mandatory; scroll-behavior:smooth; gap:0"),
+			),
+			Rule(clsArticleContend,
+				RawRule("flex:0 0 var(--cv-detail-width, 90vw); scroll-snap-align:end; order:2"),
+			),
+			Rule(clsAsideContend,
+				RawRule("flex:0 0 100vw; scroll-snap-align:start; order:1"),
+			),
 		),
 	)
 

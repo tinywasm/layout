@@ -76,10 +76,57 @@ theme-aware selection) is merged — do NOT redo it.
       (`crudview/consumer_test.go` `TestConsumer_ReadOnlyGating`) and live via
       MCP screenshots: select → grayed-out fields, ⋮ Editar → editable again,
       confirmed in both light and dark.
-- [ ] Mobile master-detail: horizontal scroll-snap; `--cv-detail-width: 90vw`,
+- [x] Mobile master-detail: horizontal scroll-snap; `--cv-detail-width: 90vw`,
       list 100vw, snap + ~10vw peek, slide left→right. Desktop keeps two columns.
-- [ ] Delete confirmation via modaldialog.
-- [ ] Verify desktop + emulated mobile, light + dark.
+      Below `(max-width: 640px)`, `.cv-module-content` becomes a
+      `scroll-snap-type:x mandatory` flex row (gap/padding zeroed so the
+      100vw+90vw math is exact); the form panel gets `flex:0 0
+      var(--cv-detail-width, 90vw)` + `scroll-snap-align:end`, the list panel
+      `flex:0 0 100vw` + `scroll-snap-align:start`. DOM order stays
+      article-then-aside (desktop semantics unchanged) — `order` reverses the
+      VISUAL sequence to list-first via CSS only. Forward navigation (row
+      select → snap to form) needed a real DOM nudge, so `tinywasm/dom` (local
+      `replace`) gained `Reference.ScrollIntoView()` (mirrors the existing
+      `Focus()` — real `scrollIntoView({behavior:"smooth"})` in WASM, no-op in
+      the backend/SSR stub); `crudview.selectAction` calls it on the form
+      panel (`v.detailPanelID()`) whenever an existing row is selected. Swipe
+      back to the list is native browser scroll-snap, no code. Verified live
+      via MCP: mobile emulation (375×812) shows the list first; selecting a
+      row snaps to the form with the list edge peeking; scrolling back to 0
+      shows the list again with selection state intact; confirmed in both
+      light and dark. (The synthetic `browser_swipe_element` tool didn't
+      trigger a real scroll in this environment — verified the scroll
+      mechanics directly via `element.scrollTo` instead; real touch swipe is
+      standard browser behavior for `overflow-x:auto` + `scroll-snap-type`,
+      not custom code.)
+- [x] Delete confirmation via modaldialog. `⋮ → Eliminar` (`crudview.deleteRequest`)
+      no longer deletes immediately — it looks up the row's label (from
+      `targetlist.Items()`), stores it + the id in two internal signals, and
+      opens a `modaldialog.ModalDialog` ("¿Eliminar «label»? Esta acción no se
+      puede deshacer.", Cancelar / Eliminar). Only the modal's "Eliminar"
+      button (`confirmDeleteAction`) actually calls `deleteAction`/closes the
+      modal; Cancelar (or the modal's own backdrop/× close) just dismisses it,
+      deleting nothing. `modaldialog.ModalDialog` (components) gained a
+      `Close()` method (mirrors the existing `Open()`) since nothing let a
+      host dismiss it programmatically before. The confirm content is built
+      once in `Init` and reused across every ⋮ → Eliminar via two signals
+      (`deleteID`, `deleteLabel`), not rebuilt per row. Verified with a new Go
+      test (`TestConsumer_DeleteRequiresConfirmation`: 0 delete calls after
+      opening/cancelling, exactly 1 after confirming) and live via MCP in both
+      light and dark — confirmed the modal opens with the correct label,
+      Cancelar leaves the row in the list, and confirming fires exactly one
+      `device_delete` call. (The demo harness's `demoCaller.Call` only
+      implements `device_list` — a static 3-item fixture — so the row
+      visually reappears after a real reload regardless of the delete call;
+      that's the fixture's limitation, not a crudview bug — the automated
+      test is the source of truth for the actual delete call.)
+- [x] Verify desktop + emulated mobile, light + dark. Done incrementally with
+      each item above (MCP screenshots + `browser_evaluate_js` scroll checks)
+      rather than as one final pass — every feature (read-only gating, mobile
+      scroll-snap, delete confirmation) was confirmed in both breakpoints and
+      both themes as it landed. Final idle-state sanity check: desktop light,
+      982×690 — two columns, blank/editable "+" form, 3-row list, no console
+      errors (`browser_get_errors` clean throughout the session).
 
 ## Known issue
 - ~~Some module icons (crudview `+`/`↺`/search, targetlist `⋮`) render blank/inconsistently

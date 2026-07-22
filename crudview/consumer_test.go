@@ -644,3 +644,63 @@ func TestConsumer_ReadOnlyGating(t *testing.T) {
 		t.Error("expected undoAction to leave the form editable")
 	}
 }
+
+// Case 12: ⋮ -> Eliminar opens the confirmation modal instead of deleting
+// immediately; only confirmDeleteAction (the modal's "Eliminar" button)
+// actually deletes. Dismissing the modal without confirming leaves the
+// record untouched.
+func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Device One"
+			d1.Ip = "192.168.1.1"
+		},
+	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithDeleteOp("device_delete"))
+
+	cfg := Config{ParentID: "my-id", Presenter: p}
+	v, err := New(cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	v.Init(&fakeCtx{})
+
+	countDeleteCalls := func() int {
+		n := 0
+		for _, c := range caller.Calls {
+			if c.Op == "device_delete" {
+				n++
+			}
+		}
+		return n
+	}
+
+	// deleteRequest (⋮ -> Eliminar) only opens the modal — no delete yet.
+	v.deleteRequest("12")
+	if countDeleteCalls() != 0 {
+		t.Error("expected deleteRequest to only open the confirmation modal, not delete")
+	}
+	if v.deleteID.Get() != "12" {
+		t.Errorf("expected pending delete id '12', got %q", v.deleteID.Get())
+	}
+	if v.deleteLabel.Get() != "Device One" {
+		t.Errorf("expected pending delete label 'Device One', got %q", v.deleteLabel.Get())
+	}
+
+	// Dismissing without confirming (e.g. Cancelar/backdrop/×) must not delete.
+	v.confirmDelete.Close()
+	if countDeleteCalls() != 0 {
+		t.Error("expected closing the modal without confirming to not delete")
+	}
+
+	// confirmDeleteAction (the modal's "Eliminar" button) performs the delete.
+	v.confirmDeleteAction()
+	if countDeleteCalls() != 1 {
+		t.Errorf("expected exactly 1 device_delete call after confirming, got %d", countDeleteCalls())
+	}
+}

@@ -5,6 +5,7 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
 
+	"github.com/tinywasm/components/modaldialog"
 	"github.com/tinywasm/components/targetlist"
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/svg"
@@ -26,6 +27,9 @@ var (
 	clsListaBox               Class = "cv-lista-box"
 	clsAsideSearch            Class = "cv-aside-search"
 	clsIcon16                 Class = "cv-icon-16"
+	clsDelConfirmActions      Class = "cv-delconfirm-actions"
+	clsDelConfirmBtn          Class = "cv-delconfirm-btn"
+	clsDelConfirmBtnDanger    Class = "cv-delconfirm-btn-danger"
 )
 
 const (
@@ -41,7 +45,7 @@ type CrudView struct {
 	Element // value embed — NEVER *dom.Element
 
 	Title             string
-	Form              Component      // what Render paints (may stay nil in standalone mode)
+	Form              Component // what Render paints (may stay nil in standalone mode)
 	Presenter         view.Presenter
 	SearchPlaceholder string
 
@@ -54,17 +58,22 @@ type CrudView struct {
 	OnCancel  func()
 
 	// internal
-	form      *form.Form             // typed handle set by New; nil when standalone
-	list      *targetlist.TargetList // owns the row rendering + ⋮ menu
-	selected  *SignalString
-	search    *SignalString
-	canDelete *SignalBool
+	form          *form.Form             // typed handle set by New; nil when standalone
+	list          *targetlist.TargetList // owns the row rendering + ⋮ menu
+	confirmDelete *modaldialog.ModalDialog
+	selected      *SignalString
+	search        *SignalString
+	canDelete     *SignalBool
+	deleteID      *SignalString // record pending confirmation (⋮ → Eliminar)
+	deleteLabel   *SignalString // its label, for the confirmation message
 }
 
 func (v *CrudView) Init(ctx Ctx) {
 	v.selected = NewString("")
 	v.search = NewString("")
 	v.canDelete = NewBool(false)
+	v.deleteID = NewString("")
+	v.deleteLabel = NewString("")
 
 	// The list is a targetlist component: it owns row rendering + the ⋮ menu and
 	// shares the selected signal so its highlight follows the form.
@@ -77,11 +86,37 @@ func (v *CrudView) Init(ctx Ctx) {
 		OnDelete: func(id string) { v.deleteRequest(id) },
 	}
 
+	// Delete confirmation modal — Content is built once; its message reacts to
+	// v.deleteLabel so the same instance is reused across every ⋮ → Eliminar.
+	v.confirmDelete = &modaldialog.ModalDialog{
+		Title:   "Eliminar",
+		Content: v.renderDeleteConfirm(),
+	}
+
 	if v.Presenter != nil {
 		if err := v.Reload(); err != nil {
 			Log(err.Error())
 		}
 	}
+}
+
+// renderDeleteConfirm builds the confirmation modal's body: a message naming
+// the record, plus Cancelar/Eliminar actions. Built once in Init and reused —
+// see the confirmDelete field.
+func (v *CrudView) renderDeleteConfirm() *Element {
+	msg := P().BindTextFunc(func() string {
+		return "¿Eliminar «" + v.deleteLabel.Get() + "»? Esta acción no se puede deshacer."
+	})
+
+	cancel := Button().Set(clsDelConfirmBtn.AsAttr()).Text("Cancelar").
+		On("click", func(Event) { v.confirmDelete.Close() })
+
+	confirm := Button().Set(clsDelConfirmBtn.AsAttr(), clsDelConfirmBtnDanger.AsAttr()).Text("Eliminar").
+		On("click", func(Event) { v.confirmDeleteAction() })
+
+	actions := Div().Set(clsDelConfirmActions.AsAttr()).Child(cancel, confirm)
+
+	return Div().Child(msg, actions)
 }
 
 // editAction (⋮ → Editar): load the record and unlock the form for editing.
@@ -94,12 +129,32 @@ func (v *CrudView) editAction(id string) {
 	}
 }
 
-// deleteRequest (⋮ → Eliminar): delete the record. Modal confirmation is a
-// follow-up step; this performs the delete when the presenter supports it.
+// deleteRequest (⋮ → Eliminar): opens the confirmation modal instead of
+// deleting immediately. confirmDeleteAction performs the actual delete.
 func (v *CrudView) deleteRequest(id string) {
+	if _, ok := v.Presenter.(view.Deleter); !ok || id == "" {
+		return
+	}
+	label := id
+	for _, it := range v.list.Items() {
+		if it.ID == id {
+			label = it.Label
+			break
+		}
+	}
+	v.deleteID.Set(id)
+	v.deleteLabel.Set(label)
+	v.confirmDelete.Open()
+}
+
+// confirmDeleteAction: the modal's "Eliminar" button. Deletes the record
+// pending confirmation (set by deleteRequest) and closes the modal.
+func (v *CrudView) confirmDeleteAction() {
+	id := v.deleteID.Get()
 	if deleter, ok := v.Presenter.(view.Deleter); ok && id != "" {
 		v.deleteAction(deleter, id)
 	}
+	v.confirmDelete.Close()
 }
 
 func (v *CrudView) Reload() error {
@@ -113,8 +168,16 @@ func (v *CrudView) Reload() error {
 	return nil
 }
 
+// detailPanelID identifies the form/article panel — the mobile scroll-snap
+// target (see css.go's "(max-width: 640px)" block and selectAction below).
+func (v *CrudView) detailPanelID() string {
+	return v.GetID() + ".detail"
+}
+
 // selectAction: card click / driver Select. Selecting an existing row shows it
-// read-only — only the ⋮ → Editar path (editAction) unlocks it.
+// read-only — only the ⋮ → Editar path (editAction) unlocks it. On mobile
+// (horizontal scroll-snap strip) it also snaps the viewport to the form panel;
+// a no-op on desktop, where both columns are already visible.
 func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
@@ -122,6 +185,11 @@ func (v *CrudView) selectAction(it view.Item) {
 	if v.form != nil {
 		_ = v.form.LoadValues(rec) // nil record → LoadValues resets; not an error
 		v.form.SetLocked(it.ID != "")
+	}
+	if it.ID != "" {
+		if el, ok := Get(v.detailPanelID()); ok {
+			el.ScrollIntoView()
+		}
 	}
 	if v.OnSelect != nil {
 		v.OnSelect(it)
@@ -231,7 +299,7 @@ func (v *CrudView) Render() *Element {
 		articleContCls = clsArticleContendFullPage
 	}
 
-	articleCont := Div().Set(articleContCls.AsAttr())
+	articleCont := Div().Set(articleContCls.AsAttr()).ID(v.detailPanelID())
 
 	// Title
 	articleCont.Child(Div().Set(clsTitleContainer.AsAttr()).
@@ -292,6 +360,7 @@ func (v *CrudView) Render() *Element {
 		asideCont.Child(actions)
 
 		root.Child(asideCont)
+		root.Child(v.confirmDelete)
 	}
 
 	return root
