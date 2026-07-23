@@ -89,6 +89,27 @@ desktop AND an emulated mobile viewport, light + dark.
     `FocusedFieldID()`. Standard behavior: new `view/conformance.Driver.Cancel`
     field + `cancel_clears_focus` clause, implemented by `view/mock.Renderer`
     and crudview.
+- [x] Visual integration pass (against a reference screenshot of the original
+  design):
+  - Hover color was inconsistent (`ColorPrimary`, hardcoded `filter:
+    brightness`, ad-hoc backgrounds) across components — `tinywasm/css`
+    already publishes a dedicated `ColorHover` token; switched `targetlist`'s
+    row hover and `fieldset`'s field hover to it so every hover indicator
+    reads as the same color app-wide.
+  - The list/form panels looked "cut" — partial border-radius on
+    `clsAsideSearch`/`clsAsideList`/`clsAsideActions` implied they connected,
+    but a `gap` between them (and a separate nested "inset box" inside each
+    white panel) meant they didn't. Replaced with the reference's model: each
+    column is ONE bordered card (`Border` + `BorderRadius` + `Overflow(Hidden)`
+    on `clsArticleContend`/`clsAsideContend`) — the title/search band sits
+    flush at the top (no radius/background of its own; the parent card
+    clips it), the content fills the rest, and inner "double box" nesting
+    (`clsBoxContent`, `clsListaBox`) lost its own margin/radius/background
+    duplication. The toggle button moved OUT of the list card into a new
+    sibling `clsAsideWrap` (flex column: card, then button) — it's its own
+    floating piece, not a third row stitched onto the list, matching the
+    reference. Mobile's scroll-snap sizing moved from `clsAsideContend` to
+    `clsAsideWrap` (the new direct flex child).
 
 ## Notes for the next agent
 - Hot reload auto-compiles — never `go build`/restart to see a change

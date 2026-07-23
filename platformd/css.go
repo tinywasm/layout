@@ -458,7 +458,11 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				Width(Pct(100)),
 				Height(Pct(100)),
 				Background(ColorSurface),
-				BorderRadius(Str("0 .4em .4em 0")),
+				// Square, not rounded: this panel's 4 corners meet the platform
+				// frame (header/nav rail) directly — a curve here shows as a
+				// mismatched notch against the module content's own rounded
+				// corners (crudview's clsModuleContent), not a clean fit.
+				BorderRadius(Zero),
 				Animation(Str("pdSlideInLeft"), tokenSlideDur, Str("ease-in-out")),
 			),
 

@@ -21,15 +21,16 @@ var (
 	clsTitle                  Class = "cv-title"
 	clsBoxContent             Class = "cv-box-content"
 	clsAsideActions           Class = "cv-aside-actions"
+	clsAsideWrap              Class = "cv-aside-wrap"
 	clsBtnCrud                Class = "cv-btn-crud"
 	clsBtnCrudIconHidden      Class = "cv-btn-crud-icon-hidden"
-	clsAsideList              Class = "cv-aside-list"
 	clsListaBox               Class = "cv-lista-box"
 	clsAsideSearch            Class = "cv-aside-search"
 	clsIcon16                 Class = "cv-icon-16"
 	clsDelConfirmActions      Class = "cv-delconfirm-actions"
 	clsDelConfirmBtn          Class = "cv-delconfirm-btn"
 	clsDelConfirmBtnDanger    Class = "cv-delconfirm-btn-danger"
+	clsDelConfirmMount        Class = "cv-delconfirm-mount"
 )
 
 const (
@@ -346,12 +347,19 @@ func (v *CrudView) Render() *Element {
 	root.Child(articleCont)
 
 	// ── Right Column ─────────────────────────────────────────────────────────
+	// Three independent cards stacked in clsAsideWrap, each its own white
+	// "frame" on the blue module background (never seamed together) — search
+	// and the toggle button share the same card treatment AND height, list
+	// is the big card between them. Matches the reference: its search bar
+	// (bottom, in that layout) and its list are each their own bordered
+	// piece; here the toggle button takes over the search bar's exact
+	// styling since it now occupies that same bottom slot.
 	if hasSource {
-		asideCont := Aside().Set(clsAsideContend.AsAttr())
-
-		// Search (TOP) — filters the targetlist below.
-		asideSearch := Div().Set(clsAsideSearch.AsAttr())
-		asideSearch.Child(Label().Child(renderIcon(iconCrudSearch)))
+		// Search — its own small card up top, filtering the list below. The
+		// label+input pill sits directly in the card (no extra inner layer —
+		// see the RenderCSS comment on clsAsideSearch).
+		searchCard := Div().Set(clsAsideSearch.AsAttr())
+		searchCard.Child(Label().Child(renderIcon(iconCrudSearch)))
 
 		placeholder := v.SearchPlaceholder
 		if placeholder == "" {
@@ -362,19 +370,28 @@ func (v *CrudView) Render() *Element {
 			v.search.Set(e.TargetValue())
 			v.filter()
 		})
-		asideSearch.Child(input)
-		asideCont.Child(asideSearch)
+		searchCard.Child(input)
 
-		// List — the targetlist component owns rows + the ⋮ menu.
-		asideList := Div().Set(clsAsideList.AsAttr()).
+		// List — its own big card. The targetlist component owns rows + the
+		// ⋮ menu; clsListaBox is the gray inset (unchanged).
+		listCard := Aside().Set(clsAsideContend.AsAttr()).
 			Child(Div().Set(clsListaBox.AsAttr()).Child(v.list))
-		asideCont.Child(asideList)
 
-		// Single toggle button (BOTTOM) — "+" when nothing is selected, "↺" when a
-		// row is; Editar/Eliminar live in the targetlist row's ⋮ menu instead.
-		actions := Div().Set(clsAsideActions.AsAttr())
+		// Single toggle button — "+" when nothing is selected, "↺" when a row
+		// is; Editar/Eliminar live in the targetlist row's ⋮ menu instead.
+		// Its own card (clsAsideActions), same white-frame treatment and
+		// height as searchCard — it occupies the bottom slot the search bar
+		// has in the reference, so it gets that same integration, not a bare
+		// color block that gets lost against the blue background.
+		actionsCard := Div().Set(clsAsideActions.AsAttr())
 		toggle := Button().Set(clsBtnCrud.AsAttr()).
-			Attr("name", "btn_crudtoggle").
+			// NOT "btn_..." — actionbutton's global `button[name*="btn"]` rule
+			// matches any button whose name contains that substring and, being
+			// a type+attribute selector, outranks .cv-btn-crud's specificity;
+			// it was silently injecting a stray margin that shrank this button
+			// below clsAsideSearch's height. This button is crudview-owned
+			// (ROADMAP.md), so its name must not accidentally opt back in.
+			Attr("name", "cv-crudtoggle").
 			Child(
 				iconCrudNew.Render(string(clsIcon16)).
 					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
@@ -386,11 +403,19 @@ func (v *CrudView) Render() *Element {
 					})),
 			)
 		toggle.On("click", func(Event) { v.toggleAction() })
-		actions.Child(toggle)
-		asideCont.Child(actions)
+		actionsCard.Child(toggle)
 
-		root.Child(asideCont)
-		root.Child(v.confirmDelete)
+		asideWrap := Div().Set(clsAsideWrap.AsAttr()).Child(searchCard, listCard, actionsCard)
+		root.Child(asideWrap)
+		// v.confirmDelete's Show() wraps its content in a bare, class-less div
+		// even while hidden (its dom/Show() anchor). As a 3rd, un-placed child
+		// of this 2-column/1-row grid, that anchor got auto-placed into an
+		// implicit 2nd row — and the shared row/column `gap` then added an
+		// extra gap below row 1, doubling the bottom gutter versus the other
+		// 3 sides. clsDelConfirmMount is `position: fixed`, which removes it
+		// from grid item participation entirely (same as how the dialog
+		// itself already positions when open), regardless of visibility.
+		root.Child(Div().Set(clsDelConfirmMount.AsAttr()).Child(v.confirmDelete))
 	}
 
 	return root

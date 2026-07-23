@@ -25,19 +25,19 @@ require (
 // TEMP: local dom checkout carries the BindChildren initial-row wiring fix
 // (rows present at first render now get their nested bindings wired). Remove
 // once that fix is released and this go.mod bumps to the published version.
-replace github.com/tinywasm/dom => /home/cesar/Dev/Project/tinywasm/dom
+replace github.com/tinywasm/dom => ../dom
 
 // TEMP: local components checkout so demo edits render live via the dev server.
-replace github.com/tinywasm/components => /home/cesar/Dev/Project/tinywasm/components
+replace github.com/tinywasm/components => ../components
 
 // TEMP: local form checkout — fixes the field-wrapper/input id collision that
 // stopped the input from displaying loaded values.
-replace github.com/tinywasm/form => /home/cesar/Dev/Project/tinywasm/form
+replace github.com/tinywasm/form => ../form
 
 // TEMP: local css checkout — brand palette set to the Pa100T reference (steel
 // blue + white text).
-replace github.com/tinywasm/css => /home/cesar/Dev/Project/tinywasm/css
+replace github.com/tinywasm/css => ../css
 
 // TEMP: local view checkout — conformance.Driver gained New/Edit/FocusedFieldID
 // for the "+ / Editar focuses the first field" behavior.
-replace github.com/tinywasm/view => /home/cesar/Dev/Project/tinywasm/view
+replace github.com/tinywasm/view => ../view

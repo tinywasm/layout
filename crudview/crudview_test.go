@@ -56,7 +56,7 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 	if !Contains(html, "cv-aside-contend") {
 		t.Error("expected aside with source")
 	}
-	if !Contains(html, "name='btn_crudtoggle'") {
+	if !Contains(html, "name='cv-crudtoggle'") {
 		t.Error("expected the single crud toggle button (+/↺)")
 	}
 	// Delete/Edit no longer render as buttons here — they live in each
