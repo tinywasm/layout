@@ -15,7 +15,6 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Declare(tokenMenuSize, "4vw"),
 			Declare(tokenHeaderHeight, "3vh"),
 			Declare(tokenContentHeight, "97vh"),
-			Declare(tokenContentWidth, "96vw"),
 			Declare(tokenSlideDur, "0.6s"),
 			Declare(tokenTransitionWait, "0s"),
 		),
@@ -192,7 +191,14 @@ func (p *Platform) RenderCSS() *Stylesheet {
 			Left(Zero),
 			Margin(Zero),
 			ZIndex(Str("1")),
-			Width(tokenContentWidth),
+			// Full width, like the desktop override below: a module panel fills
+			// the mobile screen. The old 96vw left a 15px strip of bare stage
+			// (ColorSecondary) uncovered on the side — and, worse, made the
+			// panel 15px narrower than the viewport, so any module sizing its
+			// own content in `vw` (e.g. crudview's scroll-snap panels) overflowed
+			// its container by that gap. 100% of the positioned pd-root == the
+			// full viewport width, with no scrollbar-inclusion surprise.
+			Width(Pct(100)),
 			Height(Vh(100)),
 			Position(Absolute),
 			Background(ColorSecondary),
@@ -334,7 +340,6 @@ func (p *Platform) RenderCSS() *Stylesheet {
 				// narrow widths, so icons overflowed and overlapped the content.
 				// An em value always fits the icons regardless of viewport.
 				Declare(tokenMenuSize, "3.6em"),
-				Declare(tokenContentWidth, "96vw"),
 			),
 
 			Rule(clsRoot,

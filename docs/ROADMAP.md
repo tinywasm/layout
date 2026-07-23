@@ -9,9 +9,12 @@ desktop AND an emulated mobile viewport, light + dark.
 - **Desktop**: two columns always visible — edit/form (left) · list column (right).
 - **List column** (top → bottom): search (plain input, NOT selectsearch, by
   explicit decision) · targetlist (rows) · ONE crud button.
-- **Mobile**: horizontal scroll-snap of two panels — list (100vw) and form
-  (`--cv-detail-width`, 90vw). Selecting a row snaps to the form; the list edge
-  peeks (~10vw). Swipe left→right snaps back to the list.
+- **Mobile**: horizontal scroll-snap of two panels, `direction:rtl`-anchored so
+  the physical order matches desktop — form (`--cv-detail-width`, 90vw) on the
+  left, list (100vw) on the right and visible by default with zero mount-time
+  JS. Selecting a row (or swiping) snaps to the form, which always enters
+  **from the left**; the list edge peeks (~10vw). A "‹ back" button (mobile
+  only) also returns to the list without clearing the selection.
 
 ## Components (SRP — each owns its own CSS)
 - **search**: plain `<input type=search>` inside crudview (explicit decision,
@@ -53,6 +56,30 @@ desktop AND an emulated mobile viewport, light + dark.
   text must stay fully legible/selectable while locked).
 - [x] Mobile master-detail scroll-snap (`--cv-detail-width`, `order`,
   `dom.Reference.ScrollIntoView()` for the forward snap).
+- [x] Mobile direction fix: the form was entering from the right (physical
+  order was list-left/form-right, opposite of desktop's form-left/list-right)
+  — reported as unintuitive. Fixed by adding `direction:rtl` to the scroll
+  strip (`order:1` then renders at the container's "start" edge, which RTL
+  makes the right — where the browser's native default scroll position
+  already rests, so the list still shows by default with no mount-time JS)
+  and `direction:ltr` reset on each panel so its own content isn't mirrored;
+  `order`/`scroll-snap-align` values did not need to change. No changes to
+  `tinywasm/dom` — `ScrollIntoView()` stays exactly as-is. Added a "‹ back"
+  button (mobile-only, local `iconCrudBack` in `crudview/svg.go`) alongside
+  the swipe, not replacing it — its handler only moves the viewport
+  (`ScrollIntoView` on the list panel), it does not call `undoAction`.
+- [x] Mobile width fix: a gray strip of bare stage showed on one side and the
+  view didn't use the full width. Root cause was in `platformd`, not crudview:
+  `clsPanelActive` sized the active module panel at `--pd-content-width` (96vw)
+  on mobile, so every module panel was 15px narrower than the screen — and any
+  module sizing its content in `vw` (crudview's `100vw`/`90vw` scroll-snap
+  panels) then overflowed that narrower container by the gap. Fixed at the
+  root: mobile `clsPanelActive` is now `width:100%` (fills the screen, matching
+  the desktop override); the now-unused `tokenContentWidth`/`--pd-content-width`
+  token was removed. Also decoupled crudview's panels from the viewport
+  (`100vw`/`90vw` → `100%`/`90%`) so they always equal their scroll container
+  regardless of the host panel width — preventing this bug class from
+  recurring.
 - [x] Delete confirmation via `modaldialog` (`ModalDialog.Close()` added).
 - [x] targetlist ⋮ menu: `name="tl-menu-group"` accordion + `closeAllMenus()`
   + backdrop-click-to-close (CSS `:has()`); last row's dropdown flips upward

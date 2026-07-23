@@ -31,6 +31,7 @@ var (
 	clsDelConfirmBtn          Class = "cv-delconfirm-btn"
 	clsDelConfirmBtnDanger    Class = "cv-delconfirm-btn-danger"
 	clsDelConfirmMount        Class = "cv-delconfirm-mount"
+	clsBackBtn                Class = "cv-back"
 )
 
 const (
@@ -39,6 +40,7 @@ const (
 	iconCrudNew              = svg.Icon("icon-crud-new")    // "+"  — nothing selected
 	iconCrudCancel           = svg.Icon("icon-crud-cancel") // "↺" — a row is selected (undo)
 	iconCrudSearch           = svg.Icon("icon-crud-search")
+	iconCrudBack             = svg.Icon("icon-crud-back") // "‹" — mobile-only back-to-list button
 	defaultSearchPlaceholder = "Search…"
 )
 
@@ -189,6 +191,13 @@ func (v *CrudView) detailPanelID() string {
 	return v.GetID() + ".detail"
 }
 
+// listPanelID identifies the list/aside panel — the mobile "‹ back" button's
+// scroll target (see css.go's "(max-width: 640px)" block and the back
+// button's click handler in Render() below).
+func (v *CrudView) listPanelID() string {
+	return v.GetID() + ".list"
+}
+
 // selectAction: card click / driver Select. Selecting an existing row shows it
 // read-only — only the ⋮ → Editar path (editAction) unlocks it. On mobile
 // (horizontal scroll-snap strip) it also snaps the viewport to the form panel;
@@ -332,10 +341,28 @@ func (v *CrudView) Render() *Element {
 
 	articleCont := Div().Set(articleContCls.AsAttr()).ID(v.detailPanelID())
 
-	// Title
-	articleCont.Child(Div().Set(clsTitleContainer.AsAttr()).
-		Child(Div().Set(clsTitle.AsAttr()).
-			Child(H1().Text(v.Title))))
+	// Title container. "‹ back" (mobile-only, see clsBackBtn's Display(None)
+	// base rule) comes first, only when there's a list to go back to
+	// (hasSource — the full-page/no-presenter variant has no list panel at
+	// all, so a back button there would be a dead click). It only moves the
+	// viewport back to the list panel, same effect as a manual swipe — it
+	// does NOT call undoAction, so the selection/draft survives a user just
+	// glancing back at the list.
+	titleContainer := Div().Set(clsTitleContainer.AsAttr())
+	if hasSource {
+		back := Button().Set(clsBackBtn.AsAttr()).
+			Attr("name", "cv-back"). // NOT "btn_..." — see cv-crudtoggle's comment below on the actionbutton name collision
+			Child(iconCrudBack.Render(string(clsIcon16)))
+		back.On("click", func(Event) {
+			if el, ok := Get(v.listPanelID()); ok {
+				el.ScrollIntoView()
+			}
+		})
+		titleContainer.Child(back)
+	}
+	titleContainer.Child(Div().Set(clsTitle.AsAttr()).
+		Child(H1().Text(v.Title)))
+	articleCont.Child(titleContainer)
 
 	// Article/Form
 	boxContent := Div().Set(clsBoxContent.AsAttr())
@@ -405,7 +432,7 @@ func (v *CrudView) Render() *Element {
 		toggle.On("click", func(Event) { v.toggleAction() })
 		actionsCard.Child(toggle)
 
-		asideWrap := Div().Set(clsAsideWrap.AsAttr()).Child(searchCard, listCard, actionsCard)
+		asideWrap := Div().Set(clsAsideWrap.AsAttr()).ID(v.listPanelID()).Child(searchCard, listCard, actionsCard)
 		root.Child(asideWrap)
 		// v.confirmDelete's Show() wraps its content in a bare, class-less div
 		// even while hidden (its dom/Show() anchor). As a 3rd, un-placed child

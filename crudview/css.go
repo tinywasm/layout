@@ -35,7 +35,6 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 		// so the accent shows through as a thin frame around them (padding
 		// below, plus each panel's own margin) — that continuity, not a
 		// border stroke, is what reads as "integrated" (ported from the
-		// Pa100T reference: /home/cesar/Dev/Pkg/UI/layouts/module_layout).
 		Rule(clsModuleContent,
 			Display(Grid),
 			Width(Str("100%")),
@@ -264,6 +263,19 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 			Decl{Prop: "fill", Val: "currentColor"},
 		),
 
+		// "‹ back" button — mobile-only (see the "(max-width: 640px)" block
+		// below, which overrides this to Display(Flex_)). Desktop shows both
+		// columns at once, so there is nothing to "go back" to.
+		Rule(clsBackBtn,
+			Display(None),
+			Border(None),
+			Background(Str("transparent")),
+			Color(Str(cOnAcc)),
+			Cursor(Pointer),
+			Padding(Str(".2em .4em .2em 0")),
+			AlignItems(Center),
+		),
+
 		// ── Delete confirmation modal body ──────────────────────────────────────
 		// Fixed, not static: takes this mount point (and modaldialog's own
 		// hidden-state anchor div inside it) out of clsModuleContent's grid
@@ -291,30 +303,52 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 			Border(Str("none")),
 		),
 
-		// ── Mobile master-detail (horizontal scroll-snap) ──────────────────────
+		// ── Mobile master-detail (horizontal scroll-snap, RTL-anchored) ─────────
 		// Below the breakpoint, the two-column grid becomes a horizontal
-		// scroll-snap strip: the list panel (100vw) then the form panel
-		// (--cv-detail-width, 90vw — a single token so the peek is easy to
-		// tune). DOM order stays article-then-aside (desktop semantics
-		// unchanged); `order` reverses the VISUAL sequence to list-first
-		// without touching markup. Selecting a row snaps the strip to the
-		// form (crudview.go's selectAction calls dom Reference.ScrollIntoView()
-		// on the form panel); swiping back to the list is a plain native
-		// scroll, no JS required. Zeroing gap/padding here keeps the
-		// 100vw/90vw math exact — the base rule's gap+padding are for the
-		// desktop grid.
+		// scroll-snap strip that must (a) show the list by default with zero
+		// mount-time JS and (b) place the form to the list's LEFT, matching
+		// desktop's [FORM|LIST] order — so the form always enters from the
+		// left, never the right. A plain LTR row can't do both: showing an
+		// order:2 item by default needs an initial scroll, and this
+		// framework's component contract has no mount hook (AGENTS.md,
+		// "Component Contract — ONE way"). `direction:rtl` solves it: order:1
+		// renders at the container's START edge, which RTL makes the RIGHT —
+		// exactly where the browser's native default scroll position (0)
+		// already rests. So order:1 (list) shows by default at the right,
+		// and order:2 (form) sits physically to its LEFT, matching desktop —
+		// with no scroll manipulation needed. `direction:ltr` is reset on
+		// EACH panel directly so its own content (rows, fields, icons) isn't
+		// mirrored; only the outer strip's flow flips. `scroll-snap-align:
+		// start/end` are logical keywords (relative to inline start/end), so
+		// they read correctly unchanged: `start` already means "the
+		// container's start edge", which is now the right, where the list
+		// already sits. Selecting a row still snaps via crudview.go's
+		// selectAction → dom.Reference.ScrollIntoView() on the form panel;
+		// swiping is still a plain native scroll, no JS required — same
+		// mechanism as before, just re-anchored. Zeroing gap/padding here
+		// keeps the 100vw/90vw math exact — the base rule's gap+padding are
+		// for the desktop grid.
 		Media("(max-width: 640px)",
 			Rule(clsModuleContent,
 				Display(Flex_),
 				Padding(Zero),
 				RawRule("flex-direction:row; overflow-x:auto; overflow-y:hidden; "+
-					"scroll-snap-type:x mandatory; scroll-behavior:smooth; gap:0"),
+					"scroll-snap-type:x mandatory; scroll-behavior:smooth; gap:0; direction:rtl"),
 			),
 			Rule(clsArticleContend,
-				RawRule("flex:0 0 var(--cv-detail-width, 90vw); scroll-snap-align:end; order:2"),
+				// Panels are sized in % of the scroll CONTAINER, not the
+				// viewport (vw): the platform panel that hosts this view is not
+				// guaranteed to equal the viewport width, and sizing a
+				// scroll-snap child in vw against a narrower container overflows
+				// it by the difference (that mismatch left a bare strip). % keeps
+				// each panel exactly one container-width regardless of the host.
+				RawRule("direction:ltr; flex:0 0 var(--cv-detail-width, 90%); scroll-snap-align:end; order:2"),
 			),
 			Rule(clsAsideWrap,
-				RawRule("flex:0 0 100vw; scroll-snap-align:start; order:1"),
+				RawRule("direction:ltr; flex:0 0 100%; scroll-snap-align:start; order:1"),
+			),
+			Rule(clsBackBtn,
+				Display(Flex_),
 			),
 		),
 	)

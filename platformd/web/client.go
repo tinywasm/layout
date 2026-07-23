@@ -172,7 +172,10 @@ func (m mod) View() Component {
 		if err != nil {
 			panic(err)
 		}
-		cv.OnSelect = func(it view.Item) { m.p.Notify(Msg.Info, "Seleccionado: "+it.Label, 2000) }
+		// No OnSelect notification: selecting a row is navigation, not an
+		// action — a toast there adds no value and, on mobile (where the
+		// module fills the screen), the message overlays the whole view. Save/
+		// delete below DO notify, since those confirm a real mutation.
 		cv.OnNew = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
 		cv.OnSaved = func(err error) {
 			if err == nil {
