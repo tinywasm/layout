@@ -68,6 +68,10 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 			Flex(None),
 			Display(Grid),
 			MinWidth(Str("0")),
+			// Same min-height:0 grid-item fix as clsAsideWrap above (latent here
+			// — the form is short today, but a long one would overflow the
+			// column the same way).
+			MinHeight(Str("0")),
 			// No 'controls' row: the single crud button lives outside the aside
 			// (list) card now — see clsAsideActions/clsAsideWrap below.
 			RawRule("grid-template: 'title' var(--cv-title-height, 8vh) 'article' 1fr / 100%"),
@@ -90,6 +94,14 @@ func (v *CrudView) RenderCSS() *Stylesheet {
 			Display(Flex_),
 			FlexDirection(Column),
 			MinWidth(Str("0")),
+			// min-height:0 is required on this grid item: without it the item's
+			// default `min-height:auto` refuses to shrink below its content, so
+			// when the list grows past the 1fr row the whole column overflows
+			// downward and pushes the "+" button off the stage. With 0 it
+			// respects the row and its inner list (clsAsideContend →
+			// clsListaBox → tl-list, all already min-height:0) scrolls
+			// internally, keeping the button pinned at the bottom.
+			MinHeight(Str("0")),
 			Background(Str(cPanel)),
 			BorderRadius(Str(".4em")),
 			Padding(Space1),

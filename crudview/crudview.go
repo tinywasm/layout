@@ -277,12 +277,36 @@ func (v *CrudView) toggleAction() {
 }
 
 // saveAction persists the current form values. Only reachable when saver != nil.
+// A silent no-op when the form isn't dirty (see Form.IsDirty) — moving focus
+// through a field without changing it must never persist or fire OnSaved
+// (a host's "Guardado" toast on an untouched field would be pure noise, and
+// on mobile — where the module fills the screen — actively in the way).
 func (v *CrudView) saveAction(saver view.Saver) {
+	if !v.form.IsDirty() {
+		return
+	}
 	err := v.form.Validate()
 	if err == nil {
 		record := v.Presenter.Record()
 		if err = v.form.SyncValues(record); err == nil {
 			if err = saver.Save(record); err == nil {
+				v.form.MarkPristine() // a later untouched commit isn't dirty again
+				if v.composing.Get() {
+					// A new-record draft just saved successfully: the draft is
+					// done, return to the "+" ready state. Not undoAction — that
+					// fires OnCancel ("Cancelado"), wrong after a real save; this
+					// is a silent reset, same shape as undoAction minus the
+					// callback. Only for composing: editing an EXISTING record
+					// (selected≠"", composing=false) must NOT reset here, or
+					// every auto-save on blur would kick the user out of the
+					// record they're still editing.
+					v.composing.Set(false)
+					v.selected.Set("")
+					v.canDelete.Set(false)
+					v.Presenter.Deselect()
+					v.form.Reset()
+					v.form.SetLocked(false)
+				}
 				_ = v.Reload()
 			}
 		}

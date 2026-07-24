@@ -33,13 +33,17 @@ func (m mod) ModelName() string { return m.name }
 func (m mod) Label() string     { return m.name }
 func (m mod) Icon() svg.Icon    { return m.icon }
 
-// deviceModel is a model with real widgets (input.Text() is a model.Kind)
+// deviceModel is a model with real widgets (input.Text() is a model.Kind).
+// All three fields are NotNull (a device with a blank id/name/ip isn't a
+// valid record) and ip uses the dedicated input.IP() widget — not
+// input.Text() — so a malformed address fails Form.Validate() instead of
+// silently persisting.
 var deviceDef = model.Definition{
 	Name: "device",
 	Fields: model.Fields{
-		{Name: "id", Type: input.Text()},
+		{Name: "id", Type: input.Text(), NotNull: true},
 		{Name: "name", Type: input.Text(), NotNull: true},
-		{Name: "ip", Type: input.Text()},
+		{Name: "ip", Type: input.IP(), NotNull: true},
 	},
 }
 
