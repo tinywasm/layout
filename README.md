@@ -8,6 +8,15 @@ Predefined UI layouts for tinywasm modules
 - [Architecture](docs/ARCHITECTURE.md) — package layout, platform lifecycle, signal fields, activation and notification flows
 - [Reverse Engineering](docs/IE_LAYOUT.md) — Reference from pa100t shell
 - [Reverse Engineering Module](docs/IE_MODULE_CONTENT.md) — Reference from pa100t crud module
+- [Roadmap](docs/ROADMAP.md) — CRUD mobile + desktop design roadmap
+
+### Plans (proposals, not yet implemented)
+
+- [PLAN](docs/PLAN.md) — **master plan**: simplified css/widget API, the single widget contract, and why `tinywasm/widget` warrants its own repo
+- [PLAN_WIDGET](docs/PLAN_WIDGET.md) — `tinywasm/widget` (new): anatomy, states and layout primitives
+- [PLAN_CSS](docs/PLAN_CSS.md) — `tinywasm/css`: complete the token catalog, retire the CSS-mirror DSL
+- [PLAN_SSR](docs/PLAN_SSR.md) — `tinywasm/ssr`: typed `Styler` instead of regex name matching
+- [PLAN_COMPONENTS](docs/PLAN_COMPONENTS.md) — `tinywasm/components` + `tinywasm/form`: widget migration
 
 ## Packages
 
