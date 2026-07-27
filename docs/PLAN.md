@@ -14,6 +14,13 @@ PLAN: "API simplificada css/widget — un contrato único para construir compone
 > Reglas del repo: `AGENTS.md` en la raíz. Principio rector:
 > [CONSTRUCTION_HARNESS](https://github.com/tinywasm/.github) — *el código tipado y explícito
 > **es** el arnés*.
+>
+> **Publicado:** `github.com/tinywasm/widget v0.1.0` y `github.com/tinywasm/css v0.2.0` ya están
+> etiquetados. `tinywasm/ssr`, `tinywasm/components` (+ `tinywasm/form`) y las etapas de
+> `tinywasm/layout` (§8) se ejecutan **de una sola vez, no por etapas escalonadas**: no hay
+> canario ni periodo de coexistencia entre versiones — se migra todo el árbol en el mismo
+> cambio y se fija `go.mod` directamente a `css v0.2.0` / `widget v0.1.0`. El único gate real es
+> el de siempre: `gotest` en verde y el chequeo de dependencias WASM.
 
 ---
 
@@ -473,49 +480,64 @@ Todos salen de `docs/ROADMAP.md` — ya se pagaron una vez.
 
 ## 7. Reparto por librería
 
-| Librería | Cambio | Plan | Rompe API |
-|---|---|---|---|
-| `tinywasm/widget` | **Nueva.** Contrato visual + `widget/style` | [PLAN_WIDGET](PLAN_WIDGET.md) | — |
-| `tinywasm/css` | Tokens faltantes, pares con contraste, `Class` como alias, cierre del DSL viejo | [PLAN_CSS](PLAN_CSS.md) | Sí, en fase 3 |
-| `tinywasm/ssr` | `Styler` tipado en vez de regex sobre el nombre | [PLAN_SSR](PLAN_SSR.md) | Sí, con adaptador |
-| `tinywasm/components` | Migración de `targetlist`, `fieldset`, `modaldialog` | [PLAN_COMPONENTS](PLAN_COMPONENTS.md) | No (clases derivadas) |
-| `tinywasm/form` | Emitir `State.Invalid`/`State.Locked` en vez de clases propias | dentro de PLAN_COMPONENTS | No |
-| **`tinywasm/layout`** | Migrar `crudview`, `platformd`, `rightpanel` | **este archivo, §8** | No |
+| Librería | Cambio | Plan | Versión | Estado |
+|---|---|---|---|---|
+| `tinywasm/widget` | **Nueva.** Contrato visual + `widget/style` | [PLAN_WIDGET](PLAN_WIDGET.md) | **v0.1.0** | ✅ Publicado |
+| `tinywasm/css` | Tokens faltantes, pares con contraste, `Class` como alias, cierre del DSL viejo | [PLAN_CSS](PLAN_CSS.md) | **v0.2.0** | ✅ Publicado |
+| `tinywasm/ssr` | `Styler` tipado en vez de regex sobre el nombre | [PLAN_SSR](PLAN_SSR.md) | — | Pendiente, un solo cambio |
+| `tinywasm/components` | Migración de `targetlist`, `fieldset`, `modaldialog` | [PLAN_COMPONENTS](PLAN_COMPONENTS.md) | — | Pendiente, un solo cambio |
+| `tinywasm/form` | Emitir `State.Invalid`/`State.Locked` en vez de clases propias | dentro de PLAN_COMPONENTS | — | Pendiente, junto con `components` |
+| **`tinywasm/layout`** | Migrar `crudview`, `platformd`, `rightpanel` sobre `css v0.2.0` + `widget v0.1.0` | **este archivo, §8** | — | Pendiente, un solo cambio |
+
+Los tres pendientes ya no están escalonados por dependencia — `widget` y `css`, que eran el
+bloqueo real, están publicados. `ssr`, `components`/`form` y `layout` se ejecutan cada uno de
+una sola vez (sin canario ni periodo de coexistencia); solo `components` debe cerrarse antes de
+`layout` porque `crudview` compone widgets de `components` directamente.
 
 ---
 
-## 8. Etapas en `tinywasm/layout`
+## 8. Migración de `tinywasm/layout` — un solo cambio, no por etapas
 
-> No empezar hasta que `tinywasm/widget` esté publicado con su test de forma-consumidor
-> (regla: *"An API is not published until a consumer-shaped test, inside the library itself,
-> proves it"*).
+`tinywasm/widget` (v0.1.0) y `tinywasm/css` (v0.2.0) ya están publicados y probados con su test
+de forma-consumidor. No hay razón para escalonar la migración de `rightpanel`, `crudview` y
+`platformd` en pasos sucesivos que esperan uno al otro — los tres se migran **en el mismo
+cambio**, sobre el mismo `go.mod`, y se validan juntos con un único `gotest` al final. La única
+secuencia real es la lógica de un solo commit: `go.mod` primero, después los tres paquetes,
+después el test que los cubre a todos.
 
-### Etapa 1 — Auditoría ejecutable (sin cambios de comportamiento)
+**`go.mod`:**
 
-Añadir `layout_conformance_test.go` en la raíz, que falla hoy y define el objetivo:
+```go
+require (
+	github.com/tinywasm/css    v0.2.0
+	github.com/tinywasm/widget v0.1.0
+)
+```
+
+Retirar los `replace` de desarrollo local hacia `../css` que ya no hagan falta.
+
+**Auditoría ejecutable** — añadir `layout_conformance_test.go` en la raíz, cubriendo los tres
+paquetes a la vez (no falla-luego-arregla-uno-por-uno; se corre contra el árbol completo desde
+el primer commit de la migración):
 
 1. Ningún `.go` de este repo contiene un literal de color (`#rrggbb`, `rgb(`, `hsl(`).
 2. Ningún `.go` contiene `RawRule(`.
-3. Toda `var(--…)` referenciada existe en el catálogo de `css` o en un `Declare` local.
+3. Toda `var(--…)` referenciada existe en el catálogo de `css` v0.2.0.
 4. Ningún `Media(` con un umbral literal que ya tenga token `Bp*`.
 
-La regla 3 es la que atrapa el bug de §1.2 y debe ejecutarse **antes** de migrar nada, para
-tener la lista exacta de tokens que faltan aguas arriba.
+**Los tres paquetes, migrados juntos:**
 
-### Etapa 2 — `rightpanel` primero (el más pequeño: 166 líneas)
+`rightpanel` (166 líneas) es el más simple y sirve para confirmar que el vocabulario de
+`widget/style` alcanza sin escape hatch — si no alcanza, **se corrige la API (aguas arriba, en
+`widget`/`css`) y se publica una versión nueva, nunca se reabre `RawRule` localmente**. Sus 10
+tokens `--rp-*` desaparecen: `tokenAsideBg`/`tokenBorderColor`/`tokenBg` se vuelven `On(Panel)`;
+`tokenMainWidth`/`tokenAsideWidth` se vuelven `Split(style.RatioTwoThirds, Space2)`.
 
-Es el banco de pruebas. Si `rightpanel` no se puede expresar sin `RawRule`, la API propuesta
-está incompleta y **se corrige la API, no se reabre el escape hatch**. Sus 10 tokens `--rp-*`
-desaparecen: `tokenAsideBg`/`tokenBorderColor`/`tokenBg` se vuelven `On(Panel)`;
-`tokenMainWidth`/`tokenAsideWidth` se vuelven `Split(TwoThirds, Space2)`.
-
-### Etapa 3 — `crudview`
-
-Anatomía derivada de la estructura actual, nombres según Open UI:
+`crudview` — anatomía derivada de la estructura actual, nombres según Open UI:
 
 | Clase actual | Parte propuesta | Disposición |
 |---|---|---|
-| `cv-module-content` | *root* | `Split(TwoThirds, Space2)`, `On(Accent)`, `Flush()` |
+| `cv-module-content` | *root* | `Split(style.RatioTwoThirds, Space2)`, `On(Accent)`, `Flush()` |
 | `cv-article-contend` | `detail` | `Stack(Space2)`, `Fill()` |
 | `cv-box-content` | `fields` | `On(Sunken)`, `Pad(Space2)`, `Scrolls()`, `Round(RadiusMd)` |
 | `cv-aside-wrap` | `aside` | `Stack(Space1)`, `On(Panel)`, `Pad(Space1)`, `Fill()` |
@@ -528,20 +550,18 @@ Anatomía derivada de la estructura actual, nombres según Open UI:
 Bloque `Media("(max-width: 640px)")` completo (25 líneas + 20 de comentario explicando
 `direction:rtl`): **se borra**. Lo cubre `Split`.
 
-### Etapa 4 — `platformd`
+`platformd` (521 líneas, el más grande y el que más `vw`/`vh` usa). Sus 7 tokens `--pd-*` se
+resuelven: `tokenMenuSize`/`tokenHeaderHeight` pasan a la escala `Space`; `tokenContentHeight`
+(`97vh`, `calc(100vh - 2.8rem)`) desaparece con `Cover()` + `Fill()`. Borrar
+`platformd/tokens.go` entero y los bloques `Root(Declare(...))` de `rightpanel`/`platformd`.
 
-El más grande (521 líneas) y el que más `vw`/`vh` usa. Sus 7 tokens `--pd-*` se resuelven:
-`tokenMenuSize`/`tokenHeaderHeight` pasan a la escala `Space`; `tokenContentHeight` (`97vh`,
-`calc(100vh - 2.8rem)`) desaparece con `Cover()` + `Fill()`.
-
-### Etapa 5 — Test de forma-consumidor y limpieza
+**Test de forma-consumidor, en el mismo cambio, no como paso final aparte:**
 
 `crudview/consumer_test.go` (753 líneas) ya recorre la pila real. Extenderlo para aseverar la
 hoja emitida: que no contenga `!important`, que sus `@layer` estén en orden, y que cada clase
 presente en el markup exista en la hoja **y viceversa** — el par que hoy nadie verifica y que
-permitió que `cv-btn-crud-icon-hidden` fuera un estado disfrazado.
-
-Borrar `platformd/tokens.go` y los bloques `Root(Declare(...))` de `rightpanel`/`platformd`.
+permitió que `cv-btn-crud-icon-hidden` fuera un estado disfrazado. Este test se escribe junto
+con la migración de `crudview`, no después.
 
 ---
 
@@ -578,16 +598,20 @@ que originó este plan— el arnés sigue abierto.
 
 ## 10. Costo, riesgo y qué **no** se hace
 
-**Costo honesto:** son 5 librerías y ~1.200 líneas de CSS reescritas. No es una tarde. La
-mitigación es que las fases 1 y 2 de cada plan son **aditivas y no rompientes** (`css.Class`
-pasa a ser un alias de tipo, no un tipo nuevo; `style` coexiste con el DSL viejo), y el
-borrado del DSL antiguo es la última etapa, cuando ya no queda ningún consumidor.
+**Costo honesto:** son 5 librerías y ~1.200 líneas de CSS reescritas. No es una tarde. `widget`
+y `css` (las dos que de verdad tenían que ir primero, porque todo lo demás las consume) ya están
+publicadas; lo que queda (`ssr`, `components`/`form`, `layout`) se ejecuta cada uno de una sola
+vez — sin fases aditivas intermedias ni periodo de coexistencia con el código viejo — porque los
+únicos consumidores de esas tres piezas son otras piezas de este mismo árbol, no terceros: no
+hay nadie a quien darle una rampa de migración.
 
 **Riesgo principal:** que el vocabulario de ~22 constructores resulte insuficiente y aparezca
-la tentación de reabrir `RawRule`. Mitigación explícita: la Etapa 2 (`rightpanel`, el paquete
-más pequeño) es un canario deliberado. Si allí falta vocabulario, **se amplía el enum aguas
-arriba y se publica** — jamás se añade un escape. Un `RawRule` reintroducido invalida todo el
-plan, porque un arnés evadible no es un arnés.
+la tentación de reabrir `RawRule`. Mitigación: `rightpanel` (el paquete más pequeño de `layout`)
+es la primera prueba real del vocabulario dentro del mismo cambio — si ahí falta algo, **se
+amplía el enum aguas arriba en `widget`/`css`, se publica una versión nueva y se sigue** (nunca
+se reabre el escape hatch localmente); no hace falta parar la migración completa para eso, la
+publicación de una versión menor no rompe lo que ya se migró. Un `RawRule` reintroducido en
+cualquier repo invalida todo el plan, porque un arnés evadible no es un arnés.
 
 **Fuera de alcance, a propósito:**
 

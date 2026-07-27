@@ -2,10 +2,16 @@
 PLAN: "`tinywasm/components` (+ `tinywasm/form`): migrar los widgets al contrato visual"
 ---
 
-> Depende de: [`PLAN_WIDGET`](PLAN_WIDGET.md) publicado, [`PLAN_CSS`](PLAN_CSS.md) Etapas 1-4,
-> [`PLAN_SSR`](PLAN_SSR.md) Etapa 1.
-> Bloquea a: [`PLAN.md §8`](PLAN.md) (las etapas de `layout`) — un `crudview` migrado no puede
+> Depende de: `github.com/tinywasm/widget v0.1.0` y `github.com/tinywasm/css v0.2.0`
+> (**ambos ya publicados**), y de que `ssr` exponga `style.Styler` ([`PLAN_SSR`](PLAN_SSR.md)).
+> Bloquea a: [`PLAN.md §8`](PLAN.md) (la migración de `layout`) — un `crudview` migrado no puede
 > componer widgets sin migrar.
+>
+> **Ejecución: un solo cambio, no por etapas.** Con `widget`/`css` ya publicados no queda
+> ninguna dependencia externa pendiente — todos los componentes (`fieldset`, `targetlist`,
+> `modaldialog` y el resto) y `tinywasm/form` migran en la misma ventana de trabajo, cubiertos
+> por un único `components/conformance_test.go` que se escribe primero y pasa a verde al final
+> del mismo cambio, no etapa por etapa.
 
 ---
 
@@ -22,36 +28,43 @@ autoridad para publicar aguas arriba.** El propio arnés lo anticipa:
 > to publish upstream — so it patches locally. Technical debt is then not an accident: the
 > workflow guarantees it."*
 
-Por eso este plan va **después** de `widget` y `css`: migrar `components` antes de que exista
-el vocabulario correcto solo reubicaría los parches.
+Por eso este plan iba **después** de `widget` y `css`: migrar `components` antes de que
+existiera el vocabulario correcto solo habría reubicado los parches. Ahora que ambos están
+publicados (`widget v0.1.0`, `css v0.2.0`), ese orden ya se cumplió — lo que queda es un solo
+cambio que cubre todo `components` + `form` a la vez, no una migración componente por
+componente con esperas entre medio.
 
 ---
 
-## Etapa 1 — Inventario y auditoría ejecutable
+## Auditoría ejecutable (se escribe primero, cubre todo el árbol de una vez)
 
-Antes de tocar nada, añadir `components/conformance_test.go` que falla hoy y fija el objetivo.
-Para cada paquete de componente:
+Antes de migrar el primer componente, añadir `components/conformance_test.go` que falla hoy y
+fija el objetivo — se corre contra **todos** los paquetes de componente a la vez, no se activa
+progresivamente a medida que cada uno se migra:
 
 1. Cero literales de color (`#rrggbb`, `rgb(`, `hsl(`, nombres CSS).
 2. Cero `RawRule(`.
 3. Cero `Media(`.
 4. Cero unidades de viewport (`vw`, `vh`, `vmin`, `vmax`).
-5. Toda `var(--…)` referenciada existe en el catálogo de `css`.
+5. Toda `var(--…)` referenciada existe en el catálogo de `css` v0.2.0.
 6. Cero constantes de clase escritas a mano (`Class = "..."`); toda clase se deriva de un
    `widget.Name`.
 
 La regla 5 es la que hay que ejecutar **primero y sobre todo el ecosistema**: produce la lista
-definitiva de tokens fantasma. En `layout` ya se conocen cuatro
-([`PLAN.md §1.2-1.3`](PLAN.md)); es razonable esperar más en `components`, y todos deben
-añadirse al catálogo en [`PLAN_CSS` Etapa 1](PLAN_CSS.md) **antes** de migrar, no durante.
+definitiva de tokens fantasma. En `layout` ya se conocían cuatro y ya se resolvieron en
+`css v0.2.0` ([`PLAN.md §1.2-1.3`](PLAN.md), [`PLAN_CSS`](PLAN_CSS.md)); si `components` revela
+más huecos, se publican como parche de `css` antes de terminar este mismo cambio — no se
+posponen ni se parchean localmente.
 
-La salida de esta etapa no es código: es la lista de huecos que faltan aguas arriba.
+La salida de esta primera pasada no es código: es la lista de huecos que faltan aguas arriba
+(si los hay) antes de tocar los componentes.
 
 ---
 
-## Etapa 2 — `fieldset` (el más pequeño; el canario)
+## `fieldset`
 
-Se migra primero porque es pura superficie y estado, sin disposición compleja.
+Es pura superficie y estado, sin disposición compleja — el primero en escribirse dentro de
+este mismo cambio, no una etapa aparte con su propio ciclo de revisión.
 
 | Hoy | Después |
 |---|---|
@@ -73,7 +86,7 @@ motivo de que `widget` sea un repo aparte ([`PLAN.md §5.3`](PLAN.md)).
 
 ---
 
-## Etapa 3 — `targetlist`
+## `targetlist`
 
 El más ilustrativo: es un `Listbox` de ARIA-APG y hoy no lo declara.
 
@@ -113,7 +126,7 @@ convertirse en API.
 
 ---
 
-## Etapa 4 — `modaldialog`
+## `modaldialog`
 
 `Kind = widget.Dialog`. Aporta `aria-modal`, gestión de foco y cierre con `Esc` desde la firma
 en vez de a mano. La API pública (`Open()`/`Close()`) no cambia — `crudview` no se entera.
@@ -131,9 +144,10 @@ concepto en `crudview`.
 
 ---
 
-## Etapa 5 — Barrido del resto y borrado de paletas locales
+## El resto de los componentes, mismo cambio
 
-Para cada componente restante, mismo procedimiento:
+Para cada componente restante, mismo procedimiento, todos en el mismo cambio que `fieldset`/
+`targetlist`/`modaldialog` — no uno por PR:
 
 1. `Name` + `Kind` + partes nombradas.
 2. Reemplazar toda constante de color local por `On(Surface)`.
@@ -141,14 +155,14 @@ Para cada componente restante, mismo procedimiento:
 4. Reemplazar todo `Media`/`vw`/`vh` por la primitiva `Flow` correspondiente.
 5. Borrar el bloque `Root(Declare(...))` local: la escala la posee `css`, no el componente.
 
-Al terminar, `components/conformance_test.go` (Etapa 1) pasa a verde para todo el repo, y
-queda como guardia permanente en CI: **cualquier componente nuevo —lo escriba un humano o un
-agente— falla el build si hardcodea un color**. Ese test es la respuesta operativa al problema
-que originó todos estos planes.
+Al terminar, `components/conformance_test.go` (escrito al principio) pasa a verde para todo el
+repo de una sola vez, y queda como guardia permanente en CI: **cualquier componente nuevo —lo
+escriba un humano o un agente— falla el build si hardcodea un color**. Ese test es la respuesta
+operativa al problema que originó todos estos planes.
 
 ---
 
-## Etapa 6 — Reescribir la guía, en una página
+## La guía final, en una página
 
 Con el arnés cerrado, la documentación de `components` se reduce a una tabla y un ejemplo:
 
@@ -157,14 +171,14 @@ Con el arnés cerrado, la documentación de `components` se reduce a una tabla y
 | una tarjeta sobre la página | `On(Panel)` |
 | un pozo hundido dentro de la tarjeta | `On(Sunken)` |
 | ritmo vertical | `Stack(Space2)` |
-| dos paneles que se apilan en móvil | `Split(TwoThirds, Space2)` |
+| dos paneles que se apilan en móvil | `Split(style.RatioTwoThirds, Space2)` |
 | una rejilla que decide sus columnas sola | `Grid(TrackMd, Space2)` |
 | que además tome el alto disponible | `Fill()` |
 | que desborde por dentro en vez de crecer | `Scrolls()` |
 | que **no** se adapte | `Fixed()` |
 | marcar una fila seleccionada | `When(widget.Selected, partRow, On(Selected))` |
 
-Más el ejemplo de `targetlist` de la Etapa 3, entero. Eso es toda la guía.
+Más el ejemplo de `targetlist` de más arriba, entero. Eso es toda la guía.
 
 Lo que **se borra** de la documentación actual: las reglas de nombres de proveedores SSR (las
 sustituye el tipo, ver [`PLAN_SSR`](PLAN_SSR.md)), las advertencias sobre `RawRule`s adyacentes

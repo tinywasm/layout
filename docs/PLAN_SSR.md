@@ -2,8 +2,15 @@
 PLAN: "`tinywasm/ssr`: sustituir la detección por regex de nombre por una interfaz tipada"
 ---
 
-> Depende de: [`PLAN_WIDGET`](PLAN_WIDGET.md) (§6, `style.Styler`).
+> Depende de: `github.com/tinywasm/widget v0.1.0` (**ya publicado**), que expone
+> `style.Styler` (`PLAN_WIDGET` §6).
 > Es el plan más pequeño de los cuatro y el que más fallos silenciosos elimina.
+>
+> **Ejecución: un solo cambio, no por etapas.** `widget` ya está publicado y no queda ningún
+> consumidor externo del escáner por regex fuera de este mismo árbol (`layout`, `components`),
+> que se migran en la misma ventana de tiempo. No hay razón para mantener el escáner viejo
+> vivo "por si acaso" mientras se prueba la interfaz nueva: se publican `Styler` y el nuevo
+> `Collect` **y se retira el escáner en el mismo cambio**.
 
 ---
 
@@ -85,36 +92,27 @@ Lo que cambia, en concreto:
 
 ---
 
-## Etapas
+## El cambio, completo, de una vez
 
-### Etapa 1 — Publicar las interfaces (aditivo)
+Un único commit hace las tres cosas — no hay versión intermedia que conviva con el escáner
+viejo:
 
-Declarar `Styler`, `HTMLProvider`, `JSProvider` e `IconProvider`. `Collect` prueba **primero**
-la aserción de interfaz y **cae** al escaneo por regex solo si el tipo no la satisface. Nada
-se rompe; los paquetes migrados dejan de depender del escáner.
+1. **Declarar las interfaces**: `Styler`, `HTMLProvider`, `JSProvider`, `IconProvider`.
+2. **Reescribir `Collect`** para recibir `[]widget.Widget` y aseverar cada capacidad por tipo
+   (el snippet de más arriba), en vez de escanear archivos fuente.
+3. **Borrar el escáner de regex** en el mismo cambio: el archivo que matchea `RenderCSS`/
+   `RootCSS`/`IconSvg` por nombre, la regla de "un solo receptor por paquete", y la sección de
+   `AGENTS.md` *"SSR asset provider names are matched by regex"* completa —unas 25 líneas de
+   reglas que el lector debía recordar— porque el tipo pasa a decirlas.
 
-### Etapa 2 — Diagnóstico ruidoso para el camino viejo
-
-Mientras conviven ambos, el escáner debe **gritar**. Al detectar un paquete con un
-`RenderCSS` pero sin `Styler`, emitir un aviso en build:
-
-```
-ssr: paquete "crudview" usa la detección por nombre (obsoleta).
-     Implementa style.Styler para obtener verificación en tiempo de compilación.
-```
-
-Y si detecta una función que *casi* coincide (`GenerateCSS`, `Styles`, `RenderCss`), **fallar
-el build**. Ese es el caso exacto que hoy pasa en silencio y no debe sobrevivir ni durante la
-transición: escala de preferencia del arnés, *error de compilación → diagnóstico ruidoso →
-(nunca) fallo silencioso*.
-
-### Etapa 3 — Retirar el escáner
-
-Cuando `components` y `layout` estén migrados
-([`PLAN_COMPONENTS`](PLAN_COMPONENTS.md), [`PLAN.md §8`](PLAN.md)): borrar el escáner de
-fuente, las reglas de nombre exacto y la restricción de un receptor por paquete. Borrar
-también de `AGENTS.md` la sección *"SSR asset provider names are matched by regex"* completa
-—unas 25 líneas de reglas que el lector debía recordar— porque el tipo pasa a decirlas.
+No hace falta un diagnóstico ruidoso transitorio para el camino viejo (una fase que le grite al
+paquete que todavía usa `RenderCSS` sin `Styler`) porque no hay transición: `components` y
+`layout` migran sus proveedores de estilo a `Styler` en la misma ventana de trabajo que este
+cambio, así que cuando el escáner se borra ya no queda nadie que lo necesite. Si por secuencia
+de commits `ssr` se publica un paso antes de que `components`/`layout` terminen, el build de
+esos dos falla en compilación (no en runtime) hasta que migren su `RenderCSS` a `Style()` — que
+es exactamente el fallo visible y accionable que el arnés prefiere sobre el silencioso que hay
+hoy.
 
 Es la reducción de documentación que el arnés promete: *"Because the API is the harness,
 documentation shrinks to minimal 'how' instructions"*.
