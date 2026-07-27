@@ -9,6 +9,7 @@ PLAN: "API simplificada css/widget — un contrato único para construir compone
 > - [`docs/PLAN_CSS.md`](PLAN_CSS.md) — `tinywasm/css`: catálogo de tokens y motor de emisión.
 > - [`docs/PLAN_SSR.md`](PLAN_SSR.md) — `tinywasm/ssr`: detección tipada de proveedores de estilo.
 > - [`docs/PLAN_COMPONENTS.md`](PLAN_COMPONENTS.md) — `tinywasm/components`: migración de widgets.
+> - [`docs/PLAN_FORM.md`](PLAN_FORM.md) — `tinywasm/form`: adoptar el contrato visual.
 > - Este archivo cubre además las etapas dentro de `tinywasm/layout`.
 >
 > Reglas del repo: `AGENTS.md` en la raíz. Principio rector:
@@ -16,7 +17,7 @@ PLAN: "API simplificada css/widget — un contrato único para construir compone
 > **es** el arnés*.
 >
 > **Publicado:** `github.com/tinywasm/widget v0.1.0` y `github.com/tinywasm/css v0.2.0` ya están
-> etiquetados. `tinywasm/ssr`, `tinywasm/components` (+ `tinywasm/form`) y las etapas de
+> etiquetados. `tinywasm/ssr`, `tinywasm/form`, `tinywasm/components` y las etapas de
 > `tinywasm/layout` (§8) se ejecutan **de una sola vez, no por etapas escalonadas**: no hay
 > canario ni periodo de coexistencia entre versiones — se migra todo el árbol en el mismo
 > cambio y se fija `go.mod` directamente a `css v0.2.0` / `widget v0.1.0`. El único gate real es
@@ -486,7 +487,7 @@ Todos salen de `docs/ROADMAP.md` — ya se pagaron una vez.
 | `tinywasm/css` | Tokens faltantes, pares con contraste, `Class` como alias, cierre del DSL viejo | [PLAN_CSS](PLAN_CSS.md) | **v0.2.0** | ✅ Publicado |
 | `tinywasm/ssr` | `Styler` tipado en vez de regex sobre el nombre | [PLAN_SSR](PLAN_SSR.md) | — | Pendiente, un solo cambio |
 | `tinywasm/components` | Migración de `targetlist`, `fieldset`, `modaldialog` | [PLAN_COMPONENTS](PLAN_COMPONENTS.md) | — | Pendiente, un solo cambio |
-| `tinywasm/form` | Emitir `State.Invalid`/`State.Locked` en vez de clases propias | dentro de PLAN_COMPONENTS | — | Pendiente, junto con `components` |
+| `tinywasm/form` | `css.go` roto contra `css` v0.2.0, clase de error → `widget.Invalid`, `aria-invalid`/`aria-describedby` | [PLAN_FORM](PLAN_FORM.md) | — | Pendiente, un solo cambio |
 | **`tinywasm/layout`** | Migrar `crudview`, `platformd`, `rightpanel` sobre `css v0.2.0` + `widget v0.1.0` | **este archivo, §8** | — | Pendiente, un solo cambio |
 
 Los tres pendientes ya no están escalonados por dependencia — `widget` y `css`, que eran el

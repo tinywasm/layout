@@ -16,7 +16,8 @@ Predefined UI layouts for tinywasm modules
 - [PLAN_WIDGET](docs/PLAN_WIDGET.md) — `tinywasm/widget` (new): anatomy, states and layout primitives
 - [PLAN_CSS](docs/PLAN_CSS.md) — `tinywasm/css`: complete the token catalog, retire the CSS-mirror DSL
 - [PLAN_SSR](docs/PLAN_SSR.md) — `tinywasm/ssr`: typed `Styler` instead of regex name matching
-- [PLAN_COMPONENTS](docs/PLAN_COMPONENTS.md) — `tinywasm/components` + `tinywasm/form`: widget migration
+- [PLAN_COMPONENTS](docs/PLAN_COMPONENTS.md) — `tinywasm/components`: widget migration
+- [PLAN_FORM](docs/PLAN_FORM.md) — `tinywasm/form`: adopt the visual contract
 
 ## Packages
 

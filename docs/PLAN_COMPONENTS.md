@@ -1,17 +1,19 @@
 ---
-PLAN: "`tinywasm/components` (+ `tinywasm/form`): migrar los widgets al contrato visual"
+PLAN: "`tinywasm/components`: migrar los widgets al contrato visual"
 ---
 
 > Depende de: `github.com/tinywasm/widget v0.1.0` y `github.com/tinywasm/css v0.2.0`
-> (**ambos ya publicados**), y de que `ssr` exponga `style.Styler` ([`PLAN_SSR`](PLAN_SSR.md)).
+> (**ambos ya publicados**), de que `ssr` exponga `style.Styler` ([`PLAN_SSR`](PLAN_SSR.md)), y
+> de que `tinywasm/form` esté migrado ([`PLAN_FORM`](PLAN_FORM.md)) — `components/fieldset`
+> skinea directamente lo que `form` emite.
 > Bloquea a: [`PLAN.md §8`](PLAN.md) (la migración de `layout`) — un `crudview` migrado no puede
 > componer widgets sin migrar.
 >
 > **Ejecución: un solo cambio, no por etapas.** Con `widget`/`css` ya publicados no queda
 > ninguna dependencia externa pendiente — todos los componentes (`fieldset`, `targetlist`,
-> `modaldialog` y el resto) y `tinywasm/form` migran en la misma ventana de trabajo, cubiertos
-> por un único `components/conformance_test.go` que se escribe primero y pasa a verde al final
-> del mismo cambio, no etapa por etapa.
+> `modaldialog` y el resto) migran en la misma ventana de trabajo, cubiertos por un único
+> `components/conformance_test.go` que se escribe primero y pasa a verde al final del mismo
+> cambio, no etapa por etapa.
 
 ---
 
@@ -68,10 +70,9 @@ este mismo cambio, no una etapa aparte con su propio ciclo de revisión.
 
 | Hoy | Después |
 |---|---|
-| Clases propias para el estado bloqueado | `widget.Locked` → `data-locked` |
-| Tinte "frosted glass" con `ColorSurface` a mano | `On(Sunken)` |
+| Tinte "frosted glass" con `ColorSurface` a mano para el estado bloqueado | `On(Sunken)`, activado por `Cue.ReadOnly`/`Cue.NativeDisabled` — ver decisión en [`PLAN_FORM`](PLAN_FORM.md) §2, no un `data-locked` propio |
 | Hover con `ColorHover` (arreglado en el ROADMAP tras haber divergido) | `Cue(widget.Hover, …)` — resuelto por la `Surface`, una sola vez |
-| Mensaje de error posicionado en absoluto con offsets a mano | parte `error` + `On(Danger)` |
+| Mensaje de error posicionado en absoluto con offsets a mano | parte `error` + `On(Danger)`, activado por `widget.Invalid` (emitido por `form`, ver [`PLAN_FORM`](PLAN_FORM.md) §2) |
 | El chip de etiqueta que "cruza el borde" y obligó a `PaddingTop(Space3)` en `crudview` | parte `label` con `Raise(Raised)`; el `crudview` deja de compensarlo desde fuera |
 
 Ese último punto es representativo del daño que causa la falta de anatomía: hoy `crudview`
@@ -79,10 +80,12 @@ Ese último punto es representativo del daño que causa la falta de anatomía: h
 explicando por qué el padding superior es `Space3` y los otros tres lados `Space2`. Con una
 anatomía nombrada, ese ajuste vive en `fieldset`, donde se decide.
 
-**`tinywasm/form`** cambia aquí también, y es un cambio pequeño: en vez de emitir clases
-propias para validez y bloqueo, emite `widget.Invalid` y `widget.Locked`. `form` pasa a
-importar `widget` (que solo depende de `fmt`) y **no** importa `css`. Ese es exactamente el
-motivo de que `widget` sea un repo aparte ([`PLAN.md §5.3`](PLAN.md)).
+**`tinywasm/form`** migra por separado, en su propio plan ([`PLAN_FORM`](PLAN_FORM.md)) — no es
+el cambio de dos líneas que parecía a primera vista: su `css.go` actual ya no compila contra
+`css` v0.2.0, y su estado de error hoy es una clase alternada por Go (`tw-field-error--visible`)
+en vez de `widget.Invalid`. `form` pasa a importar `widget` (que solo depende de `fmt`) y **no**
+importa `css`. Ese es exactamente el motivo de que `widget` sea un repo aparte
+([`PLAN.md §5.3`](PLAN.md)).
 
 ---
 
