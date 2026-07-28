@@ -1,6 +1,8 @@
 ---
 PLAN: "layout: migrar crudview, platformd y rightpanel al contrato visual widget/style"
 EXECUTOR: jules
+STATUS: running
+SESSION: 16868315963756356140
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: **agents-workflow**.
