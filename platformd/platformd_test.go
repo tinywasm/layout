@@ -42,11 +42,11 @@ func TestPlatform_Render(t *testing.T) {
 	}
 
 	expected := []string{
-		"pd-root",
-		"pd-header",
-		"pd-menu",
-		"pd-stage",
-		"pd-panel",
+		"pd",
+		"pd__header",
+		"pd__menu",
+		"pd__stage",
+		"pd__panel",
 		"mod1",
 		"mod2",
 	}
@@ -71,7 +71,7 @@ func TestPlatform_Render_DefaultModule(t *testing.T) {
 
 	html := p.Render().String()
 	// tinywasm/dom uses single quotes for attributes
-	if !contains(html, "id='mod2' class='pd-panel pd-panel-active'") {
+	if !contains(html, "id='mod2' class='pd__panel pd__panel-active'") {
 		t.Errorf("expected mod2 to be active, got HTML: %s", html)
 	}
 }
@@ -88,10 +88,10 @@ func TestPlatform_Activate(t *testing.T) {
 	p.Activate("mod2")
 
 	html := p.Render().String()
-	if !contains(html, "id='mod2' class='pd-panel pd-panel-active'") {
+	if !contains(html, "id='mod2' class='pd__panel pd__panel-active'") {
 		t.Errorf("expected mod2 to be active after Activate('mod2'), got HTML: %s", html)
 	}
-	if contains(html, "id='mod1' class='pd-panel pd-panel-active'") {
+	if contains(html, "id='mod1' class='pd__panel pd__panel-active'") {
 		t.Errorf("expected mod1 to NOT be active")
 	}
 }
@@ -143,7 +143,7 @@ func TestPlatform_CanView(t *testing.T) {
 	}
 
 	// mod2 should be active (fallback)
-	if !contains(html, "id='mod2' class='pd-panel pd-panel-active'") {
+	if !contains(html, "id='mod2' class='pd__panel pd__panel-active'") {
 		t.Error("expected mod2 to be active")
 	}
 
@@ -202,8 +202,8 @@ func TestRenderCSS_NonEmpty(t *testing.T) {
 	if css == "" {
 		t.Fatal("RenderCSS() returned empty string")
 	}
-	if !contains(css, ".pd-root") {
-		t.Errorf("expected CSS to contain .pd-root")
+	if !contains(css, ".pd") {
+		t.Errorf("expected CSS to contain .pd")
 	}
 }
 

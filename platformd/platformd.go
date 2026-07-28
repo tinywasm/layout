@@ -5,6 +5,7 @@ import (
 
 	"github.com/tinywasm/layout"
 	"github.com/tinywasm/svg"
+	"github.com/tinywasm/widget"
 
 	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
@@ -13,29 +14,31 @@ import (
 	"github.com/tinywasm/time"
 )
 
+const NamePlatform widget.Name = "pd"
+
 var (
-	clsRoot            Class = "pd-root"
-	clsHeader          Class = "pd-header"
-	clsUserBlock       Class = "pd-user-block"
-	clsHeaderRight     Class = "pd-header-right"
-	clsMsgDesktop      Class = "pd-msg-desktop"
-	clsArea            Class = "pd-area"
-	clsMsgMobile       Class = "pd-msg-mobile"
-	clsMenu            Class = "pd-menu"
-	clsNavbar          Class = "pd-navbar"
-	clsNavItem         Class = "pd-nav-item"
-	clsNavLink         Class = "pd-nav-link"
-	clsLinkText        Class = "pd-link-text"
-	ClsNavIcon         Class = "pd-nav-icon"
-	clsNavActive       Class = "pd-nav-active"
-	clsStage           Class = "pd-stage"
-	clsPanel           Class = "pd-panel"
-	clsPanelActive     Class = "pd-panel-active"
-	clsOrientationWarn Class = "pd-orientation-warn"
-	clsMsg             Class = "pd-msg"
-	clsHamburger       Class = "pd-hamburger"
-	clsNavOverlay      Class = "pd-nav-overlay"
-	clsMenuOpen        Class = "pd-menu-open"
+	clsRoot            = NamePlatform.Root()
+	clsHeader          = NamePlatform.Class("header")
+	clsUserBlock       = NamePlatform.Class("user-block")
+	clsHeaderRight     = NamePlatform.Class("header-right")
+	clsMsgDesktop      = NamePlatform.Class("msg-desktop")
+	clsArea            = NamePlatform.Class("area")
+	clsMsgMobile       = NamePlatform.Class("msg-mobile")
+	clsMenu            = NamePlatform.Class("menu")
+	clsNavbar          = NamePlatform.Class("navbar")
+	clsNavItem         = NamePlatform.Class("nav-item")
+	clsNavLink         = NamePlatform.Class("nav-link")
+	clsLinkText        = NamePlatform.Class("link-text")
+	ClsNavIcon         = NamePlatform.Class("nav-icon")
+	clsNavActive       = NamePlatform.Class("nav-active")
+	clsStage           = NamePlatform.Class("stage")
+	clsPanel           = NamePlatform.Class("panel")
+	clsPanelActive     = NamePlatform.Class("panel-active")
+	clsOrientationWarn = NamePlatform.Class("orientation-warn")
+	clsMsg             = NamePlatform.Class("msg")
+	clsHamburger       = NamePlatform.Class("hamburger")
+	clsNavOverlay      = NamePlatform.Class("nav-overlay")
+	clsMenuOpen        = NamePlatform.Class("menu-open")
 )
 
 const (

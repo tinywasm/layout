@@ -2,22 +2,25 @@ package rightpanel
 
 import (
 	"github.com/tinywasm/layout"
+	"github.com/tinywasm/widget"
 
-	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
 )
 
+const NameRightPanel widget.Name = "rp"
+
 var (
-	clsWrapper      Class = "rp-wrapper"
-	clsMain         Class = "rp-main"
-	clsHeader       Class = "rp-header"
-	clsTitleRow     Class = "rp-title-row"
-	clsHeadControls Class = "rp-head-controls"
-	clsArticle      Class = "rp-article"
-	clsAside        Class = "rp-aside"
-	clsAsideHeader  Class = "rp-aside-header"
-	clsAsideContent Class = "rp-aside-content"
+	clsWrapper      = NameRightPanel.Root()
+	clsMain         = NameRightPanel.Class("main")
+	clsHeader       = NameRightPanel.Class("header")
+	clsTitleRow     = NameRightPanel.Class("title-row")
+	clsTitle        = NameRightPanel.Class("title")
+	clsHeadControls = NameRightPanel.Class("controls")
+	clsArticle      = NameRightPanel.Class("article")
+	clsAside        = NameRightPanel.Class("aside")
+	clsAsideHeader  = NameRightPanel.Class("aside-header")
+	clsAsideContent = NameRightPanel.Class("aside-content")
 )
 
 // RightPanel is a two-column layout skeleton:
@@ -88,7 +91,7 @@ func (r *RightPanel) Render() *Element {
 
 	titleRow := Div().Set(clsTitleRow.AsAttr())
 	if r.Title != "" {
-		titleRow.Child(H1().Text(r.Title))
+		titleRow.Child(H1().Set(clsTitle.AsAttr()).Text(r.Title))
 	}
 	if r.Head != nil {
 		titleRow.Child(r.Head)

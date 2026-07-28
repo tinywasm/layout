@@ -39,19 +39,20 @@ func TestRightPanel_RenderHTML_WithAllSlots(t *testing.T) {
 		label, want string
 	}{
 		{"root id", "id='users'"},
-		{"wrapper class", "class='rp-wrapper'"},
-		{"main class", "class='rp-main'"},
-		{"header class", "class='rp-header'"},
-		{"title row", "class='rp-title-row'"},
-		{"h1 title", "<h1>Users</h1>"},
+		{"wrapper class", "class='rp'"},
+		{"main class", "class='rp__main'"},
+		{"header class", "class='rp__header'"},
+		{"title row", "class='rp__title-row'"},
+		{"title class", "class='rp__title'"},
+		{"h1 title", "Users</h1>"},
 		{"Head slot", "<span>badge</span>"},
 		{"HeadControls slot", "<select></select>"},
-		{"article class", "class='rp-article'"},
+		{"article class", "class='rp__article'"},
 		{"Article slot", "<table></table>"},
-		{"aside class", "class='rp-aside'"},
-		{"aside header", "class='rp-aside-header'"},
+		{"aside class", "class='rp__aside'"},
+		{"aside header", "class='rp__aside-header'"},
 		{"AsideControls slot", "<input type=search>"},
-		{"aside content", "class='rp-aside-content'"},
+		{"aside content", "class='rp__aside-content'"},
 		{"Aside slot", "<ul></ul>"},
 	}
 
@@ -72,8 +73,8 @@ func TestRightPanel_RenderHTML_AsideOmittedWhenNil(t *testing.T) {
 
 	html := panel.Render().String()
 
-	if strings.Contains(html, "rp-aside") {
-		t.Error("expected rp-aside to be absent when both AsideControls and Aside are nil")
+	if strings.Contains(html, "rp__aside") {
+		t.Error("expected rp__aside to be absent when both AsideControls and Aside are nil")
 	}
 }
 
