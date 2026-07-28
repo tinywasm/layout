@@ -1,5 +1,35 @@
 ---
-PLAN: "`tinywasm/ssr`: sustituir la detección por regex de nombre por una interfaz tipada"
+PLAN: "[SUPERSEDED] `tinywasm/ssr`: sustituir la detección por regex de nombre por una interfaz tipada"
+---
+
+> # ⛔ SUPERSEDED — NO EJECUTAR
+>
+> Este documento se conserva como registro de diseño. **No lo despaches.** Su dirección quedó
+> revertida: el contrato SSR de CSS es `RootCSS()` + `RenderCSS()`, y `Style()`/`style.Styler`
+> **no existen**. El plan vigente para `ssr` vive en su propio repo:
+> [`ssr/docs/PLAN.md`](https://github.com/tinywasm/ssr/blob/main/docs/PLAN.md).
+>
+> **Por qué se revirtió.** Este plan se ejecutó a medias: `components` migró a `Style()` pero
+> `ssr` nunca borró su escáner por regex — se limitó a **añadir** `Style()` como tercer patrón
+> junto a `RootCSS`/`RenderCSS`, concatenando ambas salidas cuando un paquete declaraba las dos.
+> El resultado fueron tres formas de emitir CSS donde debía haber una, y un `ssr` genérico
+> acoplado por `import` a una librería de estilos concreta.
+>
+> **Y el diseño tampoco entregaba lo que prometía.** Su criterio de aceptación nº1 dice *"un
+> widget cuyo método de estilo se llame mal no compila"*, pero su propio snippet
+> (`if s, ok := p.(style.Styler); ok`) es una aserción en **runtime**: un nombre equivocado se
+> salta en silencio — el mismo defecto que venía a eliminar. Además `ssr` extrae compilando un
+> `main.go` aparte (los proveedores son `//go:build !wasm`, la app es WASM), así que
+> `Collect(parts ...widget.Widget)` exige un sitio de registro nuevo en cada aplicación: un
+> *"acuérdate de registrar"* que el arnés cuenta como agujero, no como cierre.
+>
+> El fallo silencioso que este plan atacaba **sí se cerró**, con un diagnóstico ruidoso en
+> `ssr`: un paquete con `css.go` que no declara `RootCSS()` ni `RenderCSS()` es un error de
+> extracción. Sin acoplar `ssr` a nadie.
+>
+> Si algún día se retoma la idea de las capacidades tipadas, empieza por resolver el sitio de
+> registro y la aserción silenciosa — no por este texto.
+
 ---
 
 > Depende de: `github.com/tinywasm/widget v0.1.0` (**ya publicado**), que expone

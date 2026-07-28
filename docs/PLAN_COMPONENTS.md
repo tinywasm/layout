@@ -1,5 +1,19 @@
 ---
-PLAN: "`tinywasm/components` (+ `tinywasm/form`): migrar los widgets al contrato visual"
+PLAN: "[SUPERSEDED] `tinywasm/components` (+ `tinywasm/form`): migrar los widgets al contrato visual"
+---
+
+> # ⛔ SUPERSEDED — NO EJECUTAR
+>
+> Este documento se conserva como registro de diseño. **No lo despaches.** Ya se ejecutó: los
+> componentes están migrados al DSL `style.Of(...)`. Lo único que quedó mal es la firma —
+> declaró `Style() *style.Sheet` en vez de `RenderCSS() *css.Stylesheet`, creando una tercera
+> entrada de CSS en `ssr`. Todos los ejemplos de este archivo que muestran `func (x *T) Style()`
+> están **obsoletos**.
+>
+> Plan vigente:
+> [`components/docs/PLAN.md`](https://github.com/tinywasm/components/blob/main/docs/PLAN.md).
+> Motivo completo de la reversión: cabecera de [`PLAN_SSR.md`](PLAN_SSR.md).
+
 ---
 
 > Depende de: `github.com/tinywasm/widget v0.1.0` y `github.com/tinywasm/css v0.2.0`

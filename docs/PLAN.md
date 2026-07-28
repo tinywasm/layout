@@ -1,624 +1,441 @@
 ---
-PLAN: "API simplificada css/widget — un contrato único para construir componentes visuales reutilizables"
+PLAN: "layout: migrar crudview, platformd y rightpanel al contrato visual widget/style"
+EXECUTOR: jules
 ---
 
-> Plan maestro. Define el problema, la respuesta de diseño y el reparto de trabajo
-> entre librerías. Cada librería involucrada tiene su propio plan:
->
-> - [`docs/PLAN_WIDGET.md`](PLAN_WIDGET.md) — `tinywasm/widget` (**nueva**): el contrato visual.
-> - [`docs/PLAN_CSS.md`](PLAN_CSS.md) — `tinywasm/css`: catálogo de tokens y motor de emisión.
-> - [`docs/PLAN_SSR.md`](PLAN_SSR.md) — `tinywasm/ssr`: detección tipada de proveedores de estilo.
-> - [`docs/PLAN_COMPONENTS.md`](PLAN_COMPONENTS.md) — `tinywasm/components`: migración de widgets.
-> - Este archivo cubre además las etapas dentro de `tinywasm/layout`.
->
-> Reglas del repo: `AGENTS.md` en la raíz. Principio rector:
-> [CONSTRUCTION_HARNESS](https://github.com/tinywasm/.github) — *el código tipado y explícito
-> **es** el arnés*.
->
-> **Publicado:** `github.com/tinywasm/widget v0.1.0` y `github.com/tinywasm/css v0.2.0` ya están
-> etiquetados. `tinywasm/ssr`, `tinywasm/components` (+ `tinywasm/form`) y las etapas de
-> `tinywasm/layout` (§8) se ejecutan **de una sola vez, no por etapas escalonadas**: no hay
-> canario ni periodo de coexistencia entre versiones — se migra todo el árbol en el mismo
-> cambio y se fija `go.mod` directamente a `css v0.2.0` / `widget v0.1.0`. El único gate real es
-> el de siempre: `gotest` en verde y el chequeo de dependencias WASM.
+> Este plan se despacha con el flujo CodeJob. Ver skill: **agents-workflow**.
+> Documento de diseño de fondo (lectura opcional):
+> [`VISUAL_CONTRACT_MASTER_PLAN.md`](VISUAL_CONTRACT_MASTER_PLAN.md) §8.
+
+# Plan — `tinywasm/layout`: migración al contrato visual
+
+`layout` es el **último consumidor** de la cadena. Cuando este plan cierre, la verificación
+visual en vivo la hace un humano sobre la app real: es el único punto donde se comprueba que
+todo el árbol migrado se ve bien de verdad.
 
 ---
 
-## Resumen ejecutivo
+## 🚦 0. Bloqueo previo — no empieces sin esto
 
-El problema no es que los agentes "no lean la documentación". El problema es que **la API
-de CSS actual permite escribir lo incorrecto**, y en varios casos *obliga* a hacerlo. Un
-arnés que se puede evadir no es un arnés.
+`layout` va **el último**, detrás de otros tres repos que publican en este orden: `ssr` (gate) →
+`components` y `widget` (en paralelo) → `layout`.
 
-La propuesta tiene tres movimientos:
+Este plan requiere **dos publicaciones previas**:
 
-1. **Eliminar el color, la longitud y el breakpoint del vocabulario.** Si no existe un tipo
-   para escribir `#3f88bf`, `.4em` o `(max-width: 640px)`, nadie los escribe — ni un humano
-   ni un LLM. Se declara *intención* (`On(Panel)`, `Pad(Space2)`), no *valor*.
-2. **Invertir el default: responsivo, fluido y alto-automático por defecto.** No se declara
-   "quiero que sea responsivo"; se declara la **excepción** (`Fixed()`, `Fill()`, `Scrolls()`).
-   Las excepciones son pocas, tipadas y *greppables*.
-3. **Un contrato único de widget = identidad + capacidades aseveradas en la costura**, no una
-   interfaz gorda. Es exactamente el patrón que la casa ya usa (`view.Saver`/`view.Deleter`),
-   extendido a lo visual.
+1. **`github.com/tinywasm/components`** con su anatomía nueva: clases derivadas de `widget.Name`
+   y su hoja expuesta como **`RenderCSS() *css.Stylesheet`**. Si migras `layout` contra una
+   versión anterior, `crudview` compone widgets sin la anatomía nueva y el resultado no compila
+   o se ve roto.
+2. **`github.com/tinywasm/widget`** sin `style.Styler` y **con** la escala `Motion` /
+   `Animate(m)`, que `platformd` consume en la etapa 5. Ese chequeo está en la etapa 1.1.
 
-Superficie actual usada solo en los 3 `css.go` de este repo: **81 símbolos exportados
-distintos** + **33 `RawRule`** (el agujero sin tipar). Superficie propuesta: **~22
-constructores**, **0 escapes**.
+> **`Style()` no existe y no debe existir.** Hubo una ventana en la que `components` expuso su
+> hoja como `Style() *style.Sheet` y `ssr` reconocía **tres** entradas de CSS
+> (`RootCSS`, `RenderCSS`, `Style`). Esa tercera vía se eliminó: el contrato SSR de CSS es
+> `RootCSS()` para los tokens de documento y `RenderCSS()` para la hoja de un componente, y nada
+> más. Ver
+> [`components/docs/PLAN.md`](https://github.com/tinywasm/components/blob/main/docs/PLAN.md) y
+> [`ssr/docs/PLAN.md`](https://github.com/tinywasm/ssr/blob/main/docs/PLAN.md).
+>
+> Consecuencia directa para este plan: **los `css.go` de `layout` conservan su firma actual**
+> `func (x *T) RenderCSS() *Stylesheet`. Lo que cambia es el **cuerpo** — pasa a construirse con
+> el DSL `style.Of(...)` y termina en `.Stylesheet()`. Si en algún momento te ves renombrando un
+> `RenderCSS` a `Style`, has leído un documento obsoleto: **para y repórtalo**.
 
----
+**Comprobación obligatoria antes de la etapa 1:**
 
-## 1. Diagnóstico — con evidencia de este repositorio
-
-No es una impresión. Es lo que hay hoy en `crudview/css.go`, `platformd/css.go` y
-`rightpanel/css.go`.
-
-### 1.1 El catálogo tipado existe, pero la API no obliga a usarlo
-
-`tinywasm/css` publica un catálogo `Token` tipado (`ColorPrimary`, `ColorSurface`, `Space2`…).
-Sin embargo `crudview/css.go:13-23` declara su propia paleta como **strings crudos**:
-
-```go
-const (
-	cPanel  = "var(--color-background, #ffffff)"
-	cInset  = "var(--color-surface-variant, #d7d7dd)"
-	cBorder = "var(--color-outline-variant, #cfcfd6)"
-	cAccent = "var(--color-primary, #3f88bf)"
-	cOnAcc  = "#ffffff"
-	cDisBg  = "var(--color-outline-variant, #c2c1c1)"
-	cDisFg  = "var(--color-on-surface-variant, #6e6e73)"
-)
+```bash
+go list -m -versions github.com/tinywasm/components
 ```
 
-Esto es posible **solo porque `Background()` y `Color()` aceptan `Str(string)`**. Mientras
-exista `Str`, el token tipado es opcional — y lo opcional, en un flujo asistido por LLM, no
-ocurre.
+Toma la versión **mayor que v0.1.9** (la última publicada antes de la migración) y confirma que
+expone `RenderCSS()`, no `Style()`:
 
-### 1.2 Tres de esas variables **no existen** en ningún lado
-
-`--color-surface-variant`, `--color-outline-variant` y `--color-on-surface-variant` son
-nombres de Material Design, no del catálogo de `tinywasm/css`. Verificado: no se declaran en
-`css/tokens.go` ni en ningún `Root(Declare(...))` del ecosistema.
-
-Consecuencia real, no teórica: **el marco gris, las hairlines y el estado deshabilitado de
-`crudview` nunca siguen el tema.** Siempre resuelven al hex de fallback. En modo oscuro
-siguen siendo grises claros. El bug es invisible porque `var()` con fallback **nunca falla
-en voz alta** — es un fallo silencioso, que el principio 6 prohíbe explícitamente.
-
-### 1.3 Pseudo-tokens que nadie puede tematizar
-
-`--cv-title-height`, `--cv-controls-height`, `--cv-detail-width` se **usan** dentro de
-`RawRule("... var(--cv-title-height, 8vh) ...")` pero **nunca se `Declare()`n**. Son
-variables fantasma: no tienen símbolo Go, no aparecen en autocompletado, no se pueden
-sobrescribir desde una app, y su único valor real es el fallback embebido en un string.
-
-### 1.4 Cada paquete reinventa su propia escala
-
-`platformd/tokens.go` declara 7 tokens `--pd-*`; `rightpanel/css.go` declara 10 tokens
-`--rp-*`; `crudview` declara 3 fantasma `--cv-*`. Todos describen lo mismo: alto de título,
-alto de controles, ancho de panel, gap, color de borde. **Tres catálogos paralelos para un
-concepto.** Es exactamente la duplicación que el arnés llama *"pegamento que toda aplicación
-escribiría igual"*: pertenece a la pieza, no a los consumidores.
-
-Peor: `rightpanel/css.go:17` hace `Declare(tokenAsideBg, ColorOnSurface.Var())` — usa el
-color **de texto** como color **de fondo**. Nada lo impide, porque `Background()` acepta
-cualquier `Token`. Un par fg/bg emparejado por tipo lo haría imposible de escribir.
-
-### 1.5 El escape hatch no es una salida de emergencia; es la vía principal
-
-**33 `RawRule`** en tres archivos. Y no para casos exóticos: para `grid-template`, `gap`,
-`direction`, `scroll-snap-type`, `flex`, `order` — es decir, **para el layout**, que es
-precisamente lo que la librería debería resolver. La API tipada cubre lo fácil (`Display`,
-`Color`) y delega lo difícil al string.
-
-Además el escape hatch tiene sus propias trampas documentadas *en el código*:
-
-```go
-// NOTE: adjacent RawRules are concatenated without a separator, so
-// grid-template and gap MUST share one RawRule with an explicit ';'.
+```bash
+go doc github.com/tinywasm/components/fieldset.Fieldset.RenderCSS   # debe existir
+go doc github.com/tinywasm/components/fieldset.Fieldset.Style       # debe FALLAR
 ```
 
-Eso es un "acuérdate de…" en un comentario: por definición del arnés, **un agujero**.
-
-### 1.6 Bugs de la propia librería, parcheados río abajo
-
-`crudview/css.go:174-181` documenta que `Padding(a,b,c,d)` **está roto**:
-
-> *"nor a single multi-token `Padding(a,b,c,d)` call (`joinValues()`'s output loses its
-> spaces somewhere in the CSS pipeline: `padding:var(...)var(...)var(...)`, no separators —
-> both verified via the live stylesheet)"*
-
-Y `crudview` lo evita usando 4 longhands. Las reglas lego son explícitas: *"Never wrap a
-library to fix its behaviour"* y *"A missing contract at a boundary is a defect in the
-library, not in the consumer"*. El defecto es de `css` y se arregla en `css`
-([PLAN_CSS](PLAN_CSS.md), Etapa 3).
-
-Lo mismo con `ColorOnPrimary`: `crudview` lo descarta a mano —
-
-> *"Not --color-on-primary: some themes set on-primary to a near black that is unreadable on
-> the primary fill; white is the safe universal."*
-
-— y hardcodea `#ffffff`. Si un par `primary`/`on-primary` no contrasta, **el par está mal
-definido en el catálogo**. Se arregla arriba, con un test de contraste en `css`.
-
-### 1.7 El breakpoint es un string, teniendo el token al lado
-
-`Media("(max-width: 640px)")` en `crudview/css.go:343` y `rightpanel/css.go:143`, mientras
-`css.BpSm` vale exactamente `640px`. Dos fuentes de verdad para el mismo umbral, que
-divergirán.
-
-### 1.8 Fallo silencioso estructural en la detección SSR
-
-De `AGENTS.md`: `tinywasm/ssr` detecta el CSS de un paquete **por regex sobre el nombre de la
-función**. Si se llama `GenerateCSS` en vez de `RenderCSS`, *"is silently never emitted — the
-component renders with zero styling and nothing fails at build time"*. Y además exige "un solo
-receptor por paquete", regla que no está en ningún tipo.
-
-Un contrato es un tipo, no una expresión regular. Se resuelve en [PLAN_SSR](PLAN_SSR.md).
-
-### 1.9 Resumen del diagnóstico
-
-| Síntoma | Causa raíz en la API | Principio violado |
-|---|---|---|
-| Colores hardcodeados | `Str(string)` acepta cualquier cosa | 1 — tipado sobre `any` |
-| Variables inexistentes | `var()` con fallback nunca falla | 6 — fallar en compilación |
-| Tokens fantasma `--cv-*` | Ningún tipo obliga a `Declare` | 3 — estados ilegales inescribibles |
-| 3 catálogos paralelos | La escala no la posee nadie | 9 — piezas lego |
-| 33 `RawRule` | El vocabulario tipado es incompleto | 1, 4 |
-| `Padding` roto, parcheado abajo | Defecto no reportado aguas arriba | 9 |
-| Breakpoint como string | Token existente no obligatorio | 4 — una sola forma |
-| CSS no emitido por nombre de función | Contrato por regex, no por tipo | 6 |
+Si el primero falla, si el segundo **no** falla, o si no hay versión posterior a v0.1.9,
+**detente y repórtalo**. No migres `layout` contra un `components` sin migrar, y no añadas un
+`replace` local para esquivarlo.
 
 ---
 
-## 2. ¿Existe un framework agnóstico a la tecnología para construir UI?
+## ⚠️ 1. Alcance — LEE ESTO ANTES DE TOCAR NADA
 
-Respuesta corta: **no existe uno adoptable tal cual, pero sí existen cuatro vocabularios
-estandarizados que resuelven exactamente lo que estás preguntando.** Conviene robarlos por
-nombre: cuestan cero, y un agente que ya conoce esos estándares conoce tu API sin leer nada.
+Se migran **tres paquetes en el mismo cambio**: `rightpanel`, `crudview` y `platformd`. No es por
+etapas con esperas entre medio; el gate es uno solo, `gotest` en verde al final.
 
-Lo que **no** sirve como base:
+**PROHIBIDO — no hagas nada de esto:**
 
-- **Flutter / Compose Multiplatform / React Native** — no son agnósticos: son dueños del
-  renderer. Cambian el problema por otro más grande.
-- **Adaptive Cards (Microsoft) y similares** — sí son agnósticos, pero degeneran en un
-  esquema JSON sobre un catálogo cerrado de tarjetas. Sirve para notificaciones, no para
-  construir un sistema de componentes.
+| Prohibición | Motivo |
+|---|---|
+| Usar `RawRule(` | Es el agujero sin tipar que este plan cierra. Si el vocabulario no alcanza, **para y repórtalo**: es un defecto aguas arriba en `widget`/`css`, no algo a parchear aquí. |
+| Usar `Str(` para colores, longitudes o breakpoints | Misma razón. Si no existe el tipo, no se escribe el valor. |
+| Escribir un literal de color (`#rrggbb`, `rgb(`, `hsl(`) o un nombre de color CSS | La paleta la posee `css` v0.3.0. |
+| Usar unidades de viewport (`vw`, `vh`, `vmin`, `vmax`) | Toda medida es relativa al contenedor. Lo resuelven las primitivas `Flow` y `@container`. |
+| Escribir `Media(` | Responsivo es el default. Las primitivas ya se adaptan. |
+| Declarar un `Token` o un bloque `Root(Declare(...))` | La escala la posee `css`. Un componente que declara tokens crea un catálogo paralelo. |
+| Escribir una `Class` a mano | Toda clase se deriva de un `widget.Name` con `.Root()` / `.Class(Part)`. |
+| Añadir un `replace` nuevo en `go.mod` | Se migra contra versiones publicadas. |
+| Tocar la lógica de negocio (`crud.go`, `factory.go`, `platformd.go`, `rightpanel.go`, `crudview.go`) más allá de las clases que emiten | Este plan es visual. |
+| Usar `go test` | En este repo se usa `gotest`. |
 
-Lo que **sí** sirve, y qué toma de cada uno esta propuesta:
-
-### 2.1 W3C Design Tokens Community Group (DTCG) — *los valores*
-
-Formato estándar para nombrar y serializar decisiones de diseño (`color.surface`,
-`space.4`, `radius.md`, con tipo y valor). `css.Token` **ya es esto** en la práctica.
-
-Lo que aporta alinearse: (a) el catálogo se vuelve importable/exportable desde Figma o Style
-Dictionary; (b) da un **nombre canónico a los tokens que hoy faltan** — `surface-variant`,
-`outline`, `on-error` no son inventos de Material, son huecos reales del catálogo, y DTCG
-dice cómo llamarlos.
-
-### 2.2 Open UI (W3C) — *la anatomía*
-
-Describe cada componente como **`name` + `parts` nombradas + `states`**. Es literalmente el
-contrato que estás buscando: no dice cómo se ve, dice **de qué piezas está hecho y en qué
-estados puede estar**.
-
-De aquí salen `widget.Name`, `widget.Part` y `widget.State`. Ventaja concreta: hoy
-`crudview` declara 20 `Class` a mano (`clsBtnCrudIconHidden` es un *estado* disfrazado de
-clase). Con anatomía tipada, la clase se **deriva** y el estado es un `data-*` — imposible
-de colisionar entre paquetes, imposible de desincronizar entre markup y hoja de estilos.
-
-### 2.3 WAI-ARIA Authoring Practices (APG) — *el comportamiento*
-
-Es la cosa más parecida a "un contrato agnóstico y normativo para widgets reutilizables" que
-existe de verdad. Define, por tipo de widget (`listbox`, `combobox`, `dialog`, `disclosure`,
-`grid`, `tabs`, `toolbar`, `menu`…), sus roles, estados y teclado esperados.
-
-Úsalo como **la lista cerrada de qué puede ser un widget**. Beneficio secundario grande: la
-accesibilidad deja de ser un retrofit — sale de la firma. `targetlist` es un `listbox`; el
-menú ⋮ es un `menu`; `modaldialog` es un `dialog`. Nombrarlo así obliga al markup correcto.
-
-### 2.4 Every Layout + Intrinsic Web Design — *la disposición*
-
-*Every Layout* (Bell & Pickering) y *Intrinsic Web Design* (Jen Simmons) son **la respuesta
-publicada a tu pregunta "¿para qué declarar responsivo?"**. Proponen un conjunto pequeño de
-**primitivas de layout intrínsecamente responsivas, sin un solo media query**: Stack,
-Cluster, Sidebar, Switcher, Cover, Grid (`auto-fit` + `minmax`), Reel, Frame, Center.
-
-De aquí sale `style.Flow`. Y de aquí sale el default invertido: una primitiva **ya** se
-adapta; lo que se declara es cuándo **no** debe hacerlo.
-
-### 2.5 Dos mecanismos CSS que hacen todo esto viable
-
-- **`@layer` (cascade layers)** — el estándar que elimina la ambigüedad de la cascada. Con
-  `@layer tokens, primitives, widgets, states;` el orden lo decide la capa, no la
-  especificidad. Se acabaron los `!important` y los "por qué gana esta regla".
-- **`@container` (container queries)** — un widget responde al **contenedor**, no al
-  viewport. Esto no es estética: es el bug que ya pagaste. `ROADMAP.md` documenta que los
-  paneles en `100vw`/`90vw` desbordaban un contenedor de `96vw`, y la corrección fue pasar a
-  `%`. Con container queries ese tipo de bug **no se puede escribir**.
-
-### 2.6 Precedente para separar comportamiento de aspecto
-
-Radix Primitives, React Aria, Headless UI y Melt UI: todos publican **contrato de
-comportamiento sin aspecto**. Es la validación externa de la decisión clave de esta
-propuesta — `view.Presenter` (datos/conducta) y `widget` (anatomía/aspecto) son **contratos
-distintos**, unidos en la costura, no fusionados.
+**Anti-footgun:** los archivos `css.go` y `svg.go` llevan `//go:build !wasm` y **deben
+conservarlo**. `widget/style` y `css` no pueden entrar al binario WASM; hay un criterio de
+aceptación que lo verifica (§8.2).
 
 ---
 
-## 3. El contrato único
+## 2. Punto de partida medido
 
-> *"quiero limitarla a un contrato único. ya tengo una firma de presentación, pero no incluye
-> el cómo se verá. no sé si es adecuado que los datos siempre estén en este contrato."*
+Estado real de este repo, contado antes de escribir el plan:
 
-**No, los datos no deben estar en el contrato visual.** Y "contrato único" no significa una
-interfaz gorda: significa **una identidad única + capacidades aseveradas en la costura**.
+| Paquete | `css.go` | `RawRule(` | `Media(` | `vw`/`vh` | literales de color | `Str(` | tokens propios |
+|---|---|---|---|---|---|---|---|
+| `rightpanel` | 166 líneas | 11 | 1 | 11 | 0 | 9 | 10 `--rp-*` |
+| `crudview` | 369 líneas | 9 | 1 | 8 | 8 | 61 | 0 (3 fantasma `--cv-*`) |
+| `platformd` | 521 líneas | 11 | 2 | 11 | 4 | 51 | 7 `--pd-*` en `tokens.go` |
 
-Es el patrón que la casa ya tiene escrito: *"Capability bag + type assertion at the seam is
-the assembly pattern"*, y que `view` ya aplica con `Presenter` + `Saver` + `Deleter`.
+Ninguno importa `github.com/tinywasm/widget` todavía.
+
+---
+
+## 3. Vocabulario disponible — úsalo, no inventes
+
+Todo esto ya está publicado. Si crees que falta algo, **para y repórtalo** (§1).
+
+La firma que envuelve todo esto **no cambia**: cada `css.go` sigue declarando
+`func (x *T) RenderCSS() *Stylesheet`, y el DSL se cierra con `.Stylesheet()`:
 
 ```go
-// IDENTIDAD — obligatoria, mínima, sin dependencias.
-type Widget interface {
-	WidgetName() Name        // deriva TODAS las clases de sus partes
+//go:build !wasm
+
+func (v *CrudView) RenderCSS() *Stylesheet {
+	return style.Of(nameCrudView).
+		Root(style.Split(style.RatioTwoThirds, style.Space2), style.On(style.Accent)).
+		Part(partDetail, style.Stack(style.Space2), style.Fill()).
+		Stylesheet()   // <- cierra la cadena; la firma sigue siendo RenderCSS
 }
-
-// CAPACIDADES — cada costura asevera solo lo que necesita.
-dom.Component      → Render() *dom.Element      // markup      (wasm + ssr)
-style.Styler       → Style() *style.Sheet       // aspecto     (!wasm)
-view.Presenter     → datos y conducta           // datos       (agnóstico de UI)
-widget.Selectable  → Select(id string)          // interacción
-widget.Dismissible → Dismiss()
 ```
-
-```flowchart TD
-A[Módulo de dominio] --> B[view.Presenter<br/>datos + conducta<br/>NO sabe cómo se ve]
-A --> C[widget.Widget<br/>identidad: WidgetName]
-C --> D[dom.Component<br/>Render → markup + data-state]
-C --> E[style.Styler<br/>Style → Sheet · solo !wasm]
-D --> F[Binario WASM<br/>solo Name/Part/State: strings]
-E --> G[Hoja SSR<br/>@layer determinista]
-B --> H[Costura: el renderer asevera<br/>Saver / Deleter / Selectable]
-D --> H
-```
-
-Por qué los datos fuera:
-
-- **Un widget que nombra sus datos solo es reutilizable para esos datos.** Es exactamente por
-  qué `crudview` hoy no es reutilizable: está soldado a `view.Presenter` *y* a la forma
-  `targetlist.Item`.
-- La proyección ya está resuelta arriba: `view.Itemizer` (`Item() Item`) es el único código
-  de vista que un modelo escribe. Ese es el punto de contacto correcto — un widget consume
-  `[]view.Item`, no un `Presenter`.
-- **Regla operativa:** si un widget necesita saber *de qué* es la lista, el diseño está mal.
-  Solo debe saber *cuántas filas*, *qué muestra cada una* y *en qué estado está*.
-
----
-
-## 4. La API simplificada
-
-Detalle completo y firmas en [`docs/PLAN_WIDGET.md`](PLAN_WIDGET.md). Aquí, el criterio.
-
-### 4.1 Lo que se elimina del vocabulario
-
-No hay forma de escribirlo porque **no existe el tipo**:
-
-| Se elimina | Por qué | Reemplazo |
-|---|---|---|
-| Color literal (`Str("#fff")`) | Fuente de todo hardcodeo | `On(Surface)` — tripleta fg/bg/borde emparejada |
-| Longitud literal (`.4em`, `8vh`, `16px`) | Escalas divergentes | `Space`, `Radius`, `Text` — enums cerrados |
-| `Height(...)` | *"si solo declaras el ancho, el alto se sobreentiende"* | no existe; `Fill()` es la excepción |
-| `Media(...)` | Responsivo es el default | primitivas fluidas + `@container` |
-| `Display/Position/Float/...` | Es *cómo*, no *qué* | lo decide la primitiva `Flow` |
-| `RawRule(...)` | Agujero sin tipar | si falta algo, es defecto de la pieza — se reporta |
-
-### 4.2 Lo que queda: intención, ~22 constructores
 
 ```go
-// Una primitiva de disposición. Todas son fluidas y reflotan solas.
-Stack(gap)              // ritmo vertical
-Row(gap)                // horizontal; envuelve solo
-Split(ratio, gap)       // detalle|lista; se apila bajo su propio ancho
-Grid(minTrack, gap)     // auto-fit; no se elige número de columnas
+// github.com/tinywasm/widget — identidad, anatomía, estados
+type Name string          // .Root() -> "nombre" · .Class(Part) -> "nombre__parte"
+type Part string
+Kind: Region · Listbox · Menu · Dialog · Disclosure · Tabs · Toolbar · Grid · Combobox · Form · Alert
+State: Selected · Disabled · Locked · Invalid · Busy · Open · Current   // -> data-*="true"
+Cue: Hover · Focus · Press · Target
+
+// github.com/tinywasm/widget/style — solo !wasm
+style.Of(name).Root(opts...).Part(p, opts...).When(state, part, opts...).Cue(cue, part, opts...)
+
+// Disposición (todas fluidas, sin media queries)
+Stack(gap) · Row(gap) · Split(ratio, gap) · Grid(track, gap)
 Center() · Cover() · Reel(gap) · Frame(ratio)
 
-// Superficie: fondo + texto + borde SIEMPRE como una tripleta.
-On(Page|Panel|Sunken|Accent|Selected|Danger|Success|Muted|Disabled)
+// Superficie: fondo + texto + borde SIEMPRE juntos
+On(Page|Panel|Sunken|Accent|Selected|Danger|Success|Muted|Disabled|PanelHover)
 
-// Medida: UN eje. El alto siempre es automático.
-Width(Content|Prose|Half|Third|TwoThirds|Full|Screen)
+// Escalas cerradas
+Pad(Space) · Round(Radius) · Raise(Elevation) · Text(TextSize) · FontWeight(Weight) · Width(Size)
 
-// Texto, espacio, decoración: solo desde la escala.
-Text(size) · Weight(w) · Pad(space) · Inset(space) · Round(radius) · Raise(elevation)
+// Las excepciones — lo único que se declara explícitamente
+Fill() · Scrolls() · Fixed() · Flush() · Clip()
 
-// LAS EXCEPCIONES — lo único que se declara explícitamente.
-Fill()      // además, toma el alto disponible
-Scrolls()   // desborda internamente en vez de crecer
-Fixed()     // NO reflota
-Flush()     // sin radio: pega a ras del contenedor padre
-Clip()      // recorta a los hijos
+// Superposición — el vocabulario que sustituyó al último escape hatch (css.Raw)
+Backdrop(Scope) · Above() · Scrim() · Hidden() · Shown()
+
+// Movimiento — escala cerrada; el easing no se elige y prefers-reduced-motion
+// lo emite la librería sola
+Animate(MotionNone|MotionFast|MotionBase|MotionSlow)
 ```
 
-### 4.3 Cómo se lee — el mismo panel de `crudview`, antes y después
+---
+
+## Etapa 1 — `go.mod`
+
+Archivo: `go.mod`
+
+### 1.1 Fijar versiones publicadas
+
+```
+github.com/tinywasm/css        v0.3.0    // era v0.1.4
+github.com/tinywasm/widget     v0.3.0+   // NUEVA dependencia directa
+github.com/tinywasm/form       v0.3.0    // era v0.2.25
+github.com/tinywasm/view       v0.1.10   // era v0.1.2
+github.com/tinywasm/components <la del gate §0>   // era v0.1.8
+```
+
+**No copies estos números a ciegas.** Son el suelo, no el techo: `widget` y `components`
+publican versiones nuevas al cerrar sus propios planes. Para cada uno, resuelve la versión real
+con `go list -m -versions <módulo>` y toma la **más alta publicada**. `widget` debe ser una
+posterior a la que eliminó `style.Styler`; compruébalo con:
+
+```bash
+go doc github.com/tinywasm/widget/style.Styler   # debe FALLAR  (interfaz eliminada)
+go doc github.com/tinywasm/widget/style.Animate  # debe existir (escala Motion, etapa 5)
+```
+
+Si el primero **tiene éxito**, o si el segundo **falla**, `widget` aún no ha publicado su plan:
+**detente y repórtalo**.
+
+### 1.2 Desactivar los `replace` de desarrollo local — **comentándolos, no borrándolos**
+
+Hay cinco, todos marcados `TEMP`: `dom`, `components`, `form`, `css`, `view`.
+
+**No los borres. Coméntalos con `//`.** Esta migración toca los tres paquetes a la vez y es
+seguro que queden bugs por depurar; volver a apuntar a un checkout local tiene que costar
+descomentar una línea, no reconstruir la directiva de memoria.
+
+Deja el bloque así, al final de `go.mod`, conservando el comentario original de cada uno para
+que se sepa por qué existía:
 
 ```go
-// ── HOY (crudview/css.go, ~40 líneas para dos partes) ────────────────────
-Rule(clsAsideWrap,
-	Flex(None), Display(Flex_), FlexDirection(Column),
-	MinWidth(Str("0")), MinHeight(Str("0")),
-	Background(Str(cPanel)),                     // ← hex escondido tras var()
-	BorderRadius(Str(".4em")),                   // ← magic number
-	Padding(Space1),
-	RawRule("gap: "+Space1.Var()),               // ← escape hatch para un gap
-)
-Media("(max-width: 640px)",                      // ← breakpoint como string
-	Rule(clsAsideWrap,
-		RawRule("direction:ltr; flex:0 0 100%; scroll-snap-align:start; order:1"),
-	),
-)
-
-// ── PROPUESTA ────────────────────────────────────────────────────────────
-s.Part(partAside, Stack(Space1), On(Panel), Round(RadiusMd), Pad(Space1), Fill())
+// ── replaces de desarrollo local ─────────────────────────────────────────────
+// Desactivados en la migración al contrato visual: se migra contra versiones
+// publicadas. Descomenta el que necesites para depurar contra un checkout local
+// y vuelve a comentarlo antes de cerrar el PR.
+//
+// TEMP: local dom checkout carries the BindChildren initial-row wiring fix.
+// replace github.com/tinywasm/dom => ../dom
+//
+// TEMP: local components checkout so demo edits render live via the dev server.
+// replace github.com/tinywasm/components => ../components
+//
+// TEMP: local form checkout — field-wrapper/input id collision fix.
+// replace github.com/tinywasm/form => ../form
+//
+// TEMP: local css checkout — brand palette set to the Pa100T reference.
+// replace github.com/tinywasm/css => ../css
+//
+// TEMP: local view checkout — conformance.Driver gained New/Edit/FocusedFieldID.
+// replace github.com/tinywasm/view => ../view
 ```
 
-El reflow móvil no aparece: `Split` ya se apila bajo su propio ancho vía `@container`. La
-tira `Reel` con scroll-snap tampoco: es la primitiva que `Split` usa al colapsar. **No hay
-`direction:rtl` que razonar** — el orden físico lo garantiza la primitiva, no un truco de
-flujo bidireccional que costó un plan entero.
+Procedimiento: coméntalos **uno a uno** y ejecuta `gotest` tras cada uno. Si al comentar uno los
+tests fallan, **no lo reactives en silencio: detente y repórtalo**, indicando cuál y qué falla.
+Un `replace` activo convierte en mentira la frase "migrado contra versiones publicadas".
 
-### 4.4 Por qué esto reduce el binario WASM (y por qué el CSS también encoge)
+Tras `go mod tidy`, **verifica que el bloque comentado sigue en el archivo**. Si la herramienta
+lo elimina, vuelve a añadirlo al final de `go.mod` — es documentación operativa, no residuo.
 
-Son dos mecanismos distintos; conviene no confundirlos:
-
-- **Binario WASM.** Todo `widget/style` lleva `//go:build !wasm`. El lado navegador solo
-  carga `widget`: `Name`, `Part`, `State` — strings y un `uint8`. Se verifica con el mismo
-  chequeo de grafo que `AGENTS.md` ya prescribe para `svg/sprite`:
-  ```bash
-  GOOS=js GOARCH=wasm go list -deps ./... | grep tinywasm/widget/style   # DEBE estar vacío
-  ```
-- **Hoja CSS.** Las primitivas se emiten **una vez** en `@layer primitives`, y cada parte de
-  cada widget las referencia. Cuarenta widgets con `Stack` producen **un** bloque, no
-  cuarenta. Hoy `Display(Flex_) + FlexDirection(Column) + MinHeight(0)` está copiado
-  literalmente en 6 reglas solo en `crudview/css.go`.
+Atención especial al de `css`, cuyo comentario dice *"brand palette set to the Pa100T reference
+(steel blue + white text)"*: si al comentarlo la paleta cambia, es que esa marca **no está** en
+`css` v0.3.0 — repórtalo, no la re-declares localmente aquí.
 
 ---
 
-## 5. ¿Hace falta un repo nuevo? — sí, uno: `tinywasm/widget`
+## Etapa 2 — `layout_conformance_test.go` (se escribe PRIMERO)
 
-> *"¿sería necesario crear otro repo con la firma? widget por ejemplo? justifica"*
+Archivo: `layout_conformance_test.go`, en la raíz del módulo. **Escríbelo antes de migrar nada.**
+Va a fallar al principio; ése es el objetivo: fija la meta y mide el avance.
 
-**Sí, uno.** Y la justificación tiene que pasar el filtro de las reglas lego, no el gusto.
+Recorre todos los `.go` del repo (excluyendo `docs/`, `_test.go` y `web/`) por AST y falla si
+encuentra:
 
-### 5.1 ¿Hay una responsabilidad que hoy no tiene dueño?
+1. Un literal de color: `#rgb`, `#rrggbb`, `rgb(`, `hsl(`, o un nombre de color CSS.
+2. Una llamada a `RawRule(`.
+3. Una llamada a `Media(`.
+4. Una unidad de viewport: `vw`, `vh`, `vmin`, `vmax`.
+5. Una llamada a `Str(`.
+6. Una llamada a `Declare(` o a `RootCSS(`.
+7. Una `var(--…)` cuyo nombre no exista en el catálogo de `css` v0.3.0.
+8. Una constante de tipo `Class` asignada desde un literal de string.
 
-Sí, y hay prueba forense de ello. La regla dice:
+Detecta los paquetes por su **ruta de import resuelta en el bloque de imports**, nunca por el
+texto del selector: este repo usa dot-imports (`. "github.com/tinywasm/css"`) y el emparejamiento
+textual daría falsos negativos.
 
-> *"A missing contract at a boundary is a defect in the library, not in the consumer. If two
-> libraries meet and there is no type to name the thing that crosses between them, the type is
-> missing upstream. Do not declare a local intersection to paper over it."*
-
-`crudview/css.go:13-23` **es exactamente esa intersección local**: una paleta declarada abajo,
-con nombres de variables de otro sistema de diseño, porque arriba no existía el tipo que
-nombrara "la superficie hundida de un panel". Y no es un caso aislado: `platformd`,
-`rightpanel` y cada componente de `tinywasm/components` repiten el patrón con su propio
-prefijo. El síntoma que reportaste — *"los agentes hardcodean colores"* — es el efecto, no
-la causa. La causa es que **nadie posee el contrato visual**.
-
-### 5.2 ¿Puede vivir dentro de una pieza existente?
-
-Se evaluaron las tres candidatas:
-
-| Candidata | Por qué no |
-|---|---|
-| `tinywasm/css` | `css` emite **texto CSS**: es `!wasm` por naturaleza. El contrato (`Part`, `State`) debe cruzar al WASM porque el markup lo escribe. Meterlos juntos reproduce exactamente la trampa que `AGENTS.md` documenta para `svg`: *"compiles for WASM too, so forgetting the `!wasm` tag does NOT fail the build — it silently ships every path string into the browser bundle"*. |
-| `tinywasm/dom` | Arrastraría el vocabulario visual al binario, y obligaría a `form`/`view` a depender de `dom` para nombrar un estado. Dirección de dependencia invertida. |
-| `tinywasm/components` | Es un **consumidor**. Un contrato que vive en un consumidor no es un contrato: es una convención con suerte. |
-
-### 5.3 El argumento decisivo: la dirección de dependencias
-
-`widget` es la **única** pieza que puede estar por debajo de todas las demás, porque no
-depende de nada salvo `tinywasm/fmt`:
-
-```flowchart TD
-W[tinywasm/widget<br/>Name · Part · State · Class<br/>solo depende de fmt] --> C[tinywasm/css<br/>tokens + emisión]
-W --> D[tinywasm/dom<br/>markup + data-state]
-W --> F[tinywasm/form<br/>estados Invalid/Locked]
-W --> V[tinywasm/view<br/>estado Selected]
-C --> S[tinywasm/widget/style<br/>build !wasm]
-S --> CO[tinywasm/components]
-D --> CO
-CO --> L[tinywasm/layout]
-```
-
-`form` necesita nombrar `Invalid` y `Locked`. `view` necesita nombrar `Selected`. Si esos
-símbolos viven en `css`, entonces **una librería de datos pasa a depender de una librería de
-estilo** — y eso no se arregla después. Una pieza neutra en la base es la única forma sin
-ciclo ni dependencia mal orientada.
-
-### 5.4 La alternativa más barata, y por qué no se recomienda como destino final
-
-Existe precedente en la casa para partir por **paquete** en vez de por repo:
-`tinywasm/svg` (compartido) y `tinywasm/svg/sprite` (backend). Se podría empezar como
-`github.com/tinywasm/css/widget`, con un repo menos.
-
-Sirve como **paso 0 si se quiere validar la API antes de publicar un repo**, pero no como
-destino: en Go el módulo es la unidad de dependencia, así que `form` y `view` acabarían con
-una arista al módulo `css` de todos modos — el problema de 5.3, solo que menos visible.
-Recomendación: repo propio desde el inicio; la ruta de subpaquete solo si se quiere un
-prototipo desechable de una tarde.
-
-### 5.5 Qué posee y qué NO posee `tinywasm/widget`
-
-| Posee | No posee |
-|---|---|
-| `Name`, `Part`, `Class` (derivada, nunca escrita a mano) | Datos de dominio |
-| `State` (widget) y `Cue` (navegador) | Transporte / `router.Caller` |
-| Interfaces de capacidad: `Widget`, `Selectable`, `Dismissible`, `Expandable` | Emisión de CSS (vive en `widget/style`) |
-| El enum de tipos ARIA-APG (`Listbox`, `Dialog`, …) | Construcción de DOM (vive en `dom`/`html`) |
-
-Si alguna vez se le añade un campo de datos o una llamada de red, la pieza dejó de ser lego.
+Este test queda en CI como guardia permanente: cualquier regla nueva que hardcodee un color falla
+el build.
 
 ---
 
-## 6. Qué bugs históricos deja de ser posible escribir
+## Etapa 3 — `rightpanel` (el más pequeño: prueba del vocabulario)
 
-Todos salen de `docs/ROADMAP.md` — ya se pagaron una vez.
+166 líneas, 10 tokens `--rp-*`. Es el primero **porque es la prueba real de si el vocabulario
+alcanza**. Si aquí falta algo, se reporta aguas arriba (§1) — no se abre un escape hatch.
 
-| Bug ya sufrido | Por qué no vuelve |
-|---|---|
-| *"Desktop panels didn't fill the stage's height — grid row track used `none`/auto"* | `Fill()` emite el conjunto correcto completo; no hay track que elegir |
-| *"a gray strip showed… sizing a scroll-snap child in `vw` against a narrower container"* | No existen unidades de viewport en la API; toda medida es relativa al contenedor |
-| *"adjacent `RawRule`s are concatenated without a separator"* | No hay `RawRule` |
-| *"`Padding(a,b,c,d)`'s output loses its spaces"* | Se arregla en `css` ([PLAN_CSS](PLAN_CSS.md), Etapa 3) y `Pad` toma un solo `Space` |
-| *"Hover color was inconsistent (`ColorPrimary`, hardcoded `filter: brightness`, ad-hoc backgrounds) across components"* | El hover lo resuelve `On(Surface)`, definido una vez por superficie |
-| *"the form was entering from the right… fixed by adding `direction:rtl`"* | El orden físico lo garantiza la primitiva `Split`, no un truco de flujo |
-| CSS nunca emitido por nombrar la función `GenerateCSS` | Interfaz `Styler` tipada ([PLAN_SSR](PLAN_SSR.md)) — error de compilación |
-| Marco gris que ignora el tema oscuro (§1.2) | No hay `var()` con fallback escribible; el token existe o no compila |
-
----
-
-## 7. Reparto por librería
-
-| Librería | Cambio | Plan | Versión | Estado |
-|---|---|---|---|---|
-| `tinywasm/widget` | **Nueva.** Contrato visual + `widget/style` | [PLAN_WIDGET](PLAN_WIDGET.md) | **v0.1.0** | ✅ Publicado |
-| `tinywasm/css` | Tokens faltantes, pares con contraste, `Class` como alias, cierre del DSL viejo | [PLAN_CSS](PLAN_CSS.md) | **v0.2.0** | ✅ Publicado |
-| `tinywasm/ssr` | `Styler` tipado en vez de regex sobre el nombre | [PLAN_SSR](PLAN_SSR.md) | — | Pendiente, un solo cambio |
-| `tinywasm/components` | Migración de `targetlist`, `fieldset`, `modaldialog` | [PLAN_COMPONENTS](PLAN_COMPONENTS.md) | — | Pendiente, un solo cambio |
-| `tinywasm/form` | Emitir `State.Invalid`/`State.Locked` en vez de clases propias | dentro de PLAN_COMPONENTS | — | Pendiente, junto con `components` |
-| **`tinywasm/layout`** | Migrar `crudview`, `platformd`, `rightpanel` sobre `css v0.2.0` + `widget v0.1.0` | **este archivo, §8** | — | Pendiente, un solo cambio |
-
-Los tres pendientes ya no están escalonados por dependencia — `widget` y `css`, que eran el
-bloqueo real, están publicados. `ssr`, `components`/`form` y `layout` se ejecutan cada uno de
-una sola vez (sin canario ni periodo de coexistencia); solo `components` debe cerrarse antes de
-`layout` porque `crudview` compone widgets de `components` directamente.
+1. `Name` + `Kind` (`widget.Region`) + partes nombradas, derivadas de las clases actuales.
+2. Borrar el bloque `Root(Declare(...))` y las 10 constantes `Token`. Sustituciones:
+   - `tokenAsideBg`, `tokenBorderColor`, `tokenBg` → `On(Panel)`.
+     **Nota:** hoy `tokenAsideBg` vale `ColorOnSurface.Var()` — usa el color **de texto** como
+     color **de fondo**. Es un bug preexistente; `On(Panel)` lo corrige por construcción.
+   - `tokenMainWidth` (`66vw`) + `tokenAsideWidth` (`30vw`) → `Split(style.RatioTwoThirds, Space2)`.
+   - `tokenTitleHeight`, `tokenContentHeight`, `tokenControlsHeight` (`8vh`/`89vh`/`3vh`) →
+     `Fill()` sobre las partes que deben tomar el alto; nada de alturas explícitas.
+   - `tokenGap` → el `gap` de la primitiva.
+   - `tokenTitleColor` → `On(...)` de la superficie que corresponda.
+3. Borrar el bloque `Media("(max-width: 640px)")`: lo cubre `Split`.
+4. Conservar el comentario que dice que la apariencia del campo de formulario **no** se define
+   aquí (vive en `components/fieldset`). Sigue siendo cierto.
 
 ---
 
-## 8. Migración de `tinywasm/layout` — un solo cambio, no por etapas
+## Etapa 4 — `crudview`
 
-`tinywasm/widget` (v0.1.0) y `tinywasm/css` (v0.2.0) ya están publicados y probados con su test
-de forma-consumidor. No hay razón para escalonar la migración de `rightpanel`, `crudview` y
-`platformd` en pasos sucesivos que esperan uno al otro — los tres se migran **en el mismo
-cambio**, sobre el mismo `go.mod`, y se validan juntos con un único `gotest` al final. La única
-secuencia real es la lógica de un solo commit: `go.mod` primero, después los tres paquetes,
-después el test que los cubre a todos.
+369 líneas, 8 literales de color, 61 `Str(`, 3 tokens fantasma `--cv-*` (usados en `RawRule` y
+**nunca declarados**, así que hoy resuelven siempre al fallback).
 
-**`go.mod`:**
+### 4.1 Anatomía
 
-```go
-require (
-	github.com/tinywasm/css    v0.2.0
-	github.com/tinywasm/widget v0.1.0
-)
-```
+`Name` = `crudview`, `Kind` = `widget.Region`. Mapeo de clases actuales a partes:
 
-Retirar los `replace` de desarrollo local hacia `../css` que ya no hagan falta.
-
-**Auditoría ejecutable** — añadir `layout_conformance_test.go` en la raíz, cubriendo los tres
-paquetes a la vez (no falla-luego-arregla-uno-por-uno; se corre contra el árbol completo desde
-el primer commit de la migración):
-
-1. Ningún `.go` de este repo contiene un literal de color (`#rrggbb`, `rgb(`, `hsl(`).
-2. Ningún `.go` contiene `RawRule(`.
-3. Toda `var(--…)` referenciada existe en el catálogo de `css` v0.2.0.
-4. Ningún `Media(` con un umbral literal que ya tenga token `Bp*`.
-
-**Los tres paquetes, migrados juntos:**
-
-`rightpanel` (166 líneas) es el más simple y sirve para confirmar que el vocabulario de
-`widget/style` alcanza sin escape hatch — si no alcanza, **se corrige la API (aguas arriba, en
-`widget`/`css`) y se publica una versión nueva, nunca se reabre `RawRule` localmente**. Sus 10
-tokens `--rp-*` desaparecen: `tokenAsideBg`/`tokenBorderColor`/`tokenBg` se vuelven `On(Panel)`;
-`tokenMainWidth`/`tokenAsideWidth` se vuelven `Split(style.RatioTwoThirds, Space2)`.
-
-`crudview` — anatomía derivada de la estructura actual, nombres según Open UI:
-
-| Clase actual | Parte propuesta | Disposición |
+| Clase actual (`crudview.go`) | Parte | Disposición |
 |---|---|---|
 | `cv-module-content` | *root* | `Split(style.RatioTwoThirds, Space2)`, `On(Accent)`, `Flush()` |
 | `cv-article-contend` | `detail` | `Stack(Space2)`, `Fill()` |
 | `cv-box-content` | `fields` | `On(Sunken)`, `Pad(Space2)`, `Scrolls()`, `Round(RadiusMd)` |
 | `cv-aside-wrap` | `aside` | `Stack(Space1)`, `On(Panel)`, `Pad(Space1)`, `Fill()` |
 | `cv-lista-box` | `list` | `On(Sunken)`, `Scrolls()`, `Round(RadiusMd)` |
-| `cv-aside-search` | `search` | `Row(Space0)` |
+| `cv-aside-actions` | `actions` | `Row(Space1)` |
+| `cv-title-container` / `cv-title` | `title` | `Row(Space1)`, `Fixed()` |
 | `cv-btn-crud` | `action` | `On(Accent)`, `Round(RadiusMd)` |
-| `cv-btn-crud-icon-hidden` | — | **desaparece**: es `State.Open`, no una clase |
-| `cv-back` | `back` | desaparece con `Split`: el reflow ya no necesita botón de vuelta |
+| `cv-btn-crud-icon-hidden` | — | **desaparece**: es `widget.Open`, no una clase |
+| `cv-back` | — | **desaparece**: con `Split` el reflow no necesita botón de vuelta |
 
-Bloque `Media("(max-width: 640px)")` completo (25 líneas + 20 de comentario explicando
-`direction:rtl`): **se borra**. Lo cubre `Split`.
+Las clases restantes de `crudview.go` que no estén en la tabla se convierten en partes con el
+mismo criterio: nombre en inglés, sin el prefijo `cv-`.
 
-`platformd` (521 líneas, el más grande y el que más `vw`/`vh` usa). Sus 7 tokens `--pd-*` se
-resuelven: `tokenMenuSize`/`tokenHeaderHeight` pasan a la escala `Space`; `tokenContentHeight`
-(`97vh`, `calc(100vh - 2.8rem)`) desaparece con `Cover()` + `Fill()`. Borrar
-`platformd/tokens.go` entero y los bloques `Root(Declare(...))` de `rightpanel`/`platformd`.
+### 4.2 Borrar las compensaciones de internos ajenos
 
-**Test de forma-consumidor, en el mismo cambio, no como paso final aparte:**
+Dos hacks que existen solo porque a los componentes les faltaba anatomía. **Ambos se borran**:
 
-`crudview/consumer_test.go` (753 líneas) ya recorre la pila real. Extenderlo para aseverar la
-hoja emitida: que no contenga `!important`, que sus `@layer` estén en orden, y que cada clase
-presente en el markup exista en la hoja **y viceversa** — el par que hoy nadie verifica y que
-permitió que `cv-btn-crud-icon-hidden` fuera un estado disfrazado. Este test se escribe junto
-con la migración de `crudview`, no después.
+1. **`css.go:164-175`** — los cuatro longhands de padding con `PaddingTop(Space3)` y el
+   comentario de 8 líneas que explica que el chip de `fieldset` invade su propio borde. Con la
+   anatomía de `fieldset`, ese ajuste vive en `fieldset`. Aquí se usa `Pad(Space2)` y punto.
+2. **`css.go:292`** — el bloque *"Fixed, not static: takes this mount point (and modaldialog's
+   own hidden-state anchor div inside it) out of `clsModuleContent`'s grid item participation"*.
+   `modaldialog` declara `Kind = widget.Dialog` y se posiciona solo. El punto de montaje deja de
+   ser un concepto aquí.
+
+Si al borrarlos algo se ve mal, **el defecto es de `components`** y se reporta allí; no se
+recompensa desde `layout`.
+
+### 4.3 Bloque `Media`
+
+El `Media("(max-width: 640px)")` completo se borra. Lo cubre `Split`, que se apila bajo su propio
+ancho vía `@container`. No hay `direction:rtl` que razonar.
 
 ---
 
-## 9. Criterios de aceptación
+## Etapa 5 — `platformd` (el más grande)
 
-1. `grep -rn "RawRule\|#[0-9a-fA-F]\{3,6\}\|Str(" --include=*.go .` → **vacío** en este repo.
-2. `GOOS=js GOARCH=wasm go list -deps ./...` no contiene `tinywasm/widget/style` ni
+521 líneas, 11 `vw`/`vh`, 7 tokens en `tokens.go`.
+
+1. **Borrar `platformd/tokens.go` entero** y el bloque `Root(Declare(...))`.
+   - `tokenMenuSize` (`4vw`), `tokenHeaderHeight` (`3vh`) → escala `Space`.
+   - `tokenContentHeight` (`97vh`, y su `calc(100vh - 2.8rem)`) → `Cover()` + `Fill()`.
+   - `tokenFontSizeNormal`/`tokenFontSizeSmall` → `Text(TextBase)` / `Text(TextXs)`.
+   - `tokenSlideDur` (`0.6s`) → **`Animate(MotionSlow)`**.
+   - `tokenTransitionWait` (`0s`) → **desaparece**. Sin retardo es el default; no se escribe.
+
+     Este hueco existía cuando se escribió la primera versión de este plan y **ya está
+     cerrado**: `widget/style` expone ahora la escala `Motion`
+     (`MotionNone` · `MotionFast` · `MotionBase` · `MotionSlow`) y el `Opt` `Animate(m Motion)`,
+     que consume los tokens `--duration-*` / `--ease-in-out` que `css` ya poseía. El easing no
+     se elige, y la supresión por `prefers-reduced-motion` la emite `widget/style` sola: aquí no
+     se escribe nada de eso.
+
+     **`0.6s` pasa a 400ms y eso es correcto**, no un redondeo a corregir. La escala es cerrada;
+     las duraciones elegidas a mano dejan de existir. Si echas de menos un peldaño intermedio,
+     **para y repórtalo** — se amplía el enum aguas arriba en `widget`, se publica y se sigue.
+     Lo que no se hace nunca es recuperarlo con un `Token` local, un `RawRule(` o un `Str(`.
+
+     Requisito de versión: el `widget` que fijes en la etapa 1 debe exponerlo. Compruébalo con
+     `go doc github.com/tinywasm/widget/style.Animate` — si falla, `widget` aún no ha publicado
+     su plan: **detente y repórtalo**.
+2. `Name` + `Kind` + partes, mismo criterio que §4.1.
+3. Borrar los dos bloques `Media`.
+4. `svg.go` (`IconSvg()`) **no se toca**. No es un hueco pendiente: `IconSvg() *sprite.Sprite`
+   ya es un contrato tipado, propiedad de `tinywasm/svg`, y es el que `ssr` recolecta — el
+   equivalente exacto de `RenderCSS()` para iconos. Los iconos no entran en el contrato visual.
+
+---
+
+## Etapa 6 — Test de forma-consumidor
+
+Archivo: `crudview/consumer_test.go` (ya existe y recorre la pila real).
+
+Extenderlo para aseverar la **hoja emitida**, no solo el markup:
+
+1. No contiene `!important`.
+2. Sus `@layer` aparecen en el orden `tokens, primitives, widgets, states`.
+3. **Cada clase presente en el markup renderizado existe en la hoja, y cada selector de clase de
+   la hoja aparece en el markup.** Este es el par que hoy nadie verifica y que permitió que
+   `cv-btn-crud-icon-hidden` fuera un estado disfrazado de clase. Escríbelo en el mismo cambio,
+   no como paso posterior.
+
+---
+
+## 7. Lo que NO entra en este plan
+
+- **`tinywasm/view`** no se migra aquí. No importa `widget` todavía y no bloquea: los estados que
+  `crudview` necesita los emiten los widgets de `components`.
+- **`svg.go`** de `crudview` y `platformd`: `IconSvg()` sigue igual.
+- **La verificación visual en vivo** (§9) la hace un humano después de que este PR cierre. El
+  agente termina en `gotest` verde.
+
+---
+
+## 8. Criterios de aceptación — verificables con grep
+
+1. `gotest` en verde en `layout`, incluido `layout_conformance_test.go`.
+2. `GOOS=js GOARCH=wasm go list -deps ./...` **no** contiene `tinywasm/widget/style` ni
    `tinywasm/css`.
-3. `platformd/tokens.go` no existe; no queda ningún `--pd-*`, `--rp-*`, `--cv-*`.
-4. La hoja emitida no contiene `!important` ni ningún `@media` escrito a mano por un widget.
-5. `gotest` en verde en `layout`, `components`, `css`, `widget`, `ssr`.
-6. Verificación visual en vivo (MCP screenshot), escritorio y móvil emulado, claro y oscuro
-   — incluida la comprobación de que el marco gris **ahora sí** cambia en modo oscuro (§1.2).
-
-### La prueba ácida
-
-Dar a un agente sin contexto la firma de `style.Sheet` y este único ejemplo:
-
-```go
-func (l *TargetList) Style() *style.Sheet {
-	return style.Of(l.WidgetName()).
-		Root(Stack(Space1), On(Sunken), Scrolls()).
-		Part(partRow, Row(Space2), On(Panel), Pad(Space2), Round(RadiusSm)).
-		When(State.Selected, partRow, On(Selected)).
-		Cue(Cue.Hover, partRow, On(Hover))
-}
-```
-
-Si produce un widget correcto sin preguntar nada y sin poder hardcodear un color, el arnés
-está cerrado. Si necesita preguntar *"¿puedo declarar esta variable localmente?"* —la pregunta
-que originó este plan— el arnés sigue abierto.
+3. `grep -rn "RawRule(\|Str(" --include='*.go' .` → **vacío** (fuera de `_test.go`).
+4. `grep -rnE '#[0-9a-fA-F]{3,6}' --include='*.go' .` → **vacío** (fuera de `_test.go`).
+5. `grep -rnE '[0-9.]+(vw|vh|vmin|vmax)' --include='*.go' .` → **vacío**.
+6. `grep -rn "Media(\|Declare(\|RootCSS(" --include='*.go' .` → **vacío**.
+7. `ls platformd/tokens.go` → **no existe**.
+8. `grep -rn -- "--pd-\|--rp-\|--cv-" .` → **vacío**.
+9. `grep -nE '^[[:space:]]*replace' go.mod` → **vacío**: ningún `replace` **activo**. El bloque
+   comentado de la etapa 1.2 debe seguir presente y **no** cuenta como violación —
+   `grep -c '// replace' go.mod` debe dar **5**. Si algún `replace` tuvo que quedarse activo, va
+   acompañado de su justificación reportada en la etapa 1.2.
+10. `grep -rn "Class = \"" --include='*.go' .` → **vacío**: toda clase se deriva de un `widget.Name`.
 
 ---
 
-## 10. Costo, riesgo y qué **no** se hace
+## 9. Verificación visual en vivo (la hace un humano, tras el merge)
 
-**Costo honesto:** son 5 librerías y ~1.200 líneas de CSS reescritas. No es una tarde. `widget`
-y `css` (las dos que de verdad tenían que ir primero, porque todo lo demás las consume) ya están
-publicadas; lo que queda (`ssr`, `components`/`form`, `layout`) se ejecuta cada uno de una sola
-vez — sin fases aditivas intermedias ni periodo de coexistencia con el código viejo — porque los
-únicos consumidores de esas tres piezas son otras piezas de este mismo árbol, no terceros: no
-hay nadie a quien darle una rampa de migración.
+Este es el motivo de que `layout` sea el último: es donde se comprueba de verdad. Con la app
+corriendo, revisar en escritorio y en móvil emulado, en claro y en oscuro:
 
-**Riesgo principal:** que el vocabulario de ~22 constructores resulte insuficiente y aparezca
-la tentación de reabrir `RawRule`. Mitigación: `rightpanel` (el paquete más pequeño de `layout`)
-es la primera prueba real del vocabulario dentro del mismo cambio — si ahí falta algo, **se
-amplía el enum aguas arriba en `widget`/`css`, se publica una versión nueva y se sigue** (nunca
-se reabre el escape hatch localmente); no hace falta parar la migración completa para eso, la
-publicación de una versión menor no rompe lo que ya se migró. Un `RawRule` reintroducido en
-cualquier repo invalida todo el plan, porque un arnés evadible no es un arnés.
+1. Los tres paneles rellenan el alto de su contenedor, sin franjas grises.
+2. `crudview` se apila correctamente bajo su propio ancho, sin botón de vuelta.
+3. El chip de etiqueta de `fieldset` no queda cortado ni empuja el contenido.
+4. El menú ⋮ de `targetlist` abre hacia arriba en la última fila y se cierra al hacer clic fuera.
+5. `modaldialog` se centra y no duplica el margen inferior.
+6. **El marco gris cambia en modo oscuro.** Hoy no lo hace: usa `var()` con fallback a un hex
+   claro. Es la comprobación que valida todo el trabajo de tokens.
 
-**Fuera de alcance, a propósito:**
+---
 
-- No se toca `tinywasm/dom` ni el contrato de señales. La reactividad ya funciona y su
-  contrato (`Init(ctx)` + `Render()`) ya es un arnés cerrado.
-- No se toca `view.Presenter`. Su separación datos/UI es correcta; el problema nunca estuvo
-  ahí — es justamente lo que valida que lo visual sea un contrato aparte.
-- No se construye un runtime multiplataforma. El objetivo es un contrato **agnóstico de
-  renderer**, no un segundo renderer. Si algún día llega uno nativo, `widget` es lo que le
-  permitiría reutilizar los mismos widgets; pero eso es consecuencia, no objetivo.
+## 10. Checklist de calidad Go (obligatorio)
+
+- **Sin strings repetidos**: toda clase sale de `widget.Name`; ningún literal `"cv-..."`,
+  `"--rp-..."` ni `"#..."` en la lógica.
+- **Errores** con `github.com/tinywasm/fmt` (`fmt.Err(...)`), nunca `errors`/`fmt` de stdlib.
+- **`//go:build !wasm`** se conserva en todo `css.go` y `svg.go`.
+- **Cero `any`, cero `map`** en API nueva.
+- Comentarios que expliquen un *"acuérdate de…"* se borran: si hay que recordarlo, es un hueco
+  del arnés, no una línea de manual.
+
+---
+
+## 11. Tabla de etapas
+
+| # | Etapa | Archivos | Gate |
+|---|---|---|---|
+| 0 | *(bloqueo)* `components` con `RenderCSS()` **y** `widget` con `Animate`/sin `Styler`, ambos publicados | — | §0: `go doc …/fieldset.Fieldset.RenderCSS` existe y `….Style` falla · §1.1: `go doc …/style.Animate` existe y `….Styler` falla |
+| 1 | Versiones y `replace` | `go.mod`, `go.sum` | `go build ./...` |
+| 2 | Auditoría ejecutable | `layout_conformance_test.go` (nuevo) | compila (falla a propósito) |
+| 3 | `rightpanel` | `rightpanel/css.go`, `rightpanel/rightpanel.go` | compila |
+| 4 | `crudview` | `crudview/css.go`, `crudview/crudview.go` | compila |
+| 5 | `platformd` | `platformd/css.go`, `platformd/platformd.go`; borrar `platformd/tokens.go` | compila |
+| 6 | Test de forma-consumidor | `crudview/consumer_test.go` | `gotest` verde |
+
+Secuenciales. La 6 es el gate real. La §9 es posterior al merge y la hace un humano.
