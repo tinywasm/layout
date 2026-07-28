@@ -1,7 +1,6 @@
 package crudview
 
 import (
-	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
 
@@ -10,28 +9,31 @@ import (
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/view"
+	"github.com/tinywasm/widget"
 )
 
+const NameCrudView widget.Name = "crudview"
+
 var (
-	clsModuleContent          Class = "cv-module-content"
-	clsArticleContend         Class = "cv-article-contend"
-	clsArticleContendFullPage Class = "cv-article-contend-full-page"
-	clsAsideContend           Class = "cv-aside-contend"
-	clsTitleContainer         Class = "cv-title-container"
-	clsTitle                  Class = "cv-title"
-	clsBoxContent             Class = "cv-box-content"
-	clsAsideActions           Class = "cv-aside-actions"
-	clsAsideWrap              Class = "cv-aside-wrap"
-	clsBtnCrud                Class = "cv-btn-crud"
-	clsBtnCrudIconHidden      Class = "cv-btn-crud-icon-hidden"
-	clsListaBox               Class = "cv-lista-box"
-	clsAsideSearch            Class = "cv-aside-search"
-	clsIcon16                 Class = "cv-icon-16"
-	clsDelConfirmActions      Class = "cv-delconfirm-actions"
-	clsDelConfirmBtn          Class = "cv-delconfirm-btn"
-	clsDelConfirmBtnDanger    Class = "cv-delconfirm-btn-danger"
-	clsDelConfirmMount        Class = "cv-delconfirm-mount"
-	clsBackBtn                Class = "cv-back"
+	clsModuleContent          = NameCrudView.Root()
+	clsArticleContend         = NameCrudView.Class("detail")
+	clsArticleContendFullPage = NameCrudView.Class("detail-full")
+	clsAsideContend           = NameCrudView.Class("aside-content")
+	clsTitleContainer         = NameCrudView.Class("title")
+	clsTitle                  = NameCrudView.Class("title-text")
+	clsBoxContent             = NameCrudView.Class("fields")
+	clsAsideActions           = NameCrudView.Class("actions")
+	clsAsideWrap              = NameCrudView.Class("aside")
+	clsBtnCrud                = NameCrudView.Class("action")
+	clsBtnCrudIconHidden      = NameCrudView.Class("action-hidden")
+	clsListaBox               = NameCrudView.Class("list")
+	clsAsideSearch            = NameCrudView.Class("search")
+	clsIcon16                 = NameCrudView.Class("icon")
+	clsDelConfirmActions      = NameCrudView.Class("delconfirm-actions")
+	clsDelConfirmBtn          = NameCrudView.Class("delconfirm-btn")
+	clsDelConfirmBtnDanger    = NameCrudView.Class("delconfirm-btn-danger")
+	clsDelConfirmMount        = NameCrudView.Class("delconfirm-mount")
+	clsBackBtn                = NameCrudView.Class("back")
 )
 
 const (
@@ -443,14 +445,17 @@ func (v *CrudView) Render() *Element {
 			// below clsAsideSearch's height. This button is crudview-owned
 			// (ROADMAP.md), so its name must not accidentally opt back in.
 			Attr("name", "cv-crudtoggle").
+			BindAttrBool("data-open", DeriveBool(func() bool {
+				return v.active()
+			})).
 			Child(
-				iconCrudNew.Render(string(clsIcon16)).
-					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
+				iconCrudNew.Render(string(NameCrudView.Class("action-new"))).
+					BindAttrBool("data-open", DeriveBool(func() bool {
 						return v.active()
 					})),
-				iconCrudCancel.Render(string(clsIcon16)).
-					BindClass(string(clsBtnCrudIconHidden), DeriveBool(func() bool {
-						return !v.active()
+				iconCrudCancel.Render(string(NameCrudView.Class("action-cancel"))).
+					BindAttrBool("data-open", DeriveBool(func() bool {
+						return v.active()
 					})),
 			)
 		toggle.On("click", func(Event) { v.toggleAction() })

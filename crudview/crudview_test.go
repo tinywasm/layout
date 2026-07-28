@@ -28,10 +28,10 @@ func TestCrudView_Render_Basic(t *testing.T) {
 		t.Error("expected form")
 	}
 	// Full page variant (no presenter)
-	if !Contains(html, "cv-article-contend-full-page") {
+	if !Contains(html, "crudview__detail-full") {
 		t.Error("expected full page class")
 	}
-	if Contains(html, "cv-aside-contend") {
+	if Contains(html, "crudview__aside-content") {
 		t.Error("did not expect aside without source")
 	}
 }
@@ -50,10 +50,10 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 
 	html := v.Render().String()
 
-	if !Contains(html, "cv-article-contend") {
+	if !Contains(html, "crudview__detail") {
 		t.Error("expected standard article class")
 	}
-	if !Contains(html, "cv-aside-contend") {
+	if !Contains(html, "crudview__aside-content") {
 		t.Error("expected aside with source")
 	}
 	if !Contains(html, "name='cv-crudtoggle'") {
