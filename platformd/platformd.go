@@ -7,7 +7,6 @@ import (
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/widget"
 
-	. "github.com/tinywasm/css"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	. "github.com/tinywasm/html"
@@ -56,6 +55,9 @@ type UIModule interface {
 	Icon() svg.Icon  // chassis renders via the sprite
 	View() Component // module content (often a *rightpanel.RightPanel)
 }
+
+func (p *Platform) WidgetName() widget.Name { return NamePlatform }
+func (p *Platform) WidgetKind() widget.Kind { return widget.Menu }
 
 // Platform is the typed skeleton root.
 type Platform struct {
@@ -270,7 +272,7 @@ func (p *Platform) buildToasts() []*Element {
 	nodes := make([]*Element, 0, len(p.rawNotifications))
 	for _, n := range p.rawNotifications {
 		typeCls := "pd-msg-" + Convert(n.Type.String()).ToLower().String()
-		nodes = append(nodes, Div().Set(clsMsg.AsAttr(), Class(typeCls).AsAttr()).
+		nodes = append(nodes, Div().Set(clsMsg.AsAttr()).Class(typeCls).
 			ID(n.ID).
 			Key(n.ID).
 			Text(n.Msg))

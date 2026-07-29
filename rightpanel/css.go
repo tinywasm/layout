@@ -10,52 +10,52 @@ import (
 
 // RenderCSS implements visual contract for rightpanel layout.
 func (r *RightPanel) RenderCSS() *css.Stylesheet {
-	return style.Of(NameRightPanel).
+	return style.For(r).
 		Root(
-			style.Stack(style.Space0),
+			style.Stack(style.SpaceNone),
 			style.Fill(),
-			style.On(style.Panel),
+			style.As(style.Panel),
 		).
 		Part(widget.Part("main"),
-			style.Split(style.RatioTwoThirds, style.Space2),
+			style.Split(style.SplitTwoThirds, style.Space2),
 			style.Fill(),
 		).
 		Part(widget.Part("header"),
 			style.Stack(style.Space1),
 			style.Pad(style.Space2),
-			style.On(style.Panel),
+			style.As(style.Panel),
 		).
 		Part(widget.Part("title-row"),
 			style.Row(style.Space2),
 			style.Center(),
 		).
 		Part(widget.Part("title"),
-			style.Text(style.TextXl),
-			style.On(style.Secondary),
+			style.FontSize(style.TextXl),
+			style.As(style.Secondary),
 		).
 		Part(widget.Part("controls"),
 			style.Row(style.Space1),
 		).
 		Part(widget.Part("article"),
-			style.On(style.Page),
+			style.As(style.Page),
 			style.Pad(style.Space2),
-			style.Scrolls(),
+			style.Scroll(),
 			style.Fill(),
 		).
 		Part(widget.Part("aside"),
-			style.On(style.Panel),
-			style.Stack(style.Space0),
+			style.As(style.Panel),
+			style.Stack(style.SpaceNone),
 			style.Fill(),
 		).
 		Part(widget.Part("aside-header"),
 			style.Row(style.Space2),
 			style.Pad(style.Space1),
-			style.On(style.Panel),
+			style.As(style.Panel),
 		).
 		Part(widget.Part("aside-content"),
-			style.On(style.Panel),
+			style.As(style.Panel),
 			style.Pad(style.Space2),
-			style.Scrolls(),
+			style.Scroll(),
 			style.Fill(),
 		).
 		Stylesheet()

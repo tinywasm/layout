@@ -41,7 +41,7 @@ Este plan requiere **dos publicaciones previas**:
 >
 > Consecuencia directa para este plan: **los `css.go` de `layout` conservan su firma actual**
 > `func (x *T) RenderCSS() *Stylesheet`. Lo que cambia es el **cuerpo** — pasa a construirse con
-> el DSL `style.Of(...)` y termina en `.Stylesheet()`. Si en algún momento te ves renombrando un
+> el DSL `style.For(...)` y termina en `.Stylesheet()`. Si en algún momento te ves renombrando un
 > `RenderCSS` a `Style`, has leído un documento obsoleto: **para y repórtalo**.
 
 **Comprobación obligatoria antes de la etapa 1:**
@@ -115,8 +115,8 @@ La firma que envuelve todo esto **no cambia**: cada `css.go` sigue declarando
 //go:build !wasm
 
 func (v *CrudView) RenderCSS() *Stylesheet {
-	return style.Of(nameCrudView).
-		Root(style.Split(style.RatioTwoThirds, style.Space2), style.On(style.Accent)).
+	return style.For(nameCrudView).
+		Root(style.Split(style.RatioTwoThirds, style.Space2), style.As(style.Accent)).
 		Part(partDetail, style.Stack(style.Space2), style.Fill()).
 		Stylesheet()   // <- cierra la cadena; la firma sigue siendo RenderCSS
 }
@@ -131,7 +131,7 @@ State: Selected · Disabled · Locked · Invalid · Busy · Open · Current   //
 Cue: Hover · Focus · Press · Target
 
 // github.com/tinywasm/widget/style — solo !wasm
-style.Of(name).Root(opts...).Part(p, opts...).When(state, part, opts...).Cue(cue, part, opts...)
+style.For(name).Root(opts...).Part(p, opts...).When(state, part, opts...).Cue(cue, part, opts...)
 
 // Disposición (todas fluidas, sin media queries)
 Stack(gap) · Row(gap) · Split(ratio, gap) · Grid(track, gap)

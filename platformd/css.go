@@ -10,21 +10,21 @@ import (
 
 // RenderCSS implements the visual contract for platformd using the style DSL.
 func (p *Platform) RenderCSS() *css.Stylesheet {
-	return style.Of(NamePlatform).
+	return style.For(p).
 		Root(
-			style.On(style.Page),
-			style.Stack(style.Space0),
+			style.As(style.Page),
+			style.Stack(style.SpaceNone),
 			style.Fill(),
 			style.Animate(style.MotionSlow),
 		).
 		Part(widget.Part("header"),
 			style.Row(style.Space2),
-			style.On(style.Panel),
+			style.As(style.Panel),
 			style.Pad(style.Space1),
 		).
 		Part(widget.Part("user-block"),
 			style.Row(style.Space1),
-			style.Text(style.TextBase),
+			style.FontSize(style.TextBase),
 			style.FontWeight(style.WeightBold),
 		).
 		Part(widget.Part("header-right"),
@@ -34,16 +34,17 @@ func (p *Platform) RenderCSS() *css.Stylesheet {
 			style.Row(style.Space1),
 		).
 		Part(widget.Part("area"),
-			style.Text(style.TextBase),
-			style.On(style.Muted),
+			style.FontSize(style.TextBase),
+			style.As(style.Subtle),
 		).
 		Part(widget.Part("msg-mobile"),
 			style.Stack(style.Space1),
 		).
 		Part(widget.Part("menu"),
 			style.Stack(style.Space1),
-			style.On(style.Panel),
+			style.As(style.Panel),
 			style.Animate(style.MotionSlow),
+			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("navbar"),
 			style.Stack(style.Space1),
@@ -56,30 +57,30 @@ func (p *Platform) RenderCSS() *css.Stylesheet {
 			style.Pad(style.Space2),
 		).
 		Part(widget.Part("link-text"),
-			style.Text(style.TextBase),
+			style.FontSize(style.TextBase),
 		).
 		Part(widget.Part("nav-icon"),
 			style.Width(style.Content),
 		).
 		Part(widget.Part("nav-active"),
-			style.On(style.Selected),
+			style.As(style.Highlight),
 		).
 		Part(widget.Part("stage"),
-			style.Cover(),
+			style.FillCentered(),
 			style.Fill(),
 		).
 		Part(widget.Part("panel"),
-			style.Hidden(),
+			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("panel-active"),
-			style.Shown(),
+			style.Stack(style.SpaceNone),
 			style.Fill(),
 		).
 		Part(widget.Part("orientation-warn"),
-			style.Hidden(),
+			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("msg"),
-			style.On(style.Panel),
+			style.As(style.Panel),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusMd),
 		).
@@ -87,13 +88,7 @@ func (p *Platform) RenderCSS() *css.Stylesheet {
 			style.Row(style.Space1),
 		).
 		Part(widget.Part("nav-overlay"),
-			style.Hidden(),
-		).
-		When(widget.Open, widget.Part("menu"),
-			style.Shown(),
-		).
-		When(widget.Open, widget.Part("nav-overlay"),
-			style.Shown(),
+			style.RevealedBy(widget.Open),
 		).
 		Stylesheet()
 }

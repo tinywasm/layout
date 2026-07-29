@@ -362,7 +362,7 @@ func (l *TargetList) WidgetName() widget.Name { return nameTargetList }
 func (l *TargetList) WidgetKind() widget.Kind { return widget.Listbox }
 
 func (l *TargetList) Style() *style.Sheet {
-	return style.Of(nameTargetList).
+	return style.For(nameTargetList).
 		Root(Stack(Space1), On(Sunken), Scrolls(), Round(RadiusMd)).
 		Part(partRow, Row(Space2), On(Panel), Pad(Space2), Round(RadiusSm)).
 		Part(partMenu, Stack(Space0), On(Panel), Raise(Floating), Clip()).

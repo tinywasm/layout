@@ -268,7 +268,7 @@ type Widget interface {
 
 // CAPACIDADES — cada costura asevera solo lo que necesita.
 dom.Component      → Render() *dom.Element      // markup      (wasm + ssr)
-css.go             → RenderCSS() *css.Stylesheet // aspecto    (!wasm) — cuerpo con style.Of(...)
+css.go             → RenderCSS() *css.Stylesheet // aspecto    (!wasm) — cuerpo con style.For(...)
 view.Presenter     → datos y conducta           // datos       (agnóstico de UI)
 widget.Selectable  → Select(id string)          // interacción
 widget.Dismissible → Dismiss()
@@ -488,7 +488,7 @@ Todos salen de `docs/ROADMAP.md` — ya se pagaron una vez.
 | `tinywasm/css` | Tokens faltantes, pares con contraste, `Class` como alias, cierre del DSL viejo | [PLAN_CSS](PLAN_CSS.md) | **v0.3.0** | ✅ Publicado |
 | `tinywasm/ssr` | ~~`Styler` tipado~~ → **una sola entrada de CSS**: se borra la rama `Style()` y queda `RootCSS()`/`RenderCSS()` | [ssr/docs/PLAN.md](https://github.com/tinywasm/ssr/blob/main/docs/PLAN.md) · ⛔ [PLAN_SSR](PLAN_SSR.md) *superseded* | — | Pendiente — **es el gate de los otros dos** |
 | `tinywasm/widget` | Borrar `style.Styler` + **cerrar el hueco de movimiento**: escala `Motion` y `Animate(m)` sobre los tokens `--duration-*` que `css` ya poseía | [widget/docs/PLAN.md](https://github.com/tinywasm/widget/blob/main/docs/PLAN.md) | — | Pendiente, tras `ssr` |
-| `tinywasm/components` | Migración a `style.Of(...)` **hecha**; queda renombrar `Style()` → `RenderCSS()` | [components/docs/PLAN.md](https://github.com/tinywasm/components/blob/main/docs/PLAN.md) · ⛔ [PLAN_COMPONENTS](PLAN_COMPONENTS.md) *superseded* | — | Pendiente, tras `ssr` |
+| `tinywasm/components` | Migración a `style.For(...)` **hecha**; queda renombrar `Style()` → `RenderCSS()` | [components/docs/PLAN.md](https://github.com/tinywasm/components/blob/main/docs/PLAN.md) · ⛔ [PLAN_COMPONENTS](PLAN_COMPONENTS.md) *superseded* | — | Pendiente, tras `ssr` |
 | `tinywasm/form` | Emitir `State.Invalid`/`State.Locked` en vez de clases propias | — | **v0.3.1** | ✅ Publicado — `form/states.go` ya usa `widget.Invalid.Attr()` / `widget.Locked.Attr()` |
 | **`tinywasm/layout`** | Migrar `crudview`, `platformd`, `rightpanel` sobre `css v0.3.0` + el `widget` y el `components` publicados por sus planes | [layout/docs/PLAN.md](PLAN.md) | — | Pendiente — **el último**, tras los tres anteriores |
 
@@ -601,7 +601,7 @@ Dar a un agente sin contexto la firma de `style.Sheet` y este único ejemplo:
 
 ```go
 func (l *TargetList) RenderCSS() *css.Stylesheet {
-	return style.Of(l.WidgetName()).
+	return style.For(l.WidgetName()).
 		Root(Stack(Space1), On(Sunken), Scrolls()).
 		Part(partRow, Row(Space2), On(Panel), Pad(Space2), Round(RadiusSm)).
 		When(State.Selected, partRow, On(Selected)).
