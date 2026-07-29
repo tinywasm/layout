@@ -10,11 +10,11 @@ import (
 
 // RenderCSS implements the visual contract for crudview using the style DSL.
 func (v *CrudView) RenderCSS() *css.Stylesheet {
-	return style.Of(NameCrudView).
+	return style.For(v).
 		Root(
-			style.Split(style.RatioTwoThirds, style.Space2),
-			style.On(style.Accent),
-			style.Flush(),
+			style.Split(style.SplitTwoThirds, style.Space2),
+			style.As(style.Primary),
+			style.EdgeToEdge(),
 		).
 		Part(widget.Part("detail"),
 			style.Stack(style.Space2),
@@ -25,24 +25,24 @@ func (v *CrudView) RenderCSS() *css.Stylesheet {
 			style.Fill(),
 		).
 		Part(widget.Part("fields"),
-			style.On(style.Sunken),
+			style.As(style.Inset),
 			style.Pad(style.Space2),
-			style.Scrolls(),
+			style.Scroll(),
 			style.Round(style.RadiusMd),
 		).
 		Part(widget.Part("aside"),
 			style.Stack(style.Space1),
-			style.On(style.Panel),
+			style.As(style.Panel),
 			style.Pad(style.Space1),
 			style.Fill(),
 		).
 		Part(widget.Part("aside-content"),
 			style.Fill(),
-			style.Stack(style.Space0),
+			style.Stack(style.SpaceNone),
 		).
 		Part(widget.Part("list"),
-			style.On(style.Sunken),
-			style.Scrolls(),
+			style.As(style.Inset),
+			style.Scroll(),
 			style.Round(style.RadiusMd),
 		).
 		Part(widget.Part("actions"),
@@ -50,51 +50,48 @@ func (v *CrudView) RenderCSS() *css.Stylesheet {
 		).
 		Part(widget.Part("title"),
 			style.Row(style.Space1),
-			style.Fixed(),
+			style.KeepSize(),
 		).
 		Part(widget.Part("title-text"),
-			style.On(style.Accent),
+			style.As(style.Primary),
 		).
 		Part(widget.Part("back"),
-			style.Hidden(),
+			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("icon"),
 			style.Width(style.Content),
 		).
 		Part(widget.Part("action"),
-			style.On(style.Accent),
+			style.As(style.Primary),
 			style.Round(style.RadiusMd),
 		).
 		Part(widget.Part("action-new"),
-			style.On(style.Accent),
+			style.As(style.Primary),
 		).
 		Part(widget.Part("action-cancel"),
-			style.Hidden(),
+			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("search"),
 			style.Row(style.Space1),
 		).
 		Part(widget.Part("delconfirm-mount"),
-			style.Fixed(),
+			style.KeepSize(),
 		).
 		Part(widget.Part("delconfirm-actions"),
 			style.Row(style.Space1),
 		).
 		Part(widget.Part("delconfirm-btn"),
-			style.On(style.Panel),
+			style.As(style.Panel),
 			style.Round(style.RadiusSm),
 			style.Pad(style.Space1),
 		).
 		Part(widget.Part("delconfirm-btn-danger"),
-			style.On(style.Danger),
+			style.As(style.Danger),
 			style.Round(style.RadiusSm),
 			style.Pad(style.Space1),
 		).
 		When(widget.Open, widget.Part("action-new"),
-			style.Hidden(),
-		).
-		When(widget.Open, widget.Part("action-cancel"),
-			style.Shown(),
+			style.RevealedBy(widget.Open),
 		).
 		Stylesheet()
 }

@@ -46,6 +46,9 @@ const (
 	defaultSearchPlaceholder = "Search…"
 )
 
+func (v *CrudView) WidgetName() widget.Name { return NameCrudView }
+func (v *CrudView) WidgetKind() widget.Kind { return widget.Disclosure }
+
 type CrudView struct {
 	Element // value embed — NEVER *dom.Element
 

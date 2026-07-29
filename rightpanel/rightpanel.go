@@ -23,6 +23,9 @@ var (
 	clsAsideContent = NameRightPanel.Class("aside-content")
 )
 
+func (r *RightPanel) WidgetName() widget.Name { return NameRightPanel }
+func (r *RightPanel) WidgetKind() widget.Kind { return widget.Region }
+
 // RightPanel is a two-column layout skeleton:
 //   - Left: main content area with header (title + controls) and article.
 //   - Right: aside panel with its own header (controls) and content.

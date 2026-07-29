@@ -5,7 +5,7 @@ PLAN: "[SUPERSEDED] `tinywasm/components` (+ `tinywasm/form`): migrar los widget
 > # ⛔ SUPERSEDED — NO EJECUTAR
 >
 > Este documento se conserva como registro de diseño. **No lo despaches.** Ya se ejecutó: los
-> componentes están migrados al DSL `style.Of(...)`. Lo único que quedó mal es la firma —
+> componentes están migrados al DSL `style.For(...)`. Lo único que quedó mal es la firma —
 > declaró `Style() *style.Sheet` en vez de `RenderCSS() *css.Stylesheet`, creando una tercera
 > entrada de CSS en `ssr`. Todos los ejemplos de este archivo que muestran `func (x *T) Style()`
 > están **obsoletos**.
@@ -116,7 +116,7 @@ func (l *TargetList) WidgetName() widget.Name { return nameTargetList }
 func (l *TargetList) WidgetKind() widget.Kind { return widget.Listbox }
 
 func (l *TargetList) Style() *style.Sheet {
-	return style.Of(nameTargetList).
+	return style.For(nameTargetList).
 		Root(Stack(Space1), On(Sunken), Scrolls(), Round(RadiusMd)).
 		Part(partRow, Row(Space2), On(Panel), Pad(Space2), Round(RadiusSm)).
 		Part(partMenu, Stack(Space0), On(Panel), Raise(Floating), Clip()).
