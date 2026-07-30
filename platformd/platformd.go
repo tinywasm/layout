@@ -44,6 +44,7 @@ const (
 	IconHome     = svg.Icon("home")
 	IconProducts = svg.Icon("products")
 	IconInfo     = svg.Icon("info")
+	iconMenu     = svg.Icon("pd-menu")
 )
 
 // UIModule is a module that provides its UI to the platform chassis.
@@ -184,18 +185,23 @@ func (p *Platform) Render() *Element {
 	if p.HeaderActions != nil {
 		right.Child(p.HeaderActions)
 	}
-	header.Child(right)
-
-	root.Child(header)
 
 	// ── hamburger button (mobile only) ───────────────────────────────────────
+	// It belongs in the header, beside the theme toggle: as a direct child of
+	// the Cover column it claimed a full-width band of its own under the header
+	// on every phone. It stays out of .pd__body either way, which is what the
+	// Sidebar contract there requires.
 	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menú").
-		Child(Span(), Span(), Span())
+		Child(iconMenu.Render(string(ClsNavIcon)))
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()
 	})
-	root.Child(hamburger)
+	right.Child(hamburger)
+
+	header.Child(right)
+
+	root.Child(header)
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
 	overlay := Div().Set(clsNavOverlay.AsAttr()).

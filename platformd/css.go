@@ -23,7 +23,7 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Row(style.Space2),
 			style.KeepSize(),
 			style.As(style.Panel),
-			style.Pad(style.Space1),
+			style.Pad(style.Space2),
 		).
 		Part(widget.Part("user-block"),
 			style.Row(style.Space1),
@@ -118,6 +118,7 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.As(style.Primary),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusSm),
+			style.Width(style.Content),
 		).
 		OnlyOn(css.Mobile, widget.Part("nav-overlay"),
 			style.Backdrop(style.Viewport),

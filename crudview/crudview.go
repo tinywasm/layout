@@ -29,6 +29,7 @@ var (
 	clsBtnCrudIconHidden      = NameCrudView.Class("action-hidden")
 	clsListaBox               = NameCrudView.Class("list")
 	clsAsideSearch            = NameCrudView.Class("search")
+	clsSearchInput            = NameCrudView.Class("search-input")
 	clsIcon16                 = NameCrudView.Class("icon")
 	clsDelConfirmActions      = NameCrudView.Class("delconfirm-actions")
 	clsDelConfirmBtn          = NameCrudView.Class("delconfirm-btn")
@@ -422,7 +423,7 @@ func (v *CrudView) Render() *Element {
 		if placeholder == "" {
 			placeholder = defaultSearchPlaceholder
 		}
-		input := Input("search").Attr("placeholder", placeholder)
+		input := Input("search").Set(clsSearchInput.AsAttr()).Attr("placeholder", placeholder)
 		input.On("input", func(e Event) {
 			v.search.Set(e.TargetValue())
 			v.filter()
