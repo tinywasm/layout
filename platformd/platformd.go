@@ -148,6 +148,10 @@ func (p *Platform) fallback() {
 func (p *Platform) Render() *Element {
 	root := Div().Set(clsRoot.AsAttr())
 
+	// Grab the state attributes for exact string matches
+	open := widget.Open.Attr()
+	cur := widget.Current.Attr()
+
 	// ── header ───────────────────────────────────────────────────────────────
 	header := Header().Set(clsHeader.AsAttr())
 
@@ -195,7 +199,12 @@ func (p *Platform) Render() *Element {
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
 	overlay := Div().Set(clsNavOverlay.AsAttr()).
-		BindAttrBool("data-open", p.menuOpen)
+		BindAttrFunc(open.Key, func() string {
+			if p.menuOpen.Get() {
+				return open.Value
+			}
+			return ""
+		})
 	overlay.On("click", func(Event) {
 		p.menuOpen.Set(false)
 	})
@@ -216,9 +225,12 @@ func (p *Platform) Render() *Element {
 		panel := Section().Set(clsPanel.AsAttr()).
 			ID(id).
 			Attr("data-id", id).
-			BindAttrBool("data-current", DeriveBool(func() bool {
-				return p.active.Get() == id
-			}))
+			BindAttrFunc(cur.Key, func() string {
+				if p.active.Get() == id {
+					return cur.Value
+				}
+				return ""
+			})
 
 		if v := m.View(); v != nil {
 			panel.Child(v)
@@ -229,7 +241,12 @@ func (p *Platform) Render() *Element {
 
 	// ── navigation menu (rail) ───────────────────────────────────────────────
 	nav := Nav().Set(clsMenu.AsAttr()).
-		BindAttrBool("data-open", p.menuOpen)
+		BindAttrFunc(open.Key, func() string {
+			if p.menuOpen.Get() {
+				return open.Value
+			}
+			return ""
+		})
 	navbar := Ul().Set(clsNavbar.AsAttr())
 
 	for _, m := range p.Modules {
@@ -240,9 +257,12 @@ func (p *Platform) Render() *Element {
 		}
 		link := A("#"+id).Set(clsNavLink.AsAttr()).
 			Attr("data-id", id).
-			BindAttrBool("data-current", DeriveBool(func() bool {
-				return p.active.Get() == id
-			}))
+			BindAttrFunc(cur.Key, func() string {
+				if p.active.Get() == id {
+					return cur.Value
+				}
+				return ""
+			})
 
 		if icon := m.Icon(); icon != "" {
 			link.Child(icon.Render(string(ClsNavIcon)))

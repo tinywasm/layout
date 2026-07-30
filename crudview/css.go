@@ -8,8 +8,8 @@ import (
 	"github.com/tinywasm/widget/style"
 )
 
-// RenderCSS implements the visual contract for crudview using the style DSL.
-func (v *CrudView) RenderCSS() *css.Stylesheet {
+// RenderSheet returns the style Sheet containing the rules for crudview.
+func (v *CrudView) RenderSheet() *style.Sheet {
 	return style.For(v).
 		Root(
 			style.Split(style.SplitTwoThirds, style.Space2),
@@ -92,6 +92,10 @@ func (v *CrudView) RenderCSS() *css.Stylesheet {
 		).
 		When(widget.Open, widget.Part("action-new"),
 			style.RevealedBy(widget.Open),
-		).
-		Stylesheet()
+		)
+}
+
+// RenderCSS implements the visual contract for crudview using the style DSL.
+func (v *CrudView) RenderCSS() *css.Stylesheet {
+	return v.RenderSheet().Stylesheet()
 }

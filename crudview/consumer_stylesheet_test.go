@@ -111,4 +111,13 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 			t.Errorf("class %q present in stylesheet but missing in markup", c)
 		}
 	}
+
+	// 4. State-attribute parity
+	sheet := v.RenderSheet()
+	for _, kv := range sheet.StateAttrs() {
+		want := kv.Key + "='" + kv.Value + "'"
+		if !fmt.Contains(allHTML, want) {
+			t.Errorf("stylesheet selects on %q but no element in the markup ever writes it", want)
+		}
+	}
 }

@@ -109,9 +109,9 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 
 	// 4. State-attribute parity
 	for _, kv := range sheet.StateAttrs() {
-		attrKey := kv.Key
-		if !Contains(allHTML, attrKey) {
-			t.Errorf("stylesheet selects on %q but no element in the markup ever writes it", attrKey)
+		want := kv.Key + "='" + kv.Value + "'"
+		if !Contains(allHTML, want) {
+			t.Errorf("stylesheet selects on %q but no element in the markup ever writes it", want)
 		}
 	}
 }
