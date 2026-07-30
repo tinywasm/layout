@@ -78,8 +78,11 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Pad(style.Space2),
 			style.KeepSize(),
 		).
+		// Explicit now that the reset stops <h1> from carrying 2em of its own.
 		Part(widget.Part("title-text"),
 			style.As(style.Primary),
+			style.FontSize(style.Text2xl),
+			style.FontWeight(style.WeightBold),
 		).
 		// A bare <svg> with no box falls back to 300x150; IconBox pins it.
 		Part(widget.Part("icon"),
@@ -153,6 +156,32 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Round(style.RadiusMd),
 			style.Raise(style.Floating),
 			style.CenterContent(),
+		).
+		// The title travels like the action button: fixed to the screen, so it is
+		// there on both pages of the swipe strip. On a phone the platform has no
+		// header, and this is the only thing naming the section.
+		// Compact on a phone: it floats over the content, so it has to read as a
+		// chip rather than a banner.
+		On(css.Mobile, widget.Part("title-text"),
+			style.FontSize(style.TextBase),
+			style.FontWeight(style.WeightBold),
+		).
+		On(css.Mobile, widget.Part("title"),
+			style.Docked(style.Viewport, style.EdgeTop, style.SideStart, style.Space4),
+			style.Row(style.Space1),
+			style.As(style.Primary),
+			style.Round(style.RadiusMd),
+			style.Pad(style.Space2),
+			style.Raise(style.Floating),
+			style.Width(style.Content),
+		).
+		// Reserve the band the floating title and hamburger occupy, so the search
+		// bar and the form start below them instead of underneath.
+		On(css.Mobile, widget.Part("aside"),
+			style.PadEdge(style.EdgeTop, style.Space12),
+		).
+		On(css.Mobile, widget.Part("detail"),
+			style.PadEdge(style.EdgeTop, style.Space12),
 		).
 		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
 		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).

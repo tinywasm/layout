@@ -25,6 +25,22 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.As(style.Panel),
 			style.Pad(style.Space2),
 		).
+		// The drawer's head: identity chrome that has no header to live in on a
+		// phone, and rides above the rail on a wide screen.
+		Part(widget.Part("drawer-head"),
+			style.Stack(style.Space1),
+			style.KeepSize(),
+			style.Pad(style.Space2),
+			style.As(style.Inset),
+			style.Round(style.RadiusMd),
+		).
+		Part(widget.Part("app-name"),
+			style.FontSize(style.TextBase),
+			style.FontWeight(style.WeightBold),
+		).
+		Part(widget.Part("drawer-actions"),
+			style.Row(style.Space1),
+		).
 		Part(widget.Part("user-block"),
 			style.Row(style.Space1),
 			style.FontSize(style.TextBase),
@@ -59,19 +75,22 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Sidebar(style.SideEnd, style.RailNarrow, style.SpaceNone),
 			style.Fill(),
 		).
+		// A deck, not a stack of hidden panels: RevealedBy toggles `display`,
+		// which is discrete and cannot transition, so a route change jumped. The
+		// movement comes from the scroller instead — Activate() calls
+		// ScrollIntoView and the strip slides. Every module stays mounted.
 		Part(widget.Part("stage"),
+			style.Deck(style.SpaceNone),
 			style.Fill(),
-			style.HideOverflow(),
 		).
-		// Scroll(), not Fill(): the stage clips, so a module taller than the
-		// viewport has to scroll inside its own panel or its overflow is
-		// unreachable. Scroll() is Fill() plus overflow-y.
+		// Scroll(), not Fill(): a module taller than the viewport has to scroll
+		// inside its own page of the deck. Scroll() is Fill() plus overflow-y.
 		Part(widget.Part("panel"),
 			style.Stack(style.SpaceNone),
 			style.Scroll(),
-			style.RevealedBy(widget.Current),
 		).
 		Part(widget.Part("menu"),
+			style.Anchor(),
 			style.Stack(style.Space1),
 			style.As(style.Panel),
 			style.Fill(),
@@ -118,13 +137,42 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		Cue(widget.Hover, widget.Part("nav-link"),
 			style.Glyph(style.Accent),
 		).
+		// Hovering the rail floats its navbar out over the content at label
+		// width. The rail keeps its narrow slot in the Sidebar, so nothing
+		// reflows — only the overlay grows.
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("navbar"),
+			style.Docked(style.Parent, style.EdgeTop, style.SideEnd, style.SpaceNone),
+			style.Width(style.Content),
+			style.As(style.Panel),
+			style.Raise(style.Floating),
+			style.Pad(style.Space1),
+			style.Round(style.RadiusMd),
+		).
+		// The labels only exist while the rail is expanded — or on a phone,
+		// where the drawer is two thirds of the viewport and has room for them.
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("link-text"),
+			style.Row(style.SpaceNone),
+			style.FontSize(style.TextBase),
+		).
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("nav-link"),
+			style.Row(style.Space2),
+			style.Pad(style.Space2),
+		).
 		// ── mobile-only chrome ────────────────────────────────────────────────
+		// No header on a phone: the module brings its own title and the chrome
+		// floats over the content. The button pins to the screen so it is
+		// reachable from either page of a swipe strip.
+		On(css.Mobile, widget.Part("header"),
+			style.Hide(),
+		).
 		OnlyOn(css.Mobile, widget.Part("hamburger"),
 			style.Row(style.Space1),
 			style.As(style.Primary),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusSm),
-			style.Width(style.Content),
+			style.Raise(style.Floating),
+			style.CenterContent(),
+			style.Docked(style.Viewport, style.EdgeTop, style.SideEnd, style.Space4),
 		).
 		OnlyOn(css.Mobile, widget.Part("nav-overlay"),
 			style.Backdrop(style.Viewport),

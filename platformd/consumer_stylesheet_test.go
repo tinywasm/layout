@@ -6,13 +6,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/svg"
 	. "github.com/tinywasm/fmt"
+	"github.com/tinywasm/html"
+	"github.com/tinywasm/svg"
 )
 
 func TestPlatform_StylesheetAsserts(t *testing.T) {
+	// Both slots are filled: they are optional at runtime, but the class-parity
+	// assertion below is two-directional, so a slot left nil would read as a
+	// stylesheet rule with no markup behind it.
 	p := &Platform{
-		AppName: "Test App",
+		AppName:       "Test App",
+		UserBlock:     html.Div().Text("Tester"),
+		HeaderActions: html.Div().Text("actions"),
 		Modules: []UIModule{
 			&mockModule{id: "mod1", label: "Module 1", icon: svg.Icon("home")},
 			&mockModule{id: "mod2", label: "Module 2", icon: svg.Icon("info")},

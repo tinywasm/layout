@@ -16,28 +16,31 @@ import (
 const NamePlatform widget.Name = "pd"
 
 var (
-	clsRoot        = NamePlatform.Root()
-	clsHeader      = NamePlatform.Class("header")
-	clsUserBlock   = NamePlatform.Class("user-block")
-	clsMsgSlot     = NamePlatform.Class("msg-slot")
-	clsMsg         = NamePlatform.Class("msg")
-	clsMsgInfo     = NamePlatform.Class("msg-info")
-	clsMsgSuccess  = NamePlatform.Class("msg-success")
-	clsMsgWarning  = NamePlatform.Class("msg-warning")
-	clsMsgError    = NamePlatform.Class("msg-error")
-	clsHeaderRight = NamePlatform.Class("header-right")
-	clsArea        = NamePlatform.Class("area")
-	clsBody        = NamePlatform.Class("body")
-	clsStage       = NamePlatform.Class("stage")
-	clsPanel       = NamePlatform.Class("panel")
-	clsMenu        = NamePlatform.Class("menu")
-	clsNavbar      = NamePlatform.Class("navbar")
-	clsNavItem     = NamePlatform.Class("nav-item")
-	clsNavLink     = NamePlatform.Class("nav-link")
-	clsLinkText    = NamePlatform.Class("link-text")
-	ClsNavIcon     = NamePlatform.Class("nav-icon")
-	clsHamburger   = NamePlatform.Class("hamburger")
-	clsNavOverlay  = NamePlatform.Class("nav-overlay")
+	clsRoot          = NamePlatform.Root()
+	clsHeader        = NamePlatform.Class("header")
+	clsUserBlock     = NamePlatform.Class("user-block")
+	clsDrawerHead    = NamePlatform.Class("drawer-head")
+	clsAppName       = NamePlatform.Class("app-name")
+	clsDrawerActions = NamePlatform.Class("drawer-actions")
+	clsMsgSlot       = NamePlatform.Class("msg-slot")
+	clsMsg           = NamePlatform.Class("msg")
+	clsMsgInfo       = NamePlatform.Class("msg-info")
+	clsMsgSuccess    = NamePlatform.Class("msg-success")
+	clsMsgWarning    = NamePlatform.Class("msg-warning")
+	clsMsgError      = NamePlatform.Class("msg-error")
+	clsHeaderRight   = NamePlatform.Class("header-right")
+	clsArea          = NamePlatform.Class("area")
+	clsBody          = NamePlatform.Class("body")
+	clsStage         = NamePlatform.Class("stage")
+	clsPanel         = NamePlatform.Class("panel")
+	clsMenu          = NamePlatform.Class("menu")
+	clsNavbar        = NamePlatform.Class("navbar")
+	clsNavItem       = NamePlatform.Class("nav-item")
+	clsNavLink       = NamePlatform.Class("nav-link")
+	clsLinkText      = NamePlatform.Class("link-text")
+	ClsNavIcon       = NamePlatform.Class("nav-icon")
+	clsHamburger     = NamePlatform.Class("hamburger")
+	clsNavOverlay    = NamePlatform.Class("nav-overlay")
 )
 
 const (
@@ -156,12 +159,6 @@ func (p *Platform) Render() *Element {
 	// ── header ───────────────────────────────────────────────────────────────
 	header := Header().Set(clsHeader.AsAttr())
 
-	userBlock := Div().Set(clsUserBlock.AsAttr())
-	if p.UserBlock != nil {
-		userBlock.Child(p.UserBlock)
-	}
-	header.Child(userBlock)
-
 	msgSlot := Div().Set(clsMsgSlot.AsAttr()).ID("pd-msg-slot").
 		BindChildren(p.notifications)
 	// Because elementToHTML/SSR doesn't process "children" bindings, initial nodes must be manually added
@@ -182,26 +179,23 @@ func (p *Platform) Render() *Element {
 			}
 			return ""
 		})))
-	if p.HeaderActions != nil {
-		right.Child(p.HeaderActions)
-	}
+
+	header.Child(right)
+
+	root.Child(header)
 
 	// ── hamburger button (mobile only) ───────────────────────────────────────
-	// It belongs in the header, beside the theme toggle: as a direct child of
-	// the Cover column it claimed a full-width band of its own under the header
-	// on every phone. It stays out of .pd__body either way, which is what the
-	// Sidebar contract there requires.
+	// A sibling of the header, not a child of it: on a phone the header is
+	// display:none, and a fixed descendant of a hidden ancestor is not rendered
+	// either. It stays out of .pd__body, which is what the Sidebar contract
+	// there requires.
 	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menú").
 		Child(iconMenu.Render(string(ClsNavIcon)))
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()
 	})
-	right.Child(hamburger)
-
-	header.Child(right)
-
-	root.Child(header)
+	root.Child(hamburger)
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
 	overlay := Div().Set(clsNavOverlay.AsAttr()).
@@ -277,6 +271,21 @@ func (p *Platform) Render() *Element {
 
 		navbar.Child(Li().Set(clsNavItem.AsAttr()).Child(link))
 	}
+
+	// The drawer's head. On a phone this is where the identity chrome lives —
+	// there is no header to hold it — and on a wide screen it rides above the
+	// rail, revealed with it on hover.
+	head := Div().Set(clsDrawerHead.AsAttr())
+	if p.AppName != "" {
+		head.Child(Div().Set(clsAppName.AsAttr()).Text(p.AppName))
+	}
+	if p.UserBlock != nil {
+		head.Child(Div().Set(clsUserBlock.AsAttr()).Child(p.UserBlock))
+	}
+	if p.HeaderActions != nil {
+		head.Child(Div().Set(clsDrawerActions.AsAttr()).Child(p.HeaderActions))
+	}
+	nav.Child(head)
 
 	nav.Child(navbar)
 	body.Child(nav)
@@ -367,6 +376,13 @@ func (p *Platform) Activate(moduleID string) {
 
 	p.active.Set(moduleID)
 	p.menuOpen.Set(false)
+
+	// The stage is a Deck: the panels are all mounted side by side and this is
+	// what slides between them. `display` is discrete and cannot transition, so
+	// the movement has to come from the scroller.
+	if el, ok := Get(moduleID); ok {
+		el.ScrollIntoView()
+	}
 
 	// Update window hash if needed
 	if GetHash() != "#"+moduleID {
