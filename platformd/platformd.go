@@ -16,28 +16,28 @@ import (
 const NamePlatform widget.Name = "pd"
 
 var (
-	clsRoot            = NamePlatform.Root()
-	clsHeader          = NamePlatform.Class("header")
-	clsUserBlock       = NamePlatform.Class("user-block")
-	clsHeaderRight     = NamePlatform.Class("header-right")
-	clsMsgDesktop      = NamePlatform.Class("msg-desktop")
-	clsArea            = NamePlatform.Class("area")
-	clsMsgMobile       = NamePlatform.Class("msg-mobile")
-	clsMenu            = NamePlatform.Class("menu")
-	clsNavbar          = NamePlatform.Class("navbar")
-	clsNavItem         = NamePlatform.Class("nav-item")
-	clsNavLink         = NamePlatform.Class("nav-link")
-	clsLinkText        = NamePlatform.Class("link-text")
-	ClsNavIcon         = NamePlatform.Class("nav-icon")
-	clsNavActive       = NamePlatform.Class("nav-active")
-	clsStage           = NamePlatform.Class("stage")
-	clsPanel           = NamePlatform.Class("panel")
-	clsPanelActive     = NamePlatform.Class("panel-active")
-	clsOrientationWarn = NamePlatform.Class("orientation-warn")
-	clsMsg             = NamePlatform.Class("msg")
-	clsHamburger       = NamePlatform.Class("hamburger")
-	clsNavOverlay      = NamePlatform.Class("nav-overlay")
-	clsMenuOpen        = NamePlatform.Class("menu-open")
+	clsRoot        = NamePlatform.Root()
+	clsHeader      = NamePlatform.Class("header")
+	clsUserBlock   = NamePlatform.Class("user-block")
+	clsMsgSlot     = NamePlatform.Class("msg-slot")
+	clsMsg         = NamePlatform.Class("msg")
+	clsMsgInfo     = NamePlatform.Class("msg-info")
+	clsMsgSuccess  = NamePlatform.Class("msg-success")
+	clsMsgWarning  = NamePlatform.Class("msg-warning")
+	clsMsgError    = NamePlatform.Class("msg-error")
+	clsHeaderRight = NamePlatform.Class("header-right")
+	clsArea        = NamePlatform.Class("area")
+	clsBody        = NamePlatform.Class("body")
+	clsStage       = NamePlatform.Class("stage")
+	clsPanel       = NamePlatform.Class("panel")
+	clsMenu        = NamePlatform.Class("menu")
+	clsNavbar      = NamePlatform.Class("navbar")
+	clsNavItem     = NamePlatform.Class("nav-item")
+	clsNavLink     = NamePlatform.Class("nav-link")
+	clsLinkText    = NamePlatform.Class("link-text")
+	ClsNavIcon     = NamePlatform.Class("nav-icon")
+	clsHamburger   = NamePlatform.Class("hamburger")
+	clsNavOverlay  = NamePlatform.Class("nav-overlay")
 )
 
 const (
@@ -146,8 +146,7 @@ func (p *Platform) fallback() {
 
 // Render builds the DOM tree (implements ViewRenderer).
 func (p *Platform) Render() *Element {
-	root := Div().Set(clsRoot.AsAttr()).
-		BindClass(string(clsMenuOpen), p.menuOpen)
+	root := Div().Set(clsRoot.AsAttr())
 
 	// ── header ───────────────────────────────────────────────────────────────
 	header := Header().Set(clsHeader.AsAttr())
@@ -158,12 +157,13 @@ func (p *Platform) Render() *Element {
 	}
 	header.Child(userBlock)
 
-	msgDesktop := Div().Set(clsMsgDesktop.AsAttr()).ID("pd-msg-desktop").
+	msgSlot := Div().Set(clsMsgSlot.AsAttr()).ID("pd-msg-slot").
 		BindChildren(p.notifications)
+	// Because elementToHTML/SSR doesn't process "children" bindings, initial nodes must be manually added
 	for _, n := range p.notifications.Get() {
-		msgDesktop.Child(n)
+		msgSlot.Child(n)
 	}
-	header.Child(msgDesktop)
+	header.Child(msgSlot)
 
 	// header right: work-area name + actions (theme toggle) grouped together.
 	right := Div().Set(clsHeaderRight.AsAttr())
@@ -184,15 +184,7 @@ func (p *Platform) Render() *Element {
 
 	root.Child(header)
 
-	// ── mobile message slot ──────────────────────────────────────────────────
-	msgMobile := Div().Set(clsMsgMobile.AsAttr()).ID("pd-msg-mobile").
-		BindChildren(p.notifications)
-	for _, n := range p.notifications.Get() {
-		msgMobile.Child(n)
-	}
-	root.Child(msgMobile)
-
-	// ── hamburger button (mobile only — hidden via CSS on desktop) ───────────
+	// ── hamburger button (mobile only) ───────────────────────────────────────
 	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menú").
 		Child(Span(), Span(), Span())
@@ -202,38 +194,15 @@ func (p *Platform) Render() *Element {
 	root.Child(hamburger)
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
-	overlay := Div().Set(clsNavOverlay.AsAttr())
+	overlay := Div().Set(clsNavOverlay.AsAttr()).
+		BindAttrBool("data-open", p.menuOpen)
 	overlay.On("click", func(Event) {
 		p.menuOpen.Set(false)
 	})
 	root.Child(overlay)
 
-	// ── navigation menu ──────────────────────────────────────────────────────
-	nav := Nav().Set(clsMenu.AsAttr())
-	navbar := Ul().Set(clsNavbar.AsAttr())
-
-	for _, m := range p.Modules {
-		m := m
-		id := m.ModelName()
-		if !p.isViewable(id) {
-			continue
-		}
-		link := A("#"+id).Set(clsNavLink.AsAttr()).
-			Attr("data-id", id).
-			BindClass(string(clsNavActive), DeriveBool(func() bool {
-				return p.active.Get() == id
-			}))
-
-		if icon := m.Icon(); icon != "" {
-			link.Child(icon.Render(string(ClsNavIcon)))
-		}
-		link.Child(Span().Set(clsLinkText.AsAttr()).Text(m.Label()))
-
-		navbar.Child(Li().Set(clsNavItem.AsAttr()).Child(link))
-	}
-
-	nav.Child(navbar)
-	root.Child(nav)
+	// ── body (Sidebar wrapping stage and nav) ────────────────────────────────
+	body := Div().Set(clsBody.AsAttr())
 
 	// ── main stage ───────────────────────────────────────────────────────────
 	stage := Main().Set(clsStage.AsAttr())
@@ -247,7 +216,7 @@ func (p *Platform) Render() *Element {
 		panel := Section().Set(clsPanel.AsAttr()).
 			ID(id).
 			Attr("data-id", id).
-			BindClass(string(clsPanelActive), DeriveBool(func() bool {
+			BindAttrBool("data-current", DeriveBool(func() bool {
 				return p.active.Get() == id
 			}))
 
@@ -256,11 +225,37 @@ func (p *Platform) Render() *Element {
 		}
 		stage.Child(panel)
 	}
+	body.Child(stage)
 
-	root.Child(stage)
+	// ── navigation menu (rail) ───────────────────────────────────────────────
+	nav := Nav().Set(clsMenu.AsAttr()).
+		BindAttrBool("data-open", p.menuOpen)
+	navbar := Ul().Set(clsNavbar.AsAttr())
 
-	// orientation warning (placeholder as per PLAN.md A.5)
-	root.Child(Div().Set(clsOrientationWarn.AsAttr()))
+	for _, m := range p.Modules {
+		m := m
+		id := m.ModelName()
+		if !p.isViewable(id) {
+			continue
+		}
+		link := A("#"+id).Set(clsNavLink.AsAttr()).
+			Attr("data-id", id).
+			BindAttrBool("data-current", DeriveBool(func() bool {
+				return p.active.Get() == id
+			}))
+
+		if icon := m.Icon(); icon != "" {
+			link.Child(icon.Render(string(ClsNavIcon)))
+		}
+		link.Child(Span().Set(clsLinkText.AsAttr()).Text(m.Label()))
+
+		navbar.Child(Li().Set(clsNavItem.AsAttr()).Child(link))
+	}
+
+	nav.Child(navbar)
+	body.Child(nav)
+
+	root.Child(body)
 
 	return root
 }
@@ -271,8 +266,21 @@ func (p *Platform) buildToasts() []*Element {
 
 	nodes := make([]*Element, 0, len(p.rawNotifications))
 	for _, n := range p.rawNotifications {
-		typeCls := "pd-msg-" + Convert(n.Type.String()).ToLower().String()
-		nodes = append(nodes, Div().Set(clsMsg.AsAttr()).Class(typeCls).
+		var variantCls widget.Class
+		switch n.Type {
+		case Msg.Info:
+			variantCls = clsMsgInfo
+		case Msg.Success:
+			variantCls = clsMsgSuccess
+		case Msg.Warning:
+			variantCls = clsMsgWarning
+		case Msg.Error:
+			variantCls = clsMsgError
+		default:
+			variantCls = clsMsgInfo
+		}
+
+		nodes = append(nodes, Div().Set(clsMsg.AsAttr(), variantCls.AsAttr()).
 			ID(n.ID).
 			Key(n.ID).
 			Text(n.Msg))
