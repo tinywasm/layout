@@ -139,7 +139,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// instead of a bar across the bottom: the list keeps the whole panel and
 		// the button matches the hamburger it shares the screen with.
 		On(css.Mobile, widget.Part("action"),
-			style.Docked(style.SideEnd, style.Space4),
+			style.Docked(style.EdgeBottom, style.SideEnd, style.Space4),
 			style.Width(style.Content),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusMd),
