@@ -11,10 +11,12 @@ import (
 // RenderSheet returns the style Sheet containing the rules for platformd.
 func (p *Platform) RenderSheet() *style.Sheet {
 	return style.For(p).
-		// The outermost frame of the application: fills the viewport, stacks
-		// header over body. Everything else sizes against this.
+		// The outermost frame of the application: locks to the viewport, stacks
+		// header over body. HideOverflow() keeps the frame itself from ever
+		// scrolling — a tall module scrolls inside its own panel instead.
 		Root(
 			style.Cover(),
+			style.HideOverflow(),
 			style.As(style.Page),
 		).
 		Part(widget.Part("header"),
@@ -61,9 +63,12 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Fill(),
 			style.HideOverflow(),
 		).
+		// Scroll(), not Fill(): the stage clips, so a module taller than the
+		// viewport has to scroll inside its own panel or its overflow is
+		// unreachable. Scroll() is Fill() plus overflow-y.
 		Part(widget.Part("panel"),
 			style.Stack(style.SpaceNone),
-			style.Fill(),
+			style.Scroll(),
 			style.RevealedBy(widget.Current),
 		).
 		Part(widget.Part("menu"),
@@ -85,8 +90,9 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Fill(),
 			style.Animate(style.MotionFast),
 		).
+		// A bare <svg> with no box falls back to 300x150 and wrecks the rail.
 		Part(widget.Part("nav-icon"),
-			style.Width(style.Content),
+			style.IconBox(style.IconLg),
 		).
 		Part(widget.Part("link-text"),
 			style.FontSize(style.TextBase),

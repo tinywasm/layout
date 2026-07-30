@@ -15,7 +15,7 @@ require (
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.10
-	github.com/tinywasm/widget v0.4.3
+	github.com/tinywasm/widget v0.4.4
 )
 
 require (

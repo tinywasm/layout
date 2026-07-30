@@ -32,7 +32,7 @@ The chassis is built using a structured hierarchy of semantic HTML elements. Eac
 ### Part Tree
 
 ```
-root .pd                          Cover
+root .pd                          Cover  HideOverflow
 ├── header .pd__header            KeepSize
 │   ├── div  .pd__user-block
 │   ├── div  .pd__msg-slot        Fill  (BindChildren(p.notifications))
@@ -43,14 +43,26 @@ root .pd                          Cover
 ├── div    .pd__nav-overlay       mobile only, data-open
 ├── div    .pd__body              Sidebar(SideEnd)  Fill
 │   ├── main .pd__stage           Fill  HideOverflow          ← content, first child
-│   │   └── section .pd__panel    data-current                  (one per module)
+│   │   └── section .pd__panel    Scroll  data-current          (one per module)
 │   └── nav  .pd__menu            Fill                        ← rail, LAST child
 │       └── ul .pd__navbar
 │           └── li .pd__nav-item
 │               └── a .pd__nav-link  data-current
-│                   ├── svg  .pd__nav-icon
+│                   ├── svg  .pd__nav-icon  IconBox(IconLg)
 │                   └── span .pd__link-text
 ```
+
+### Where the scroll lives
+
+`Cover()` gives the root a **definite** `height: 100dvh`, not a floor, so the frame
+never grows with its content: `HideOverflow()` on the root and on the stage clips,
+and the header and rail stay put no matter how tall a module is. The only element
+that scrolls is `.pd__panel`, through `Scroll()`. A module that renders its own
+scroll region nests it inside that panel.
+
+Every part that renders a bare `<svg>` must declare `IconBox`. An `<svg>` with no
+width or height falls back to the replaced-element default of 300×150 and blows the
+layout apart — this is what made the rail 150px per item before `IconBox` existed.
 
 ### State-Revealed Parts
 

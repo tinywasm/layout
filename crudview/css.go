@@ -58,8 +58,9 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		Part(widget.Part("back"),
 			style.RevealedBy(widget.Open),
 		).
+		// A bare <svg> with no box falls back to 300x150; IconBox pins it.
 		Part(widget.Part("icon"),
-			style.Width(style.Content),
+			style.IconBox(style.IconMd),
 		).
 		Part(widget.Part("action"),
 			style.As(style.Primary),

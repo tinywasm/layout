@@ -27,6 +27,8 @@
 
 The application chassis is built exclusively from the `Cover` and `Sidebar` layouts using the style DSL. Sizing, grid flow, mobile reflow, and drawer navigation are defined by widget-level tokens and layout models. Route selection and visibility are carried exclusively by reactive state attributes (`data-current`, `data-open`) tied to `widget.Current` and `widget.Open` states, completely eliminating legacy CSS class toggles.
 
+`Cover` fixes the shell to the viewport height, so the frame itself never scrolls; the active module panel carries `Scroll` and is the only element that does. Any part rendering a bare `<svg>` declares `IconBox` — without a box an svg falls back to 300×150 and breaks the layout. Both require `widget` v0.4.4 or later.
+
 ```flowchart TD
 A[New Platform] --> B[Render: build DOM tree with signal bindings]
 B --> C[Init: create signals, register OnHashChange]
