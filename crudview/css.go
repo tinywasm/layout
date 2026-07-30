@@ -11,8 +11,12 @@ import (
 // RenderSheet returns the style Sheet containing the rules for crudview.
 func (v *CrudView) RenderSheet() *style.Sheet {
 	return style.For(v).
+		// Fill() so the view takes the whole height of the platform panel that
+		// hosts it; without it the module stops at its content and leaves dead
+		// space under the stage.
 		Root(
 			style.Split(style.SplitTwoThirds, style.Space2),
+			style.Fill(),
 			style.As(style.Primary),
 			style.EdgeToEdge(),
 		).
@@ -68,9 +72,11 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		).
 		Part(widget.Part("action-new"),
 			style.As(style.Primary),
+			style.IconBox(style.IconMd),
 		).
 		Part(widget.Part("action-cancel"),
 			style.RevealedBy(widget.Open),
+			style.IconBox(style.IconMd),
 		).
 		Part(widget.Part("search"),
 			style.Row(style.Space1),
