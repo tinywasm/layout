@@ -64,14 +64,14 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 	if Contains(html, "name='btn_cruddel'") {
 		t.Error("did not expect a separate delete button")
 	}
-	// Mobile-only "‹ back" button (hidden on desktop via clsBackBtn's
-	// Display(None) base rule) — returns to the list panel without calling
-	// undoAction, see Render()'s back.On("click", ...).
-	if !Contains(html, "name='cv-back'") {
-		t.Error("expected the mobile back-to-list button")
+	// There is no back button: on a phone a sliver of the list stays visible
+	// at the trailing edge of the swipe strip, and cancelling returns there
+	// on its own (undoAction).
+	if Contains(html, "name='cv-back'") {
+		t.Error("did not expect a back-to-list button")
 	}
-	// The list/aside panel needs a stable id — it's the back button's and
-	// the mobile scroll-snap's shared target (listPanelID()).
+	// The list/aside panel needs a stable id — it is the scroll-snap target
+	// undoAction returns to (listPanelID()).
 	if !Contains(html, ".list'") {
 		t.Error("expected the list panel to carry a stable id (listPanelID)")
 	}

@@ -81,15 +81,6 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		Part(widget.Part("title-text"),
 			style.As(style.Primary),
 		).
-		// Mobile-only: on a phone the two panels are a swipe strip, so the row
-		// that was tapped needs a way back to the list.
-		OnlyOn(css.Mobile, widget.Part("back"),
-			style.Row(style.SpaceNone),
-			style.As(style.Primary),
-			style.Round(style.RadiusSm),
-			style.Pad(style.Space1),
-			style.Width(style.Content),
-		).
 		// A bare <svg> with no box falls back to 300x150; IconBox pins it.
 		Part(widget.Part("icon"),
 			style.IconBox(style.IconMd),

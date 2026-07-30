@@ -84,10 +84,14 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Row(style.SpaceNone),
 			style.Fill(),
 		).
+		// Glyph, not As: an item that is merely available is a coloured icon on
+		// the rail's own surface. Only the current one is filled.
 		Part(widget.Part("nav-link"),
 			style.Row(style.Space1),
 			style.Pad(style.Space2),
 			style.Fill(),
+			style.CenterContent(),
+			style.Glyph(style.Primary),
 			style.Animate(style.MotionFast),
 		).
 		// A bare <svg> with no box falls back to 300x150 and wrecks the rail.
@@ -106,11 +110,13 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		).
 		// The active route reads as "current", the same vocabulary the rail and
 		// crudview's list rows share. It is a STATE, never a class.
+		// The route you are on is the one filled block in the rail; its icon
+		// rides the filled surface through currentColor.
 		When(widget.Current, widget.Part("nav-link"),
-			style.As(style.Highlight),
+			style.As(style.Primary),
 		).
 		Cue(widget.Hover, widget.Part("nav-link"),
-			style.As(style.Panel),
+			style.Glyph(style.Accent),
 		).
 		// ── mobile-only chrome ────────────────────────────────────────────────
 		OnlyOn(css.Mobile, widget.Part("hamburger"),

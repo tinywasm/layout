@@ -36,7 +36,6 @@ var (
 	clsDelConfirmBtn          = NameCrudView.Class("delconfirm-btn")
 	clsDelConfirmBtnDanger    = NameCrudView.Class("delconfirm-btn-danger")
 	clsDelConfirmMount        = NameCrudView.Class("delconfirm-mount")
-	clsBackBtn                = NameCrudView.Class("back")
 )
 
 const (
@@ -45,7 +44,6 @@ const (
 	iconCrudNew              = svg.Icon("icon-crud-new")    // "+"  — nothing selected
 	iconCrudCancel           = svg.Icon("icon-crud-cancel") // "↺" — a row is selected (undo)
 	iconCrudSearch           = svg.Icon("icon-crud-search")
-	iconCrudBack             = svg.Icon("icon-crud-back") // "‹" — mobile-only back-to-list button
 	defaultSearchPlaceholder = "Search…"
 )
 
@@ -247,6 +245,11 @@ func (v *CrudView) newAction() {
 		v.form.Focus()
 	}
 	v.composing.Set(true)
+	// It focused the first field; on a phone that field is on the panel next
+	// door, so bring the panel with it.
+	if el, ok := Get(v.detailPanelID()); ok {
+		el.ScrollIntoView()
+	}
 	if v.OnNew != nil {
 		v.OnNew()
 	}
@@ -267,6 +270,12 @@ func (v *CrudView) undoAction() {
 	if v.form != nil {
 		v.form.Reset() // also clears the tracked FocusedFieldID()
 		v.form.SetLocked(false)
+	}
+	// The list is the resting view: cancelling has to put the user back on it,
+	// or on a phone the strip stays parked on an empty form with nothing left
+	// to cancel. A no-op on a wide screen, where both panels are already up.
+	if el, ok := Get(v.listPanelID()); ok {
+		el.ScrollIntoView()
 	}
 	if v.OnCancel != nil {
 		v.OnCancel()
@@ -373,25 +382,10 @@ func (v *CrudView) Render() *Element {
 
 	articleCont := Div().Set(articleContCls.AsAttr()).ID(v.detailPanelID())
 
-	// Title container. "‹ back" (mobile-only, see clsBackBtn's Display(None)
-	// base rule) comes first, only when there's a list to go back to
-	// (hasSource — the full-page/no-presenter variant has no list panel at
-	// all, so a back button there would be a dead click). It only moves the
-	// viewport back to the list panel, same effect as a manual swipe — it
-	// does NOT call undoAction, so the selection/draft survives a user just
-	// glancing back at the list.
+	// No back button: on a phone the list is the panel the strip rests on and
+	// a sliver of it stays visible at the trailing edge, which says "swipe
+	// back" on its own. Cancelling returns there too (undoAction).
 	titleContainer := Div().Set(clsTitleContainer.AsAttr())
-	if hasSource {
-		back := Button().Set(clsBackBtn.AsAttr()).
-			Attr("name", "cv-back"). // NOT "btn_..." — see cv-crudtoggle's comment below on the actionbutton name collision
-			Child(iconCrudBack.Render(string(clsIcon16)))
-		back.On("click", func(Event) {
-			if el, ok := Get(v.listPanelID()); ok {
-				el.ScrollIntoView()
-			}
-		})
-		titleContainer.Child(back)
-	}
 	titleContainer.Child(Div().Set(clsTitle.AsAttr()).
 		Child(H1().Text(v.Title)))
 	articleCont.Child(titleContainer)
