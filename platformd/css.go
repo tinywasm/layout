@@ -25,20 +25,22 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.As(style.Panel),
 			style.Pad(style.Space2),
 		).
-		// The drawer's head: identity chrome that has no header to live in on a
-		// phone, and rides above the rail on a wide screen.
-		Part(widget.Part("drawer-head"),
+		// The drawer's head. It exists on a phone, where there is no header for
+		// identity chrome to live in, and on a wide screen only while the rail
+		// is expanded — squeezed into a 57px rail it wraps into nonsense.
+		OnlyOn(css.Mobile, widget.Part("drawer-head"),
 			style.Stack(style.Space1),
 			style.KeepSize(),
 			style.Pad(style.Space2),
 			style.As(style.Inset),
 			style.Round(style.RadiusMd),
 		).
-		Part(widget.Part("app-name"),
+		OnlyOn(css.Mobile, widget.Part("app-name"),
+			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
 			style.FontWeight(style.WeightBold),
 		).
-		Part(widget.Part("drawer-actions"),
+		OnlyOn(css.Mobile, widget.Part("drawer-actions"),
 			style.Row(style.Space1),
 		).
 		Part(widget.Part("user-block"),
@@ -157,6 +159,23 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("nav-link"),
 			style.Row(style.Space2),
 			style.Pad(style.Space2),
+		).
+		// The head rides along with the expansion: the theme toggle and the user
+		// are reachable on a wide screen the moment the rail opens.
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-head"),
+			style.Stack(style.Space1),
+			style.KeepSize(),
+			style.Pad(style.Space2),
+			style.As(style.Inset),
+			style.Round(style.RadiusMd),
+		).
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("app-name"),
+			style.Row(style.SpaceNone),
+			style.FontSize(style.TextBase),
+			style.FontWeight(style.WeightBold),
+		).
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-actions"),
+			style.Row(style.Space1),
 		).
 		// ── mobile-only chrome ────────────────────────────────────────────────
 		// No header on a phone: the module brings its own title and the chrome
