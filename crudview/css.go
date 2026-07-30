@@ -39,6 +39,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Round(style.RadiusMd),
 		).
 		Part(widget.Part("aside"),
+			style.Anchor(),
 			style.Stack(style.Space1),
 			style.As(style.Panel),
 			style.Pad(style.Space1),
@@ -94,6 +95,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Round(style.RadiusMd),
 			style.Pad(style.Space3),
 			style.Width(style.Full),
+			style.CenterContent(),
 		).
 		Part(widget.Part("action-new"),
 			style.As(style.Primary),
@@ -133,6 +135,19 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.MasterDetail(style.Most),
 			style.Pad(style.SpaceNone),
 		).
+		// On a phone the action is a floating square pinned to the list's corner
+		// instead of a bar across the bottom: the list keeps the whole panel and
+		// the button matches the hamburger it shares the screen with.
+		On(css.Mobile, widget.Part("action"),
+			style.Docked(style.SideEnd, style.Space4),
+			style.Width(style.Content),
+			style.Pad(style.Space2),
+			style.Round(style.RadiusMd),
+			style.Raise(style.Floating),
+			style.CenterContent(),
+		).
+		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
+		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
 		Part(widget.Part("delconfirm-mount"),
 			style.KeepSize(),
 		).
