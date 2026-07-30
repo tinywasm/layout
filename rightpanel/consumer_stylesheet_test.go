@@ -1,6 +1,6 @@
 //go:build !wasm
 
-package crudview
+package rightpanel
 
 import (
 	"strings"
@@ -8,25 +8,27 @@ import (
 
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/html"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/model"
 )
 
-func TestConsumer_StylesheetAsserts(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
-	v := &CrudView{
-		Title:     "CRUD",
-		Presenter: p,
-		Form:      html.Div(),
-	}
-	v.Init(&fakeCtx{})
-	_ = v.Reload()
-	v.composing.Set(true) // Ensure data-open renders as true
+type mockModule struct {
+	id string
+}
 
-	cssStr := v.RenderCSS().String()
+func (m *mockModule) ModelName() string { return m.id }
+
+func TestRightPanel_StylesheetAsserts(t *testing.T) {
+	r := &RightPanel{
+		Module:        &mockModule{id: "test-module"},
+		Title:         "Test Title",
+		Head:          html.Div(),
+		HeadControls:  html.Div(),
+		Article:       html.Div(),
+		AsideControls: html.Div(),
+		Aside:         html.Div(),
+	}
+
+	sheet := r.RenderSheet()
+	cssStr := r.RenderCSS().String()
 
 	// 1. Check "!important"
 	if fmt.Contains(cssStr, "!important") {
@@ -39,17 +41,8 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 		t.Errorf("expected stylesheet to declare layers in order %q", expectedLayers)
 	}
 
-	// 3. Extract markup and match classes starting with "crudview"
-	html1 := v.Render().String()
-
-	vFull := &CrudView{Title: "Full", Form: html.Div()}
-	vFull.Init(&fakeCtx{})
-	html2 := vFull.Render().String()
-
-	// Manually render delete confirmation content because ModalDialog doesn't render it in hidden/initial state
-	confirmHTML := v.renderDeleteConfirm().String()
-
-	allHTML := html1 + " " + html2 + " " + confirmHTML
+	// 3. Extract markup and match classes starting with "rp"
+	allHTML := r.Render().String()
 
 	// Extract classes from HTML
 	importMatches := func() map[string]bool {
@@ -66,7 +59,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 				clsGroup := allHTML[start:end]
 				// split by space in case of multiple classes
 				for _, cls := range strings.Fields(clsGroup) {
-					if strings.HasPrefix(cls, "crudview") {
+					if strings.HasPrefix(cls, "rp") {
 						classes[cls] = true
 					}
 				}
@@ -78,7 +71,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	// Extract classes from CSS
 	cssClasses := func() map[string]bool {
 		classes := make(map[string]bool)
-		// We search for class selectors: e.g. .crudview or .crudview__something
+		// We search for class selectors: e.g. .rp or .rp__something
 		for i := 0; i < len(cssStr); i++ {
 			if cssStr[i] == '.' {
 				start := i + 1
@@ -90,7 +83,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 					end++
 				}
 				cls := cssStr[start:end]
-				if strings.HasPrefix(cls, "crudview") {
+				if strings.HasPrefix(cls, "rp") {
 					classes[cls] = true
 				}
 			}
@@ -113,7 +106,6 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	}
 
 	// 4. State-attribute parity
-	sheet := v.RenderSheet()
 	for _, kv := range sheet.StateAttrs() {
 		want := kv.Key + "='" + kv.Value + "'"
 		if !fmt.Contains(allHTML, want) {

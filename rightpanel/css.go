@@ -8,8 +8,8 @@ import (
 	"github.com/tinywasm/widget/style"
 )
 
-// RenderCSS implements visual contract for rightpanel layout.
-func (r *RightPanel) RenderCSS() *css.Stylesheet {
+// RenderSheet returns the style Sheet containing the rules for rightpanel.
+func (r *RightPanel) RenderSheet() *style.Sheet {
 	return style.For(r).
 		Root(
 			style.Stack(style.SpaceNone),
@@ -57,6 +57,10 @@ func (r *RightPanel) RenderCSS() *css.Stylesheet {
 			style.Pad(style.Space2),
 			style.Scroll(),
 			style.Fill(),
-		).
-		Stylesheet()
+		)
+}
+
+// RenderCSS implements visual contract for rightpanel layout.
+func (r *RightPanel) RenderCSS() *css.Stylesheet {
+	return r.RenderSheet().Stylesheet()
 }

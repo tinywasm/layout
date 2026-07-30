@@ -1,55 +1,50 @@
 //go:build !wasm
 
-package crudview
+package platformd
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/html"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/model"
+	"github.com/tinywasm/svg"
+	. "github.com/tinywasm/fmt"
 )
 
-func TestConsumer_StylesheetAsserts(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
-	v := &CrudView{
-		Title:     "CRUD",
-		Presenter: p,
-		Form:      html.Div(),
+func TestPlatform_StylesheetAsserts(t *testing.T) {
+	p := &Platform{
+		AppName: "Test App",
+		Modules: []UIModule{
+			&mockModule{id: "mod1", label: "Module 1", icon: svg.Icon("home")},
+			&mockModule{id: "mod2", label: "Module 2", icon: svg.Icon("info")},
+		},
 	}
-	v.Init(&fakeCtx{})
-	_ = v.Reload()
-	v.composing.Set(true) // Ensure data-open renders as true
+	p.Init(NilCtx())
 
-	cssStr := v.RenderCSS().String()
+	// Queue notifications of all types to ensure variant classes render
+	p.Notify(Msg.Info, "info msg", 0)
+	p.Notify(Msg.Success, "success msg", 0)
+	p.Notify(Msg.Warning, "warning msg", 0)
+	p.Notify(Msg.Error, "error msg", 0)
+
+	// Set menuOpen to true so that data-open attribute renders in markup
+	p.menuOpen.Set(true)
+
+	sheet := p.RenderSheet()
+	cssStr := p.RenderCSS().String()
 
 	// 1. Check "!important"
-	if fmt.Contains(cssStr, "!important") {
+	if Contains(cssStr, "!important") {
 		t.Error("stylesheet contains forbidden !important directive")
 	}
 
 	// 2. Check @layer order
 	expectedLayers := "@layer tokens, primitives, widgets, states;"
-	if !fmt.Contains(cssStr, expectedLayers) {
+	if !Contains(cssStr, expectedLayers) {
 		t.Errorf("expected stylesheet to declare layers in order %q", expectedLayers)
 	}
 
-	// 3. Extract markup and match classes starting with "crudview"
-	html1 := v.Render().String()
-
-	vFull := &CrudView{Title: "Full", Form: html.Div()}
-	vFull.Init(&fakeCtx{})
-	html2 := vFull.Render().String()
-
-	// Manually render delete confirmation content because ModalDialog doesn't render it in hidden/initial state
-	confirmHTML := v.renderDeleteConfirm().String()
-
-	allHTML := html1 + " " + html2 + " " + confirmHTML
+	// 3. Extract markup and match classes starting with "pd"
+	allHTML := p.Render().String()
 
 	// Extract classes from HTML
 	importMatches := func() map[string]bool {
@@ -66,7 +61,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 				clsGroup := allHTML[start:end]
 				// split by space in case of multiple classes
 				for _, cls := range strings.Fields(clsGroup) {
-					if strings.HasPrefix(cls, "crudview") {
+					if strings.HasPrefix(cls, "pd") {
 						classes[cls] = true
 					}
 				}
@@ -78,7 +73,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	// Extract classes from CSS
 	cssClasses := func() map[string]bool {
 		classes := make(map[string]bool)
-		// We search for class selectors: e.g. .crudview or .crudview__something
+		// We search for class selectors: e.g. .pd or .pd__something
 		for i := 0; i < len(cssStr); i++ {
 			if cssStr[i] == '.' {
 				start := i + 1
@@ -90,7 +85,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 					end++
 				}
 				cls := cssStr[start:end]
-				if strings.HasPrefix(cls, "crudview") {
+				if strings.HasPrefix(cls, "pd") {
 					classes[cls] = true
 				}
 			}
@@ -113,10 +108,9 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	}
 
 	// 4. State-attribute parity
-	sheet := v.RenderSheet()
 	for _, kv := range sheet.StateAttrs() {
 		want := kv.Key + "='" + kv.Value + "'"
-		if !fmt.Contains(allHTML, want) {
+		if !Contains(allHTML, want) {
 			t.Errorf("stylesheet selects on %q but no element in the markup ever writes it", want)
 		}
 	}
