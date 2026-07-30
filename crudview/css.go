@@ -52,9 +52,15 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// The <article> between the title and the fields carries no style of
 		// its own, so without Fill() it stops at its content and the fields
 		// card floats halfway up the blue panel.
+		// The same frame the aside wears: a light panel with a sliver of padding
+		// around the sunken card inside it. Without it the form area reads as a
+		// slab dropped on the blue while the list next to it is framed.
 		Part(widget.Part("article"),
 			style.Stack(style.SpaceNone),
 			style.Fill(),
+			style.As(style.Panel),
+			style.Round(style.RadiusMd),
+			style.Pad(style.Space1),
 		).
 		Part(widget.Part("list"),
 			style.As(style.Inset),
@@ -114,6 +120,14 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Round(style.RadiusMd),
 			style.KeepSize(),
 		).
+		// The magnifier reads as the card's button, not as decoration.
+		Part(widget.Part("search-icon"),
+			style.As(style.Primary),
+			style.Round(style.RadiusSm),
+			style.Pad(style.Space2),
+			style.CenterContent(),
+			style.KeepSize(),
+		).
 		// The input takes what the icon leaves, so the field is the whole card
 		// instead of a short box with dead space beside it.
 		Part(widget.Part("search-input"),
@@ -135,11 +149,14 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.MasterDetail(style.Most),
 			style.Pad(style.SpaceNone),
 		).
-		// On a phone the action is a floating square pinned to the list's corner
-		// instead of a bar across the bottom: the list keeps the whole panel and
-		// the button matches the hamburger it shares the screen with.
+		// On a phone the action is a floating square instead of a bar across the
+		// bottom: the list keeps the whole panel and the button matches the
+		// hamburger it shares the screen with. Viewport scope, not Parent — it
+		// has to stay reachable on the detail panel too, where its job is to
+		// cancel. It still disappears with the module: a fixed descendant of a
+		// display:none panel is not rendered, so no other route sees it.
 		On(css.Mobile, widget.Part("action"),
-			style.Docked(style.EdgeBottom, style.SideEnd, style.Space4),
+			style.Docked(style.Viewport, style.EdgeBottom, style.SideEnd, style.Space4),
 			style.Width(style.Content),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusMd),

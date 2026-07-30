@@ -30,6 +30,7 @@ var (
 	clsListaBox               = NameCrudView.Class("list")
 	clsAsideSearch            = NameCrudView.Class("search")
 	clsSearchInput            = NameCrudView.Class("search-input")
+	clsSearchIcon             = NameCrudView.Class("search-icon")
 	clsIcon16                 = NameCrudView.Class("icon")
 	clsDelConfirmActions      = NameCrudView.Class("delconfirm-actions")
 	clsDelConfirmBtn          = NameCrudView.Class("delconfirm-btn")
@@ -417,7 +418,7 @@ func (v *CrudView) Render() *Element {
 		// label+input pill sits directly in the card (no extra inner layer —
 		// see the RenderCSS comment on clsAsideSearch).
 		searchCard := Div().Set(clsAsideSearch.AsAttr())
-		searchCard.Child(Label().Child(renderIcon(iconCrudSearch)))
+		searchCard.Child(Label().Set(clsSearchIcon.AsAttr()).Child(renderIcon(iconCrudSearch)))
 
 		placeholder := v.SearchPlaceholder
 		if placeholder == "" {
