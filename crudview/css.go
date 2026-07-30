@@ -44,6 +44,13 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Fill(),
 			style.Stack(style.SpaceNone),
 		).
+		// The <article> between the title and the fields carries no style of
+		// its own, so without Fill() it stops at its content and the fields
+		// card floats halfway up the blue panel.
+		Part(widget.Part("article"),
+			style.Stack(style.SpaceNone),
+			style.Fill(),
+		).
 		Part(widget.Part("list"),
 			style.As(style.Inset),
 			style.Scroll(),
@@ -51,6 +58,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		).
 		Part(widget.Part("actions"),
 			style.Row(style.Space1),
+			style.KeepSize(),
 		).
 		Part(widget.Part("title"),
 			style.Row(style.Space1),
@@ -66,9 +74,13 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		Part(widget.Part("icon"),
 			style.IconBox(style.IconMd),
 		).
+		// The primary action spans the column, mirroring the search bar above
+		// the list rather than sitting as a stray square beside it.
 		Part(widget.Part("action"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
+			style.Pad(style.Space2),
+			style.Width(style.Full),
 		).
 		Part(widget.Part("action-new"),
 			style.As(style.Primary),
@@ -78,8 +90,14 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.RevealedBy(widget.Open),
 			style.IconBox(style.IconMd),
 		).
+		// The search bar is a card in its own right, the same height treatment
+		// the action bar gets at the other end of the column.
 		Part(widget.Part("search"),
 			style.Row(style.Space1),
+			style.As(style.Panel),
+			style.Pad(style.Space2),
+			style.Round(style.RadiusMd),
+			style.KeepSize(),
 		).
 		Part(widget.Part("delconfirm-mount"),
 			style.KeepSize(),

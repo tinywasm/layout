@@ -94,7 +94,14 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		Part(widget.Part("nav-icon"),
 			style.IconBox(style.IconLg),
 		).
-		Part(widget.Part("link-text"),
+		// The rail is icon-only: at RailNarrow a label does not fit, and forcing
+		// it in is what widened the rail past its token. The mobile drawer is
+		// two thirds of the viewport, so there the label rides along.
+		// Row() is not decoration here: OnlyOn hides the part outside the device
+		// and only a flow puts a display back on it inside, so a rule carrying
+		// nothing but FontSize would stay hidden everywhere.
+		OnlyOn(css.Mobile, widget.Part("link-text"),
+			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
 		).
 		// The active route reads as "current", the same vocabulary the rail and

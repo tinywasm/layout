@@ -42,3 +42,12 @@ require (
 //
 // TEMP: local view checkout — conformance.Driver gained New/Edit/FocusedFieldID behavior.
 // replace github.com/tinywasm/view => ../view
+
+// TEMP: local css checkout — UA margin/list reset in @layer tokens (pending release).
+replace github.com/tinywasm/css => ../css
+
+// TEMP: local components checkout — targetlist row on one line (pending release).
+replace github.com/tinywasm/components => ../components
+
+// TEMP: local widget checkout — Grow() primitive (pending release).
+replace github.com/tinywasm/widget => ../widget

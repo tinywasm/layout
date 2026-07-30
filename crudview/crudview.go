@@ -21,6 +21,7 @@ var (
 	clsAsideContend           = NameCrudView.Class("aside-content")
 	clsTitleContainer         = NameCrudView.Class("title")
 	clsTitle                  = NameCrudView.Class("title-text")
+	clsArticle                = NameCrudView.Class("article")
 	clsBoxContent             = NameCrudView.Class("fields")
 	clsAsideActions           = NameCrudView.Class("actions")
 	clsAsideWrap              = NameCrudView.Class("aside")
@@ -398,7 +399,7 @@ func (v *CrudView) Render() *Element {
 	if v.Form != nil {
 		boxContent.Child(v.Form)
 	}
-	articleCont.Child(Article().Child(boxContent))
+	articleCont.Child(Article().Set(clsArticle.AsAttr()).Child(boxContent))
 
 	root.Child(articleCont)
 
