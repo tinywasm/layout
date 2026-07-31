@@ -36,7 +36,7 @@ func (m mod) ModelName() string { return m.name }
 func (m mod) Label() string     { return m.label }
 func (m mod) Icon() svg.Icon    { return m.icon }
 
-// deviceModel is a model with real widgets (input.Text() is a model.Kind).
+// deviceModel is a model built from real widgets (input.Text() is a model.Kind).
 // All three fields are NotNull (a device with a blank id/name/ip isn't a
 // valid record) and ip uses the dedicated input.IP() widget — not
 // input.Text() — so a malformed address fails Form.Validate() instead of
@@ -198,8 +198,11 @@ func (m mod) View() Component {
 		return cv
 	}
 
+	// No Module: inside platformd the SECTION of the deck owns the route id, and
+	// RightPanel stamps Module.ModelName() on its own root — two nodes, one id,
+	// which is what Get(moduleID) resolves for the scroll. Title carries the
+	// label, which is all this panel needs from the module.
 	return &rightpanel.RightPanel{
-		Module:  m,
 		Title:   m.label,
 		Article: Div().Text("Contenido de " + m.label),
 	}
@@ -220,10 +223,15 @@ func (demoIdentity) UserRoles() []string {
 
 func main() {
 	p := &platformd.Platform{
-		AppName:     "Demo Platform",
-		DefaultID:   "crud",
-		User:        demoIdentity{},
-		UserActions: &themetoggle.ThemeToggle{},
+		AppName:   "Demo Platform",
+		DefaultID: "crud",
+		User:      demoIdentity{},
+		// A factory, not an instance: the shell renders one menu for the header
+		// and one for the drawer, and a single component in both places would
+		// put one id on two nodes — the second copy inert.
+		UserActions: func() Component {
+			return &themetoggle.ThemeToggle{}
+		},
 		CanView: func(id string) bool {
 			return id != "hidden"
 		},

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/html"
 	"github.com/tinywasm/svg"
@@ -25,7 +26,7 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 	p := &Platform{
 		AppName:     "Test App",
 		User:        testIdentity{},
-		UserActions: html.Div().Text("actions"),
+		UserActions: func() dom.Component { return html.Div().Text("actions") },
 		Modules: []UIModule{
 			&mockModule{id: "mod1", label: "Module 1", icon: svg.Icon("home")},
 			&mockModule{id: "mod2", label: "Module 2", icon: svg.Icon("info")},

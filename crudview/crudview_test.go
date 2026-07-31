@@ -5,11 +5,11 @@ package crudview
 import (
 	"testing"
 
-	. "github.com/tinywasm/html"
 	. "github.com/tinywasm/fmt"
+	. "github.com/tinywasm/html"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/model"
 )
 
 func TestCrudView_Render_Basic(t *testing.T) {
@@ -42,9 +42,9 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 		func() model.ModelSlice { return &DeviceList{} })
 
 	v := &CrudView{
-		Title: "CRUD with List",
+		Title:     "CRUD with List",
 		Presenter: p,
-		OnNew: func() {},
+		OnNew:     func() {},
 	}
 	v.Init(&mockCtx{})
 
@@ -78,4 +78,5 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 }
 
 type mockCtx struct{}
+
 func (m *mockCtx) OnCleanup(fn func()) {}

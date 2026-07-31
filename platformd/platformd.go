@@ -102,7 +102,11 @@ type Platform struct {
 
 	// UserActions slot — shown at the header RIGHT, next to the work-area name
 	// (e.g. the light/dark theme toggle). Optional.
-	UserActions Component
+	// A factory, not a Component: the shell renders one menu per surface and a
+	// single element cannot have two parents. Passing one instance put the same
+	// element in both menus, which rendered twice with one id and left the copy
+	// in the drawer inert.
+	UserActions func() Component
 
 	// Modules registered in order — appearance order in the nav rail.
 	Modules []UIModule
@@ -183,12 +187,16 @@ func (p *Platform) fallback() {
 // A fresh instance per call on purpose — the shell renders one for the header
 // and one for the drawer, and a single *UserMenu cannot have two parents.
 func (p *Platform) userMenu() Component {
+	var actions Component
+	if p.UserActions != nil {
+		actions = p.UserActions()
+	}
 	return &usermenu.UserMenu{
 		Name:     p.User.UserName(),
 		Avatar:   p.User.UserAvatar(),
 		Roles:    p.User.UserRoles(),
 		Fallback: IconUser,
-		Actions:  p.UserActions,
+		Actions:  actions,
 	}
 }
 

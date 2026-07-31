@@ -3,10 +3,10 @@
 package crudview
 
 import (
-	"testing"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/model"
+	"testing"
 )
 
 func TestCrudView_Wasm_Flow(t *testing.T) {
@@ -30,7 +30,7 @@ func TestCrudView_Wasm_Flow(t *testing.T) {
 		view.WithDeleteOp("device_delete"))
 
 	v := &CrudView{
-		Title: "Wasm Test",
+		Title:     "Wasm Test",
 		Presenter: p,
 	}
 	v.Init(&mockCtxWasm{})
@@ -63,4 +63,5 @@ func TestCrudView_Wasm_Flow(t *testing.T) {
 }
 
 type mockCtxWasm struct{}
+
 func (m *mockCtxWasm) OnCleanup(fn func()) {}

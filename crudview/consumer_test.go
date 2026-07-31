@@ -57,12 +57,12 @@ type DeviceList struct {
 	Items []*Device
 }
 
-func (l *DeviceList) IsNil() bool { return l == nil }
+func (l *DeviceList) IsNil() bool                      { return l == nil }
 func (l *DeviceList) DecodeFields(r model.FieldReader) {}
-func (l *DeviceList) Schema() []model.Field { return nil }
-func (l *DeviceList) Pointers() []any { return nil }
-func (l *DeviceList) Len() int { return len(l.Items) }
-func (l *DeviceList) At(i int) model.Fielder { return l.Items[i] }
+func (l *DeviceList) Schema() []model.Field            { return nil }
+func (l *DeviceList) Pointers() []any                  { return nil }
+func (l *DeviceList) Len() int                         { return len(l.Items) }
+func (l *DeviceList) At(i int) model.Fielder           { return l.Items[i] }
 func (l *DeviceList) Append() model.Fielder {
 	d := &Device{}
 	l.Items = append(l.Items, d)
@@ -105,15 +105,15 @@ type fakeNoWidgetsPresenter struct {
 	record model.Model
 }
 
-func (f *fakeNoWidgetsPresenter) Title() string             { return "No Widgets" }
-func (f *fakeNoWidgetsPresenter) SearchPlaceholder() string { return "Search" }
-func (f *fakeNoWidgetsPresenter) Record() model.Model       { return f.record }
-func (f *fakeNoWidgetsPresenter) Items() []view.Item        { return nil }
+func (f *fakeNoWidgetsPresenter) Title() string                  { return "No Widgets" }
+func (f *fakeNoWidgetsPresenter) SearchPlaceholder() string      { return "Search" }
+func (f *fakeNoWidgetsPresenter) Record() model.Model            { return f.record }
+func (f *fakeNoWidgetsPresenter) Items() []view.Item             { return nil }
 func (f *fakeNoWidgetsPresenter) Filter(term string) []view.Item { return nil }
-func (f *fakeNoWidgetsPresenter) Reload() error             { return nil }
-func (f *fakeNoWidgetsPresenter) Selected() string          { return "" }
-func (f *fakeNoWidgetsPresenter) Select(id string) model.Model { return nil }
-func (f *fakeNoWidgetsPresenter) Deselect()                 {}
+func (f *fakeNoWidgetsPresenter) Reload() error                  { return nil }
+func (f *fakeNoWidgetsPresenter) Selected() string               { return "" }
+func (f *fakeNoWidgetsPresenter) Select(id string) model.Model   { return nil }
+func (f *fakeNoWidgetsPresenter) Deselect()                      {}
 
 // Case 1: New with a model without widgets fails
 func TestConsumer_NewNoWidgets(t *testing.T) {

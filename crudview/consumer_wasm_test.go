@@ -5,11 +5,11 @@ package crudview
 import (
 	"testing"
 
-	"github.com/tinywasm/form"
 	"github.com/tinywasm/fmt"
+	"github.com/tinywasm/form"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/model"
 )
 
 type mockCtxWasmConsumer struct{}
@@ -24,8 +24,8 @@ func TestConsumer_Wasm_Render(t *testing.T) {
 		view.WithSearchPlaceholder("Custom Search..."))
 
 	cfg := Config{
-		ParentID:          "my-wasm-id",
-		Presenter:         p,
+		ParentID:  "my-wasm-id",
+		Presenter: p,
 	}
 	v, err := New(cfg)
 	if err != nil {

@@ -60,7 +60,12 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		).
 		// Scroll(), not Fill(): a module taller than the viewport has to scroll
 		// inside its own page of the deck. Scroll() is Fill() plus overflow-y.
+		// Anchor so a module's own floating chrome — a title, an action button —
+		// resolves against ITS page of the deck. Against the viewport it
+		// survived the route change: every panel stays mounted in a deck, so the
+		// crud module's title floated over every other module.
 		Part(widget.Part("panel"),
+			style.Anchor(),
 			style.Stack(style.SpaceNone),
 			style.Scroll(),
 		).

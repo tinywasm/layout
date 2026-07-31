@@ -8,9 +8,9 @@ import (
 
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/html"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/model"
 )
 
 func TestConsumer_StylesheetAsserts(t *testing.T) {

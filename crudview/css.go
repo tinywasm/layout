@@ -39,7 +39,6 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Round(style.RadiusMd),
 		).
 		Part(widget.Part("aside"),
-			style.Anchor(),
 			style.Stack(style.Space1),
 			style.As(style.Panel),
 			style.Pad(style.Space1),
@@ -150,7 +149,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// cancel. It still disappears with the module: a fixed descendant of a
 		// display:none panel is not rendered, so no other route sees it.
 		On(css.Mobile, widget.Part("action"),
-			style.Docked(style.Viewport, style.EdgeBottom, style.SideEnd, style.Space4),
+			style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.Space4),
 			style.Width(style.Content),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusMd),
@@ -167,7 +166,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.FontWeight(style.WeightBold),
 		).
 		On(css.Mobile, widget.Part("title"),
-			style.Docked(style.Viewport, style.EdgeTop, style.SideStart, style.Space4),
+			style.Docked(style.Parent, style.EdgeTop, style.SideStart, style.Space4),
 			style.Row(style.Space1),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
