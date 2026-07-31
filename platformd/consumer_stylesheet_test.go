@@ -14,9 +14,8 @@ import (
 // testIdentity is the smallest thing that satisfies the Identity contract.
 type testIdentity struct{}
 
-func (testIdentity) UserName() string   { return "Tester" }
-func (testIdentity) UserArea() string   { return "QA" }
-func (testIdentity) UserIcon() svg.Icon { return IconUser }
+func (testIdentity) UserName() string { return "Tester" }
+func (testIdentity) UserArea() string { return "QA" }
 
 func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// Identity and the actions slot are both supplied: the class-parity

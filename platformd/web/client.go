@@ -211,9 +211,8 @@ func (m mod) View() Component {
 // contract directly.
 type demoIdentity struct{}
 
-func (demoIdentity) UserName() string   { return "Thor Odinson" }
-func (demoIdentity) UserArea() string   { return "Operaciones" }
-func (demoIdentity) UserIcon() svg.Icon { return platformd.IconUser }
+func (demoIdentity) UserName() string { return "Thor Odinson" }
+func (demoIdentity) UserArea() string { return "Operaciones" }
 
 func main() {
 	p := &platformd.Platform{

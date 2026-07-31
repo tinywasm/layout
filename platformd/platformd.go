@@ -74,17 +74,17 @@ func (p *Platform) WidgetKind() widget.Kind { return widget.Menu }
 // application — supplies an implementation; the platform neither knows nor
 // cares where the values come from.
 //
-// Every method has a place in the chrome: the name and the area are the
+// It asks for facts, not for presentation: the name and the area are the
 // header's outer thirds on a wide screen and the drawer's first entry on a
-// phone, and the icon is what that entry shows while the rail is collapsed.
+// phone. The glyph that stands for the user in the collapsed rail is IconUser,
+// which this package owns — an authentication package has no business choosing
+// a sprite, and asking it to would put a rendering decision behind a login.
 type Identity interface {
 	// UserName is who is logged in.
 	UserName() string
 	// UserArea is the area they are working in — a department, a tenant, a
 	// role. It is NOT the current route: the module already names itself.
 	UserArea() string
-	// UserIcon is the glyph that stands for them in the collapsed rail.
-	UserIcon() svg.Icon
 }
 
 // Platform is the typed skeleton root.
@@ -320,7 +320,7 @@ func (p *Platform) Render() *Element {
 	// icons and shoved them down, then took it away again.
 	if p.User != nil {
 		head := Div().Set(clsDrawerHead.AsAttr())
-		head.Child(p.User.UserIcon().Render(string(ClsNavIcon)))
+		head.Child(IconUser.Render(string(ClsNavIcon)))
 		head.Child(Div().Set(clsDrawerUser.AsAttr()).Text(p.User.UserName()))
 		head.Child(Div().Set(clsDrawerArea.AsAttr()).Text(p.User.UserArea()))
 		drawerPanel.Child(head)
