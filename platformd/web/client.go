@@ -211,15 +211,19 @@ func (m mod) View() Component {
 // contract directly.
 type demoIdentity struct{}
 
-func (demoIdentity) UserName() string { return "Thor Odinson" }
-func (demoIdentity) UserArea() string { return "Operaciones" }
+func (demoIdentity) UserName() string   { return "Thor Odinson" }
+func (demoIdentity) UserAvatar() string { return "" } // sin imagen: cae al glifo
+func (demoIdentity) UserRoles() []string {
+	// Tres, para que el caso N se vea en el demo.
+	return []string{"Administrador", "Operaciones", "Soporte"}
+}
 
 func main() {
 	p := &platformd.Platform{
-		AppName:       "Demo Platform",
-		DefaultID:     "crud",
-		User:          demoIdentity{},
-		HeaderActions: &themetoggle.ThemeToggle{},
+		AppName:     "Demo Platform",
+		DefaultID:   "crud",
+		User:        demoIdentity{},
+		UserActions: &themetoggle.ThemeToggle{},
 		CanView: func(id string) bool {
 			return id != "hidden"
 		},

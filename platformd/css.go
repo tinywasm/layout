@@ -25,39 +25,6 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.As(style.Panel),
 			style.Pad(style.Space2),
 		).
-		// Shaped exactly like a nav item and ALWAYS present: the icon holds the
-		// row open at rail width, and only the text arrives when the rail
-		// expands. Revealing the whole entry on hover inserted a fourth element
-		// above three icons and pushed them down.
-		Part(widget.Part("drawer-head"),
-			style.Row(style.Space1),
-			style.Pad(style.Space2),
-			style.KeepSize(),
-			style.CenterContent(),
-			style.Glyph(style.Primary),
-		).
-		Part(widget.Part("drawer-actions"),
-			style.Row(style.Space1),
-			style.KeepSize(),
-			style.CenterContent(),
-		).
-		// Text with no icon beside it: it can only exist where the panel opens
-		// wholesale, which is the phone drawer.
-		OnlyOn(css.Mobile, widget.Part("app-name"),
-			style.Row(style.SpaceNone),
-			style.Pad(style.Space2),
-			style.FontSize(style.TextBase),
-			style.FontWeight(style.WeightBold),
-		).
-		// The header's outer thirds. Both are plain text about the login, never
-		// about the route. The drawer carries its own pair of parts: the same
-		// name in both places would mean one visibility rule for two jobs, and
-		// the drawer's copy would never hide in the collapsed rail.
-		Part(widget.Part("user-name"),
-			style.Row(style.Space1),
-			style.FontSize(style.TextBase),
-			style.FontWeight(style.WeightBold),
-		).
 		// Fill() here is what pushes header-right to the far edge: it grows to
 		// take the free space between the two blocks.
 		Part(widget.Part("msg-slot"),
@@ -75,10 +42,6 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		Part(widget.Part("header-right"),
 			style.Row(style.Space2),
 			style.KeepSize(),
-		).
-		Part(widget.Part("area"),
-			style.FontSize(style.TextBase),
-			style.As(style.Subtle),
 		).
 		// The rail sits at the inline-end edge; the stage takes everything else.
 		// Below the stage's minimum width the two reflow into one column with no
@@ -110,6 +73,22 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.As(style.Panel),
 			style.Fill(),
 			style.Grow(),
+		).
+		// The drawer's copy of the identity exists only where there is no header
+		// to hold one. Two visible at once is the redundancy this whole change
+		// set out to remove.
+		OnlyOn(css.Mobile, widget.Part("drawer-identity"),
+			style.Row(style.SpaceNone),
+			style.KeepSize(),
+		).
+		// Text with no icon beside it: it can only exist where the panel opens
+		// wholesale, which is the phone drawer. No hover rule reveals it on a
+		// wide screen, on purpose.
+		OnlyOn(css.Mobile, widget.Part("app-name"),
+			style.Row(style.SpaceNone),
+			style.Pad(style.Space2),
+			style.FontSize(style.TextBase),
+			style.FontWeight(style.WeightBold),
 		).
 		Part(widget.Part("drawer-panel"),
 			style.Stack(style.Space1),
@@ -146,21 +125,17 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// Row() is not decoration here: OnlyOn hides the part outside the device
 		// and only a flow puts a display back on it inside, so a rule carrying
 		// nothing but FontSize would stay hidden everywhere.
+		// Left-aligned on a phone too: the drawer shows icon and label together,
+		// which is the same row the expanded rail draws, so it aligns the same
+		// way. Centring is only right for a lone icon.
+		On(css.Mobile, widget.Part("nav-link"),
+			style.Row(style.Space2),
+			style.Pad(style.Space2),
+			style.StartContent(),
+		).
 		OnlyOn(css.Mobile, widget.Part("link-text"),
 			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
-		).
-		// Same rule as a nav label: absent while the rail is a column of icons,
-		// present once it opens. The row's height never changes, only its width.
-		OnlyOn(css.Mobile, widget.Part("drawer-user"),
-			style.Row(style.SpaceNone),
-			style.FontSize(style.TextBase),
-			style.FontWeight(style.WeightBold),
-		).
-		OnlyOn(css.Mobile, widget.Part("drawer-area"),
-			style.Row(style.SpaceNone),
-			style.FontSize(style.TextXs),
-			style.As(style.Subtle),
 		).
 		// The active route reads as "current", the same vocabulary the rail and
 		// crudview's list rows share. It is a STATE, never a class.
@@ -200,23 +175,6 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Row(style.Space2),
 			style.Pad(style.Space2),
 			style.StartContent(),
-		).
-		// The head rides along with the expansion: the theme toggle and the user
-		// are reachable on a wide screen the moment the rail opens.
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-head"),
-			style.Row(style.Space2),
-			style.Pad(style.Space2),
-			style.StartContent(),
-		).
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-user"),
-			style.Row(style.SpaceNone),
-			style.FontSize(style.TextBase),
-			style.FontWeight(style.WeightBold),
-		).
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-area"),
-			style.Row(style.SpaceNone),
-			style.FontSize(style.TextXs),
-			style.As(style.Subtle),
 		).
 		// ── mobile-only chrome ────────────────────────────────────────────────
 		// No header on a phone: the module brings its own title and the chrome

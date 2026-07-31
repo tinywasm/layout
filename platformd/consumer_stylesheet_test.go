@@ -14,17 +14,18 @@ import (
 // testIdentity is the smallest thing that satisfies the Identity contract.
 type testIdentity struct{}
 
-func (testIdentity) UserName() string { return "Tester" }
-func (testIdentity) UserArea() string { return "QA" }
+func (testIdentity) UserName() string    { return "Tester" }
+func (testIdentity) UserAvatar() string  { return "" }
+func (testIdentity) UserRoles() []string { return []string{"QA", "Soporte"} }
 
 func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// Identity and the actions slot are both supplied: the class-parity
 	// assertion below is two-directional, so anything left nil would read as a
 	// stylesheet rule with no markup behind it.
 	p := &Platform{
-		AppName:       "Test App",
-		User:          testIdentity{},
-		HeaderActions: html.Div().Text("actions"),
+		AppName:     "Test App",
+		User:        testIdentity{},
+		UserActions: html.Div().Text("actions"),
 		Modules: []UIModule{
 			&mockModule{id: "mod1", label: "Module 1", icon: svg.Icon("home")},
 			&mockModule{id: "mod2", label: "Module 2", icon: svg.Icon("info")},

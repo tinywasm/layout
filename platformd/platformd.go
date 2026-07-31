@@ -3,6 +3,7 @@ package platformd
 import (
 	"sync"
 
+	"github.com/tinywasm/components/usermenu"
 	"github.com/tinywasm/layout"
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/widget"
@@ -16,34 +17,29 @@ import (
 const NamePlatform widget.Name = "pd"
 
 var (
-	clsRoot          = NamePlatform.Root()
-	clsHeader        = NamePlatform.Class("header")
-	clsUserName      = NamePlatform.Class("user-name")
-	clsDrawerUser    = NamePlatform.Class("drawer-user")
-	clsDrawerArea    = NamePlatform.Class("drawer-area")
-	clsDrawerPanel   = NamePlatform.Class("drawer-panel")
-	clsDrawerHead    = NamePlatform.Class("drawer-head")
-	clsAppName       = NamePlatform.Class("app-name")
-	clsDrawerActions = NamePlatform.Class("drawer-actions")
-	clsMsgSlot       = NamePlatform.Class("msg-slot")
-	clsMsg           = NamePlatform.Class("msg")
-	clsMsgInfo       = NamePlatform.Class("msg-info")
-	clsMsgSuccess    = NamePlatform.Class("msg-success")
-	clsMsgWarning    = NamePlatform.Class("msg-warning")
-	clsMsgError      = NamePlatform.Class("msg-error")
-	clsHeaderRight   = NamePlatform.Class("header-right")
-	clsArea          = NamePlatform.Class("area")
-	clsBody          = NamePlatform.Class("body")
-	clsStage         = NamePlatform.Class("stage")
-	clsPanel         = NamePlatform.Class("panel")
-	clsMenu          = NamePlatform.Class("menu")
-	clsNavbar        = NamePlatform.Class("navbar")
-	clsNavItem       = NamePlatform.Class("nav-item")
-	clsNavLink       = NamePlatform.Class("nav-link")
-	clsLinkText      = NamePlatform.Class("link-text")
-	ClsNavIcon       = NamePlatform.Class("nav-icon")
-	clsHamburger     = NamePlatform.Class("hamburger")
-	clsNavOverlay    = NamePlatform.Class("nav-overlay")
+	clsRoot           = NamePlatform.Root()
+	clsHeader         = NamePlatform.Class("header")
+	clsDrawerPanel    = NamePlatform.Class("drawer-panel")
+	clsAppName        = NamePlatform.Class("app-name")
+	clsDrawerIdentity = NamePlatform.Class("drawer-identity")
+	clsMsgSlot        = NamePlatform.Class("msg-slot")
+	clsMsg            = NamePlatform.Class("msg")
+	clsMsgInfo        = NamePlatform.Class("msg-info")
+	clsMsgSuccess     = NamePlatform.Class("msg-success")
+	clsMsgWarning     = NamePlatform.Class("msg-warning")
+	clsMsgError       = NamePlatform.Class("msg-error")
+	clsHeaderRight    = NamePlatform.Class("header-right")
+	clsBody           = NamePlatform.Class("body")
+	clsStage          = NamePlatform.Class("stage")
+	clsPanel          = NamePlatform.Class("panel")
+	clsMenu           = NamePlatform.Class("menu")
+	clsNavbar         = NamePlatform.Class("navbar")
+	clsNavItem        = NamePlatform.Class("nav-item")
+	clsNavLink        = NamePlatform.Class("nav-link")
+	clsLinkText       = NamePlatform.Class("link-text")
+	ClsNavIcon        = NamePlatform.Class("nav-icon")
+	clsHamburger      = NamePlatform.Class("hamburger")
+	clsNavOverlay     = NamePlatform.Class("nav-overlay")
 )
 
 const (
@@ -74,17 +70,21 @@ func (p *Platform) WidgetKind() widget.Kind { return widget.Menu }
 // application — supplies an implementation; the platform neither knows nor
 // cares where the values come from.
 //
-// It asks for facts, not for presentation: the name and the area are the
-// header's outer thirds on a wide screen and the drawer's first entry on a
-// phone. The glyph that stands for the user in the collapsed rail is IconUser,
-// which this package owns — an authentication package has no business choosing
-// a sprite, and asking it to would put a rendering decision behind a login.
+// It asks for facts, not for presentation. The glyph drawn when there is no
+// avatar is IconUser, which this package owns — an authentication package has
+// no business choosing a sprite, and asking it to would put a rendering
+// decision behind a login.
+//
+// Roles, plural, because they are plural: a user holds N of them and no
+// ordering exists to say which one matters. Asking for a single "area" forced
+// every implementation to pick arbitrarily, and that decision was invisible.
 type Identity interface {
 	// UserName is who is logged in.
 	UserName() string
-	// UserArea is the area they are working in — a department, a tenant, a
-	// role. It is NOT the current route: the module already names itself.
-	UserArea() string
+	// UserAvatar is the URL of their picture. Empty is normal and expected.
+	UserAvatar() string
+	// UserRoles are display names, not authorization codes. May be empty.
+	UserRoles() []string
 }
 
 // Platform is the typed skeleton root.
@@ -100,9 +100,9 @@ type Platform struct {
 	// the drawer's first entry are built from it.
 	User Identity
 
-	// HeaderActions slot — shown at the header RIGHT, next to the work-area name
+	// UserActions slot — shown at the header RIGHT, next to the work-area name
 	// (e.g. the light/dark theme toggle). Optional.
-	HeaderActions Component
+	UserActions Component
 
 	// Modules registered in order — appearance order in the nav rail.
 	Modules []UIModule
@@ -176,6 +176,22 @@ func (p *Platform) fallback() {
 }
 
 // Render builds the DOM tree (implements ViewRenderer).
+// userMenu adapts the Identity contract into the component's plain props. The
+// component must not know the contract: it lives below layout in the graph, and
+// typing Identity there would invert the dependency.
+//
+// A fresh instance per call on purpose — the shell renders one for the header
+// and one for the drawer, and a single *UserMenu cannot have two parents.
+func (p *Platform) userMenu() Component {
+	return &usermenu.UserMenu{
+		Name:     p.User.UserName(),
+		Avatar:   p.User.UserAvatar(),
+		Roles:    p.User.UserRoles(),
+		Fallback: IconUser,
+		Actions:  p.UserActions,
+	}
+}
+
 func (p *Platform) Render() *Element {
 	root := Div().Set(clsRoot.AsAttr())
 
@@ -189,10 +205,6 @@ func (p *Platform) Render() *Element {
 	// itself, and repeating that here says nothing new.
 	header := Header().Set(clsHeader.AsAttr())
 
-	if p.User != nil {
-		header.Child(Div().Set(clsUserName.AsAttr()).Text(p.User.UserName()))
-	}
-
 	msgSlot := Div().Set(clsMsgSlot.AsAttr()).ID("pd-msg-slot").
 		BindChildren(p.notifications)
 	// Because elementToHTML/SSR doesn't process "children" bindings, initial nodes must be manually added
@@ -203,7 +215,7 @@ func (p *Platform) Render() *Element {
 
 	right := Div().Set(clsHeaderRight.AsAttr())
 	if p.User != nil {
-		right.Child(Div().Set(clsArea.AsAttr()).Text(p.User.UserArea()))
+		right.Child(p.userMenu())
 	}
 
 	header.Child(right)
@@ -306,28 +318,24 @@ func (p *Platform) Render() *Element {
 	// inside the rail's flow instead, the rail would widen and push the stage.
 	drawerPanel := Div().Set(clsDrawerPanel.AsAttr())
 
-	// AppName only on a phone: the drawer opens wholesale there, so a line of
-	// text appearing costs nothing. In the collapsed rail it would have to
-	// materialise out of nowhere when the rail expands, and push everything
-	// under it down — the exact shift the user entry below is shaped to avoid.
+	// Only on a phone, and deliberately with no CueWithin to reveal it on a
+	// wide screen: the drawer opens wholesale on a phone so a line of text
+	// costs nothing, while in the collapsed rail it would have to materialise
+	// when the rail expands and push everything under it down.
 	if p.AppName != "" {
 		drawerPanel.Child(Div().Set(clsAppName.AsAttr()).Text(p.AppName))
 	}
 
-	// The user entry is ALWAYS here, icon and all, exactly like a nav item.
-	// Every platform behind a login has one, so it is not chrome that comes and
-	// goes: revealing it only on expansion inserted a fourth element above three
-	// icons and shoved them down, then took it away again.
+	// A second menu, for the phone: there is no header there to hold the first
+	// one. This costs nothing now that the contract returns strings — two
+	// elements built from the same facts, of which exactly one is ever visible.
+	// It was impossible while identity was a Component slot: one element has
+	// one parent.
+	// Wrapped in a part this package can switch off: the component's own class
+	// belongs to the component, and the shell needs somewhere to say "not on a
+	// wide screen, where the header already has one".
 	if p.User != nil {
-		head := Div().Set(clsDrawerHead.AsAttr())
-		head.Child(IconUser.Render(string(ClsNavIcon)))
-		head.Child(Div().Set(clsDrawerUser.AsAttr()).Text(p.User.UserName()))
-		head.Child(Div().Set(clsDrawerArea.AsAttr()).Text(p.User.UserArea()))
-		drawerPanel.Child(head)
-	}
-
-	if p.HeaderActions != nil {
-		drawerPanel.Child(Div().Set(clsDrawerActions.AsAttr()).Child(p.HeaderActions))
+		drawerPanel.Child(Div().Set(clsDrawerIdentity.AsAttr()).Child(p.userMenu()))
 	}
 
 	drawerPanel.Child(navbar)
