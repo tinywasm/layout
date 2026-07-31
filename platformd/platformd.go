@@ -18,7 +18,9 @@ const NamePlatform widget.Name = "pd"
 var (
 	clsRoot          = NamePlatform.Root()
 	clsHeader        = NamePlatform.Class("header")
-	clsUserBlock     = NamePlatform.Class("user-block")
+	clsUserName      = NamePlatform.Class("user-name")
+	clsDrawerUser    = NamePlatform.Class("drawer-user")
+	clsDrawerArea    = NamePlatform.Class("drawer-area")
 	clsDrawerPanel   = NamePlatform.Class("drawer-panel")
 	clsDrawerHead    = NamePlatform.Class("drawer-head")
 	clsAppName       = NamePlatform.Class("app-name")
@@ -48,6 +50,7 @@ const (
 	IconHome     = svg.Icon("home")
 	IconProducts = svg.Icon("products")
 	IconInfo     = svg.Icon("info")
+	IconUser     = svg.Icon("pd-user")
 	iconMenu     = svg.Icon("pd-menu")
 )
 
@@ -64,15 +67,38 @@ type UIModule interface {
 func (p *Platform) WidgetName() widget.Name { return NamePlatform }
 func (p *Platform) WidgetKind() widget.Kind { return widget.Menu }
 
+// Identity is what the platform needs to know about whoever is logged in.
+//
+// It is a READ contract, not a store: platformd renders it and never mutates
+// it. Whatever owns authentication — github.com/tinywasm/user in a real
+// application — supplies an implementation; the platform neither knows nor
+// cares where the values come from.
+//
+// Every method has a place in the chrome: the name and the area are the
+// header's outer thirds on a wide screen and the drawer's first entry on a
+// phone, and the icon is what that entry shows while the rail is collapsed.
+type Identity interface {
+	// UserName is who is logged in.
+	UserName() string
+	// UserArea is the area they are working in — a department, a tenant, a
+	// role. It is NOT the current route: the module already names itself.
+	UserArea() string
+	// UserIcon is the glyph that stands for them in the collapsed rail.
+	UserIcon() svg.Icon
+}
+
 // Platform is the typed skeleton root.
 type Platform struct {
 	Element
 
-	// AppName appears in the header (left side, near UserBlock).
+	// AppName titles the drawer on a phone, where the panel opens wholesale and
+	// there is room for it. The collapsed rail never shows it: text with no icon
+	// beside it would have to appear from nowhere when the rail expands.
 	AppName string
 
-	// UserBlock slot — the logged-in user (name/avatar), shown at the header LEFT.
-	UserBlock Component
+	// User is the logged-in identity. Required: the header's outer thirds and
+	// the drawer's first entry are built from it.
+	User Identity
 
 	// HeaderActions slot — shown at the header RIGHT, next to the work-area name
 	// (e.g. the light/dark theme toggle). Optional.
@@ -158,7 +184,14 @@ func (p *Platform) Render() *Element {
 	cur := widget.Current.Attr()
 
 	// ── header ───────────────────────────────────────────────────────────────
+	// Three parts: who is logged in, what the platform is telling them, and the
+	// area they are working in. None of it echoes the route — the module names
+	// itself, and repeating that here says nothing new.
 	header := Header().Set(clsHeader.AsAttr())
+
+	if p.User != nil {
+		header.Child(Div().Set(clsUserName.AsAttr()).Text(p.User.UserName()))
+	}
 
 	msgSlot := Div().Set(clsMsgSlot.AsAttr()).ID("pd-msg-slot").
 		BindChildren(p.notifications)
@@ -168,18 +201,10 @@ func (p *Platform) Render() *Element {
 	}
 	header.Child(msgSlot)
 
-	// header right: work-area name + actions (theme toggle) grouped together.
 	right := Div().Set(clsHeaderRight.AsAttr())
-	right.Child(H2().Set(clsArea.AsAttr()).
-		BindText(DeriveString(func() string {
-			id := p.active.Get()
-			for _, m := range p.Modules {
-				if m.ModelName() == id {
-					return m.Label()
-				}
-			}
-			return ""
-		})))
+	if p.User != nil {
+		right.Child(Div().Set(clsArea.AsAttr()).Text(p.User.UserArea()))
+	}
 
 	header.Child(right)
 
@@ -281,17 +306,30 @@ func (p *Platform) Render() *Element {
 	// inside the rail's flow instead, the rail would widen and push the stage.
 	drawerPanel := Div().Set(clsDrawerPanel.AsAttr())
 
-	head := Div().Set(clsDrawerHead.AsAttr())
+	// AppName only on a phone: the drawer opens wholesale there, so a line of
+	// text appearing costs nothing. In the collapsed rail it would have to
+	// materialise out of nowhere when the rail expands, and push everything
+	// under it down — the exact shift the user entry below is shaped to avoid.
 	if p.AppName != "" {
-		head.Child(Div().Set(clsAppName.AsAttr()).Text(p.AppName))
+		drawerPanel.Child(Div().Set(clsAppName.AsAttr()).Text(p.AppName))
 	}
-	if p.UserBlock != nil {
-		head.Child(Div().Set(clsUserBlock.AsAttr()).Child(p.UserBlock))
+
+	// The user entry is ALWAYS here, icon and all, exactly like a nav item.
+	// Every platform behind a login has one, so it is not chrome that comes and
+	// goes: revealing it only on expansion inserted a fourth element above three
+	// icons and shoved them down, then took it away again.
+	if p.User != nil {
+		head := Div().Set(clsDrawerHead.AsAttr())
+		head.Child(p.User.UserIcon().Render(string(ClsNavIcon)))
+		head.Child(Div().Set(clsDrawerUser.AsAttr()).Text(p.User.UserName()))
+		head.Child(Div().Set(clsDrawerArea.AsAttr()).Text(p.User.UserArea()))
+		drawerPanel.Child(head)
 	}
+
 	if p.HeaderActions != nil {
-		head.Child(Div().Set(clsDrawerActions.AsAttr()).Child(p.HeaderActions))
+		drawerPanel.Child(Div().Set(clsDrawerActions.AsAttr()).Child(p.HeaderActions))
 	}
-	drawerPanel.Child(head)
+
 	drawerPanel.Child(navbar)
 	nav.Child(drawerPanel)
 	body.Child(nav)

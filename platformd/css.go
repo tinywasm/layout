@@ -25,25 +25,35 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.As(style.Panel),
 			style.Pad(style.Space2),
 		).
-		// The drawer's head. It exists on a phone, where there is no header for
-		// identity chrome to live in, and on a wide screen only while the rail
-		// is expanded — squeezed into a 57px rail it wraps into nonsense.
-		OnlyOn(css.Mobile, widget.Part("drawer-head"),
-			style.Stack(style.Space1),
-			style.KeepSize(),
+		// Shaped exactly like a nav item and ALWAYS present: the icon holds the
+		// row open at rail width, and only the text arrives when the rail
+		// expands. Revealing the whole entry on hover inserted a fourth element
+		// above three icons and pushed them down.
+		Part(widget.Part("drawer-head"),
+			style.Row(style.Space1),
 			style.Pad(style.Space2),
-			style.As(style.Inset),
-			style.Round(style.RadiusMd),
+			style.KeepSize(),
+			style.CenterContent(),
+			style.Glyph(style.Primary),
 		).
+		Part(widget.Part("drawer-actions"),
+			style.Row(style.Space1),
+			style.KeepSize(),
+			style.CenterContent(),
+		).
+		// Text with no icon beside it: it can only exist where the panel opens
+		// wholesale, which is the phone drawer.
 		OnlyOn(css.Mobile, widget.Part("app-name"),
 			style.Row(style.SpaceNone),
+			style.Pad(style.Space2),
 			style.FontSize(style.TextBase),
 			style.FontWeight(style.WeightBold),
 		).
-		OnlyOn(css.Mobile, widget.Part("drawer-actions"),
-			style.Row(style.Space1),
-		).
-		Part(widget.Part("user-block"),
+		// The header's outer thirds. Both are plain text about the login, never
+		// about the route. The drawer carries its own pair of parts: the same
+		// name in both places would mean one visibility rule for two jobs, and
+		// the drawer's copy would never hide in the collapsed rail.
+		Part(widget.Part("user-name"),
 			style.Row(style.Space1),
 			style.FontSize(style.TextBase),
 			style.FontWeight(style.WeightBold),
@@ -109,16 +119,19 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Stack(style.SpaceNone),
 			style.Fill(),
 		).
+		// No Fill: spreading the items down the rail makes every row resize the
+		// moment the panel floats out and stops being full height. A rail packed
+		// from the top measures the same collapsed and expanded.
 		Part(widget.Part("nav-item"),
 			style.Row(style.SpaceNone),
-			style.Fill(),
+			style.KeepSize(),
 		).
 		// Glyph, not As: an item that is merely available is a coloured icon on
 		// the rail's own surface. Only the current one is filled.
 		Part(widget.Part("nav-link"),
 			style.Row(style.Space1),
 			style.Pad(style.Space2),
-			style.Fill(),
+			style.Width(style.Full),
 			style.CenterContent(),
 			style.Glyph(style.Primary),
 			style.Animate(style.MotionFast),
@@ -136,6 +149,18 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		OnlyOn(css.Mobile, widget.Part("link-text"),
 			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
+		).
+		// Same rule as a nav label: absent while the rail is a column of icons,
+		// present once it opens. The row's height never changes, only its width.
+		OnlyOn(css.Mobile, widget.Part("drawer-user"),
+			style.Row(style.SpaceNone),
+			style.FontSize(style.TextBase),
+			style.FontWeight(style.WeightBold),
+		).
+		OnlyOn(css.Mobile, widget.Part("drawer-area"),
+			style.Row(style.SpaceNone),
+			style.FontSize(style.TextXs),
+			style.As(style.Subtle),
 		).
 		// The active route reads as "current", the same vocabulary the rail and
 		// crudview's list rows share. It is a STATE, never a class.
@@ -179,20 +204,19 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// The head rides along with the expansion: the theme toggle and the user
 		// are reachable on a wide screen the moment the rail opens.
 		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-head"),
-			style.Stack(style.Space1),
-			style.StartContent(),
-			style.KeepSize(),
+			style.Row(style.Space2),
 			style.Pad(style.Space2),
-			style.As(style.Inset),
-			style.Round(style.RadiusMd),
+			style.StartContent(),
 		).
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("app-name"),
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-user"),
 			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
 			style.FontWeight(style.WeightBold),
 		).
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-actions"),
-			style.Row(style.Space1),
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-area"),
+			style.Row(style.SpaceNone),
+			style.FontSize(style.TextXs),
+			style.As(style.Subtle),
 		).
 		// ── mobile-only chrome ────────────────────────────────────────────────
 		// No header on a phone: the module brings its own title and the chrome

@@ -205,11 +205,21 @@ func (m mod) View() Component {
 	}
 }
 
+// demoIdentity mocks the login for the demo. In a real application this is
+// whatever github.com/tinywasm/user hands back for the current session — see
+// that repository's docs/PLAN.md for the work that makes it satisfy this
+// contract directly.
+type demoIdentity struct{}
+
+func (demoIdentity) UserName() string   { return "Thor Odinson" }
+func (demoIdentity) UserArea() string   { return "Operaciones" }
+func (demoIdentity) UserIcon() svg.Icon { return platformd.IconUser }
+
 func main() {
 	p := &platformd.Platform{
 		AppName:       "Demo Platform",
 		DefaultID:     "crud",
-		UserBlock:     Div().Text("Thor Odinson"),
+		User:          demoIdentity{},
 		HeaderActions: &themetoggle.ThemeToggle{},
 		CanView: func(id string) bool {
 			return id != "hidden"
