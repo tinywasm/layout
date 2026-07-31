@@ -108,9 +108,13 @@ func (v *CrudView) Init(ctx Ctx) {
 
 	// Delete confirmation modal — Content is built once; its message reacts to
 	// v.deleteLabel so the same instance is reused across every ⋮ → Eliminar.
+	// No "×": the body carries Cancelar and Eliminar, and a third way out says
+	// nothing Cancelar does not. A destructive confirmation wants exactly two
+	// exits, both of them explicit.
 	v.confirmDelete = &modaldialog.ModalDialog{
-		Title:   "Eliminar",
-		Content: v.renderDeleteConfirm(),
+		Title:     "Confirmar",
+		HideClose: true,
+		Content:   v.renderDeleteConfirm(),
 	}
 
 	if v.Presenter != nil {
@@ -124,6 +128,9 @@ func (v *CrudView) Init(ctx Ctx) {
 // the record, plus Cancelar/Eliminar actions. Built once in Init and reused —
 // see the confirmDelete field.
 func (v *CrudView) renderDeleteConfirm() *Element {
+	// The question names the action and the record. "¿Desea continuar?" would
+	// read as safe and be signed without thought — what makes someone stop is
+	// seeing the verb and the name of the thing it is about to happen to.
 	msg := P().BindTextFunc(func() string {
 		return "¿Eliminar «" + v.deleteLabel.Get() + "»? Esta acción no se puede deshacer."
 	})
