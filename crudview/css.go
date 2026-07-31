@@ -188,6 +188,11 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		Part(widget.Part("delconfirm-mount"),
 			style.KeepSize(),
 		).
+		// Space2: the same step modaldialog's panel puts between its header and
+		// its body, so title→question and question→buttons read as one rhythm.
+		Part(widget.Part("delconfirm-body"),
+			style.Stack(style.Space2),
+		).
 		Part(widget.Part("delconfirm-actions"),
 			style.Row(style.Space1),
 		).

@@ -32,6 +32,7 @@ var (
 	clsSearchInput            = NameCrudView.Class("search-input")
 	clsSearchIcon             = NameCrudView.Class("search-icon")
 	clsIcon16                 = NameCrudView.Class("icon")
+	clsDelConfirmBody         = NameCrudView.Class("delconfirm-body")
 	clsDelConfirmActions      = NameCrudView.Class("delconfirm-actions")
 	clsDelConfirmBtn          = NameCrudView.Class("delconfirm-btn")
 	clsDelConfirmBtnDanger    = NameCrudView.Class("delconfirm-btn-danger")
@@ -143,7 +144,11 @@ func (v *CrudView) renderDeleteConfirm() *Element {
 
 	actions := Div().Set(clsDelConfirmActions.AsAttr()).Child(cancel, confirm)
 
-	return Div().Child(msg, actions)
+	// Classed so the gap between the message and the actions is declared, and
+	// declared as the same step the dialog puts between its header and its
+	// body — otherwise the question sits far from the title and right on top of
+	// the buttons.
+	return Div().Set(clsDelConfirmBody.AsAttr()).Child(msg, actions)
 }
 
 // editAction (⋮ → Editar): load the record and unlock the form for editing.
