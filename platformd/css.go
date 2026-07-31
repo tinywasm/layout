@@ -168,14 +168,19 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
 		).
+		// Left-aligned once expanded: centred is right for a lone icon in a
+		// narrow rail, wrong for an icon-and-label row where the labels have to
+		// start on the same line as each other.
 		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("nav-link"),
 			style.Row(style.Space2),
 			style.Pad(style.Space2),
+			style.StartContent(),
 		).
 		// The head rides along with the expansion: the theme toggle and the user
 		// are reachable on a wide screen the moment the rail opens.
 		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-head"),
 			style.Stack(style.Space1),
+			style.StartContent(),
 			style.KeepSize(),
 			style.Pad(style.Space2),
 			style.As(style.Inset),
