@@ -203,6 +203,23 @@ func (v *CrudView) Reload() error {
 	return nil
 }
 
+// showPanel brings one of the two panels into view, but only when this view is
+// actually a swipe strip — that is, on a narrow screen.
+//
+// ScrollIntoView walks every scrollable ancestor, not just the nearest one the
+// caller had in mind. Side by side on a wide screen there is nothing to scroll
+// here, so the call reached the platform's module deck instead and slid the
+// whole application to the next module.
+func (v *CrudView) showPanel(id string) {
+	strip, ok := Get(v.GetID())
+	if !ok || !strip.ScrollsX() {
+		return
+	}
+	if el, ok := Get(id); ok {
+		el.ScrollIntoView()
+	}
+}
+
 // detailPanelID identifies the form/article panel — the mobile scroll-snap
 // target (see css.go's "(max-width: 640px)" block and selectAction below).
 func (v *CrudView) detailPanelID() string {
@@ -232,9 +249,7 @@ func (v *CrudView) selectAction(it view.Item) {
 		v.form.SetLocked(it.ID != "")
 	}
 	if it.ID != "" {
-		if el, ok := Get(v.detailPanelID()); ok {
-			el.ScrollIntoView()
-		}
+		v.showPanel(v.detailPanelID())
 	}
 	if v.OnSelect != nil {
 		v.OnSelect(it)
@@ -259,9 +274,7 @@ func (v *CrudView) newAction() {
 	v.composing.Set(true)
 	// It focused the first field; on a phone that field is on the panel next
 	// door, so bring the panel with it.
-	if el, ok := Get(v.detailPanelID()); ok {
-		el.ScrollIntoView()
-	}
+	v.showPanel(v.detailPanelID())
 	if v.OnNew != nil {
 		v.OnNew()
 	}
@@ -285,10 +298,8 @@ func (v *CrudView) undoAction() {
 	}
 	// The list is the resting view: cancelling has to put the user back on it,
 	// or on a phone the strip stays parked on an empty form with nothing left
-	// to cancel. A no-op on a wide screen, where both panels are already up.
-	if el, ok := Get(v.listPanelID()); ok {
-		el.ScrollIntoView()
-	}
+	// to cancel.
+	v.showPanel(v.listPanelID())
 	if v.OnCancel != nil {
 		v.OnCancel()
 	}

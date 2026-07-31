@@ -51,3 +51,6 @@ replace github.com/tinywasm/components => ../components
 
 // TEMP: local widget checkout — Grow() primitive (pending release).
 replace github.com/tinywasm/widget => ../widget
+
+// TEMP: local dom checkout — Reference.ScrollsX (pending release).
+replace github.com/tinywasm/dom => ../dom
