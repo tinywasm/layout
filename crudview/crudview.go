@@ -459,7 +459,6 @@ func (v *CrudView) Render() *Element {
 		// height as searchCard — it occupies the bottom slot the search bar
 		// has in the reference, so it gets that same integration, not a bare
 		// color block that gets lost against the blue background.
-		open := widget.Open.Attr()
 		actionsCard := Div().Set(clsAsideActions.AsAttr())
 		toggle := Button().Set(clsBtnCrud.AsAttr()).
 			// NOT "btn_..." — actionbutton's global `button[name*="btn"]` rule
@@ -469,27 +468,12 @@ func (v *CrudView) Render() *Element {
 			// below clsAsideSearch's height. This button is crudview-owned
 			// (ROADMAP.md), so its name must not accidentally opt back in.
 			Attr("name", "cv-crudtoggle").
-			BindAttrFunc(open.Key, func() string {
-				if v.active() {
-					return open.Value
-				}
-				return ""
-			}).
+			BindStateFunc(widget.Open, v.active).
 			Child(
 				iconCrudNew.Render(string(NameCrudView.Class("action-new"))).
-					BindAttrFunc(open.Key, func() string {
-						if v.active() {
-							return open.Value
-						}
-						return ""
-					}),
+					BindStateFunc(widget.Open, v.active),
 				iconCrudCancel.Render(string(NameCrudView.Class("action-cancel"))).
-					BindAttrFunc(open.Key, func() string {
-						if v.active() {
-							return open.Value
-						}
-						return ""
-					}),
+					BindStateFunc(widget.Open, v.active),
 			)
 		toggle.On("click", func(Event) { v.toggleAction() })
 		actionsCard.Child(toggle)

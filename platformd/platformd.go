@@ -203,10 +203,6 @@ func (p *Platform) userMenu() Component {
 func (p *Platform) Render() *Element {
 	root := Div().Set(clsRoot.AsAttr())
 
-	// Grab the state attributes for exact string matches
-	open := widget.Open.Attr()
-	cur := widget.Current.Attr()
-
 	// ── header ───────────────────────────────────────────────────────────────
 	// Three parts: who is logged in, what the platform is telling them, and the
 	// area they are working in. None of it echoes the route — the module names
@@ -245,12 +241,7 @@ func (p *Platform) Render() *Element {
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
 	overlay := Div().Set(clsNavOverlay.AsAttr()).
-		BindAttrFunc(open.Key, func() string {
-			if p.menuOpen.Get() {
-				return open.Value
-			}
-			return ""
-		})
+		BindStateFunc(widget.Open, func() bool { return p.menuOpen.Get() })
 	overlay.On("click", func(Event) {
 		p.menuOpen.Set(false)
 	})
@@ -271,12 +262,7 @@ func (p *Platform) Render() *Element {
 		panel := Section().Set(clsPanel.AsAttr()).
 			ID(id).
 			Attr("data-id", id).
-			BindAttrFunc(cur.Key, func() string {
-				if p.active.Get() == id {
-					return cur.Value
-				}
-				return ""
-			})
+			BindStateFunc(widget.Current, func() bool { return p.active.Get() == id })
 
 		if v := m.View(); v != nil {
 			panel.Child(v)
@@ -287,12 +273,7 @@ func (p *Platform) Render() *Element {
 
 	// ── navigation menu (rail) ───────────────────────────────────────────────
 	nav := Nav().Set(clsMenu.AsAttr()).
-		BindAttrFunc(open.Key, func() string {
-			if p.menuOpen.Get() {
-				return open.Value
-			}
-			return ""
-		})
+		BindStateFunc(widget.Open, func() bool { return p.menuOpen.Get() })
 	navbar := Ul().Set(clsNavbar.AsAttr())
 
 	for _, m := range p.Modules {
@@ -303,12 +284,7 @@ func (p *Platform) Render() *Element {
 		}
 		link := A("#"+id).Set(clsNavLink.AsAttr()).
 			Attr("data-id", id).
-			BindAttrFunc(cur.Key, func() string {
-				if p.active.Get() == id {
-					return cur.Value
-				}
-				return ""
-			})
+			BindStateFunc(widget.Current, func() bool { return p.active.Get() == id })
 
 		if icon := m.Icon(); icon != "" {
 			link.Child(icon.Render(string(ClsNavIcon)))

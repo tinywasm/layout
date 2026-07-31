@@ -1,0 +1,80 @@
+//go:build wasm
+
+package crudview
+
+import (
+	"syscall/js"
+	"testing"
+
+	. "github.com/tinywasm/dom"
+	"github.com/tinywasm/model"
+	"github.com/tinywasm/view"
+	"github.com/tinywasm/view/conformance"
+)
+
+// TestRowClick_WritesDataSelected is the observable the whole plan exists for.
+// Before the fix, clicking a row wrote data-selected="" (HTML boolean form via
+// BindAttrBool) while the sheet selects data-selected="true", so the highlight
+// never applied — with no error anywhere. The value is asserted, never merely
+// the attribute's presence: a presence test passes against the bug.
+func TestRowClick_WritesDataSelected(t *testing.T) {
+	doc := js.Global().Get("document")
+	root := doc.Call("createElement", "div")
+	root.Set("id", "cv-root")
+	doc.Get("body").Call("appendChild", root)
+	t.Cleanup(func() { root.Set("innerHTML", "") })
+
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			for _, id := range []string{"1", "2"} {
+				d := dl.Append().(*Device)
+				d.Id = id
+				d.Name = "Item " + id
+				d.Ip = "Desc " + id
+			}
+		},
+	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithDeleteOp("device_delete"))
+
+	v := &CrudView{Title: "Wasm Test", Presenter: p}
+	v.Init(&mockCtxWasm{})
+	v.SetID("cv")
+	_ = v.Reload()
+	if err := Render("cv-root", v); err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+
+	row1 := doc.Call("getElementById", "tl-1")
+	if row1.IsNull() {
+		t.Fatal("row #tl-1 not mounted")
+	}
+	row2 := doc.Call("getElementById", "tl-2")
+	if row2.IsNull() {
+		t.Fatal("row #tl-2 not mounted")
+	}
+
+	if got := row1.Call("getAttribute", "data-selected").String(); got != "<null>" {
+		t.Fatalf("initial: row 1 data-selected want absent, got %q", got)
+	}
+
+	row1.Call("click")
+
+	if got := row1.Call("getAttribute", "data-selected").String(); got != "true" {
+		t.Errorf("after click on row 1: data-selected want \"true\", got %q — the targetlist defect", got)
+	}
+	if got := row2.Call("getAttribute", "data-selected").String(); got != "<null>" {
+		t.Errorf("after click on row 1: row 2 data-selected want absent, got %q", got)
+	}
+
+	row2.Call("click")
+
+	if got := row2.Call("getAttribute", "data-selected").String(); got != "true" {
+		t.Errorf("after click on row 2: data-selected want \"true\", got %q", got)
+	}
+	if got := row1.Call("getAttribute", "data-selected").String(); got != "<null>" {
+		t.Errorf("after click on row 2: row 1 data-selected want absent, got %q", got)
+	}
+}
