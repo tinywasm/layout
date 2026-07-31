@@ -58,6 +58,61 @@ func TestPlatform_Render(t *testing.T) {
 	}
 }
 
+func TestPlatform_Render_Brand(t *testing.T) {
+	p := &Platform{
+		Brand: testBrand{name: "Acme", mark: "https://example.com/logo.svg"},
+	}
+	p.Init(NilCtx())
+
+	html := p.Render().String()
+	if !contains(html, "pd__brand") {
+		t.Error("expected the brand slot")
+	}
+	if !contains(html, "src='https://example.com/logo.svg'") {
+		t.Error("expected the brand mark img")
+	}
+	if !contains(html, "alt='Acme'") {
+		t.Error("expected the brand name as the mark's alt")
+	}
+	if !contains(html, "pd__brand-name") {
+		t.Error("expected the brand name part")
+	}
+	if !contains(html, ">Acme<") {
+		t.Error("expected the brand name text")
+	}
+}
+
+func TestPlatform_Render_BrandEmptyMark(t *testing.T) {
+	// Empty mark is a normal, expected outcome: the shell falls back to its
+	// own glyph, exactly as a missing avatar does.
+	p := &Platform{
+		Brand: testBrand{name: "Acme", mark: ""},
+	}
+	p.Init(NilCtx())
+
+	html := p.Render().String()
+	if !contains(html, "pd__brand") {
+		t.Error("expected the brand slot")
+	}
+	if !contains(html, "href='#pd-brand'") {
+		t.Error("expected the default brand glyph when the mark is empty")
+	}
+	if contains(html, "<img") {
+		t.Error("an empty mark must not render an <img>")
+	}
+}
+
+func TestPlatform_Render_NoBrand(t *testing.T) {
+	// Brand is optional: a platform without a logo is not a broken platform.
+	p := &Platform{}
+	p.Init(NilCtx())
+
+	html := p.Render().String()
+	if contains(html, "pd__brand") {
+		t.Error("nil Brand must not render a brand slot")
+	}
+}
+
 func TestPlatform_Render_DefaultModule(t *testing.T) {
 	p := &Platform{
 		Element:   *Div(),

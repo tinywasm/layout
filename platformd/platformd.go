@@ -22,6 +22,9 @@ var (
 	clsDrawerPanel    = NamePlatform.Class("drawer-panel")
 	clsAppName        = NamePlatform.Class("app-name")
 	clsDrawerIdentity = NamePlatform.Class("drawer-identity")
+	clsBrand          = NamePlatform.Class("brand")
+	clsBrandMark      = NamePlatform.Class("brand-mark")
+	clsBrandName      = NamePlatform.Class("brand-name")
 	clsMsgSlot        = NamePlatform.Class("msg-slot")
 	clsMsg            = NamePlatform.Class("msg")
 	clsMsgInfo        = NamePlatform.Class("msg-info")
@@ -47,6 +50,7 @@ const (
 	IconProducts = svg.Icon("products")
 	IconInfo     = svg.Icon("info")
 	IconUser     = svg.Icon("pd-user")
+	IconBrand    = svg.Icon("pd-brand")
 	iconMenu     = svg.Icon("pd-menu")
 )
 
@@ -87,6 +91,23 @@ type Identity interface {
 	UserRoles() []string
 }
 
+// Brand is what the platform calls itself in its own chrome. The shell asks for
+// a mark and a name; how they are drawn, sized and spaced is platformd's
+// business.
+//
+// It is a READ contract, not a store, mirroring Identity: platformd renders it
+// and never mutates it. The consumer supplies facts, not presentation — a
+// Brand never hands the shell an svg.Icon, because picking the sprite is a
+// rendering decision this package owns (the same reasoning that keeps IconUser
+// out of Identity).
+type Brand interface {
+	// BrandName is shown beside the mark, and is the mark's alt text.
+	BrandName() string
+	// BrandMark is a URL or inline SVG data URI. Empty is normal and expected:
+	// the shell falls back to its own glyph, exactly as UserAvatar does.
+	BrandMark() string
+}
+
 // Platform is the typed skeleton root.
 type Platform struct {
 	Element
@@ -94,7 +115,18 @@ type Platform struct {
 	// AppName titles the drawer on a phone, where the panel opens wholesale and
 	// there is room for it. The collapsed rail never shows it: text with no icon
 	// beside it would have to appear from nowhere when the rail expands.
+	//
+	// It is NOT the header brand: AppName belongs to the phone drawer and Brand
+	// belongs to the desktop header, two surfaces of which only one exists at a
+	// time. A Brand does not supersede it and it is not a fallback for a missing
+	// Brand — a platform without a Brand renders no header brand slot at all.
 	AppName string
+
+	// Brand is what the platform calls itself in the header's leading slot:
+	// the mark and the name at the header's start, mirrored against the user
+	// menu at its end. Optional — a platform without a logo renders no brand
+	// slot and the message block stays centred between nothing and the menu.
+	Brand Brand
 
 	// User is the logged-in identity. Required: the header's outer thirds and
 	// the drawer's first entry are built from it.
@@ -186,6 +218,24 @@ func (p *Platform) fallback() {
 //
 // A fresh instance per call on purpose — the shell renders one for the header
 // and one for the drawer, and a single *UserMenu cannot have two parents.
+// brand builds the header's leading slot from the Brand contract. The mark is
+// an <img> when the contract returns a URL and the default glyph otherwise —
+// the avatar's exact treatment, mirrored.
+func (p *Platform) brand() *Element {
+	slot := Div().Set(clsBrand.AsAttr())
+	if url := p.Brand.BrandMark(); url != "" {
+		slot.Child(NewElement("img").
+			Set(clsBrandMark.AsAttr()).
+			Attr("src", url).
+			Attr("alt", p.Brand.BrandName()).
+			Attr("loading", "lazy"))
+	} else {
+		slot.Child(IconBrand.Render(string(clsBrandMark)))
+	}
+	slot.Child(Span().Set(clsBrandName.AsAttr()).Text(p.Brand.BrandName()))
+	return slot
+}
+
 func (p *Platform) userMenu() Component {
 	var actions Component
 	if p.UserActions != nil {
@@ -204,10 +254,17 @@ func (p *Platform) Render() *Element {
 	root := Div().Set(clsRoot.AsAttr())
 
 	// ── header ───────────────────────────────────────────────────────────────
-	// Three parts: who is logged in, what the platform is telling them, and the
-	// area they are working in. None of it echoes the route — the module names
-	// itself, and repeating that here says nothing new.
+	// Three parts: who the platform is (brand), what it is telling them
+	// (messages), and who is logged in (user menu). None of it echoes the route
+	// — the module names itself, and repeating that here says nothing new.
 	header := Header().Set(clsHeader.AsAttr())
+
+	// The leading slot: the brand's mark and name. Mirror of the user menu at
+	// the other end, so the two edges of the header read as the same kind of
+	// object — facts in, rendering owned by the shell.
+	if p.Brand != nil {
+		header.Child(p.brand())
+	}
 
 	msgSlot := Div().Set(clsMsgSlot.AsAttr()).ID("pd-msg-slot").
 		BindChildren(p.notifications)

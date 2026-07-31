@@ -16,6 +16,54 @@ type mockModule struct {
 
 func (m *mockModule) ModelName() string { return m.id }
 
+// ruleBlock returns the declaration block of the LAST rule whose selector
+// contains want, or "" when absent. The primitives layer is emitted before the
+// widgets layer and groups edge cases (e.g. ".rp, .rp__header, .rp__title {
+// margin: 0; border-radius: 0; }"), so the first match can be a legitimate
+// collective primitive — the intent lives in the widgets-layer rule.
+func ruleBlock(cssStr, want string) string {
+	i := strings.LastIndex(cssStr, want)
+	if i == -1 {
+		return ""
+	}
+	start := strings.Index(cssStr[i:], "{")
+	if start == -1 {
+		return ""
+	}
+	body := cssStr[i+start:]
+	end := strings.Index(body, "}")
+	if end == -1 {
+		return ""
+	}
+	return body[:end]
+}
+
+// TestRightPanel_EdgeAsserts guards PLAN v0.2.0 item 5: the panel and its
+// header/title are welded to the application frame and must be square, while
+// interior parts keep their radius.
+func TestRightPanel_EdgeAsserts(t *testing.T) {
+	r := &RightPanel{
+		Module:        &mockModule{id: "test-module"},
+		Title:         "Test Title",
+		Head:          html.Div(),
+		HeadControls:  html.Div(),
+		Article:       html.Div(),
+		AsideControls: html.Div(),
+		Aside:         html.Div(),
+	}
+
+	cssStr := r.RenderCSS().String()
+
+	for _, sel := range []string{".rp {", ".rp__header {", ".rp__title {"} {
+		if b := ruleBlock(cssStr, sel); fmt.Contains(b, "border-radius") {
+			t.Errorf("%s must be squared at the frame, block:\n%s", sel, b)
+		}
+	}
+	if b := ruleBlock(cssStr, ".rp__aside-header {"); !fmt.Contains(b, "border-radius") {
+		t.Errorf("interior aside-header must keep its radius, block:\n%s", b)
+	}
+}
+
 func TestRightPanel_StylesheetAsserts(t *testing.T) {
 	r := &RightPanel{
 		Module:        &mockModule{id: "test-module"},

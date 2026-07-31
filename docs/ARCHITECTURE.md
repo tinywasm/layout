@@ -68,6 +68,29 @@ No `Update()` is called anywhere — all UI changes go through signal `Set`.
 
 ---
 
+## Header chrome (`platformd`, v0.2.0 pass)
+
+The header is a three-slot frame: **brand** at the leading edge, **messages**
+centred (`CenterContent` on `msg-slot`), **user menu** at the trailing edge.
+Parts touching the application frame — header, nav, menu, msg, and the
+`rightpanel` root/header/title, the `crudview` root — are squared with
+`EdgeToEdge()`; interior elements keep their radius.
+
+- **`Platform.Brand`** (`Brand` interface: `BrandName()`, `BrandMark()`) fills the
+  leading slot. An empty mark falls back to the shell's `IconBrand` glyph at the
+  same box as the avatar (`IconBox(IconLg)` + `Round(RadiusFull)` +
+  `HideOverflow`); a `nil` Brand renders no slot at all. `AppName` is NOT a
+  fallback: it titles the phone drawer, Brand lives in the desktop header, and
+  only one of the two surfaces exists at a time.
+- **Notifications** are plain text in severity colour: `Glyph(Subtle|Success|
+  Accent|Danger)` emits `color` + `fill: currentColor` with no background box.
+- **Navigation semantics**: the current route renders `As(Accent)` (amber —
+  "where I am"), hover renders `As(Inset)` (tonal). The light selection tint
+  (`Highlight`) is deliberately not used in the nav; selected rows in consumer
+  lists re-point at `Accent` for the same reason.
+
+---
+
 ## CRUD Layout (`crudview`)
 
 Standard two-column layout: Form (left, 66vw) and List (right, 29vw).

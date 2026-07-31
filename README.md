@@ -22,6 +22,7 @@ The platform shell, providing the header, navigation rail, and module hosting.
 
 - `NewUIModule(id, label, iconID, view)`: helper to create modules.
 - `CanView`: function field to gate module access.
+- `Platform.Brand` (`BrandName()`/`BrandMark()`): optional leading header slot; empty mark falls back to the shell's default glyph.
 
 ### crudview
 

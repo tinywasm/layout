@@ -13,6 +13,64 @@ import (
 	"github.com/tinywasm/view/conformance"
 )
 
+// ruleBlock returns the declaration block of the first rule whose selector
+// contains want, or "" when absent.
+func ruleBlock(cssStr, want string) string {
+	i := strings.Index(cssStr, want)
+	if i == -1 {
+		return ""
+	}
+	start := strings.Index(cssStr[i:], "{")
+	if start == -1 {
+		return ""
+	}
+	body := cssStr[i+start:]
+	end := strings.Index(body, "}")
+	if end == -1 {
+		return ""
+	}
+	return body[:end]
+}
+
+// TestCrudView_ControlAndEdgeAsserts guards PLAN v0.2.0 items 5 and 6: the
+// controls answer to --control-height by construction, and the root is squared
+// at the frame while the interior keeps its radius.
+func TestCrudView_ControlAndEdgeAsserts(t *testing.T) {
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+	v := &CrudView{
+		Title:     "CRUD",
+		Presenter: p,
+		Form:      html.Div(),
+	}
+	v.Init(&fakeCtx{})
+
+	cssStr := v.RenderCSS().String()
+
+	// The search bar and the action button agree on the control token.
+	for _, part := range []string{".crudview__search {", ".crudview__action {"} {
+		if b := ruleBlock(cssStr, part); !fmt.Contains(b, "min-height: var(--control-height") {
+			t.Errorf("%s must be sized by --control-height, block:\n%s", part, b)
+		}
+	}
+	// The magnifier claims the whole card height instead of a padded box.
+	if b := ruleBlock(cssStr, ".crudview__search-icon {"); !fmt.Contains(b, "min-height: var(--control-height") {
+		t.Errorf("search-icon must fill the control height, block:\n%s", b)
+	}
+	if b := ruleBlock(cssStr, ".crudview__search-icon {"); fmt.Contains(b, "padding") {
+		t.Errorf("search-icon must not be a padded box, block:\n%s", b)
+	}
+	// The root is square where it meets the frame (EdgeToEdge now actually
+	// wins over the surface's default radius); the interior keeps its radius.
+	if b := ruleBlock(cssStr, ".crudview {"); fmt.Contains(b, "border-radius") {
+		t.Errorf("crudview root must be squared by EdgeToEdge, block:\n%s", b)
+	}
+	if b := ruleBlock(cssStr, ".crudview__article {"); !fmt.Contains(b, "border-radius") {
+		t.Errorf("interior article must keep its radius, block:\n%s", b)
+	}
+}
+
 func TestConsumer_StylesheetAsserts(t *testing.T) {
 	caller := &conformance.FakeCaller{}
 	p := view.New(caller, &Device{}, "device_list",

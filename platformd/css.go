@@ -24,21 +24,48 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.KeepSize(),
 			style.As(style.Panel),
 			style.Pad(style.Space2),
+			style.EdgeToEdge(),
+		).
+		// The brand slot mirrors the user menu at the other end of the header:
+		// the mark is the avatar's exact box (IconLg, full round, clipped), the
+		// name the trigger's text treatment.
+		Part(widget.Part("brand"),
+			style.Row(style.Space2),
+			style.KeepSize(),
+		).
+		Part(widget.Part("brand-mark"),
+			style.IconBox(style.IconLg),
+			style.Round(style.RadiusFull),
+			style.HideOverflow(),
+			style.KeepSize(),
+		).
+		Part(widget.Part("brand-name"),
+			style.FontSize(style.TextBase),
+			style.FontWeight(style.WeightBold),
+			style.KeepSize(),
 		).
 		// Fill() here is what pushes header-right to the far edge: it grows to
-		// take the free space between the two blocks.
+		// take the free space between the two blocks. CenterContent() makes the
+		// message itself read in the middle of that space instead of hard
+		// against the brand — the same block, held apart at the two edges.
 		Part(widget.Part("msg-slot"),
 			style.Row(style.Space1),
 			style.Fill(),
+			style.CenterContent(),
 		).
-		Part(widget.Part("msg"),
-			style.Pad(style.Space1),
-			style.Round(style.RadiusSm),
-		).
-		Part(widget.Part("msg-info"), style.As(style.Subtle)).
-		Part(widget.Part("msg-success"), style.As(style.Success)).
-		Part(widget.Part("msg-warning"), style.As(style.Highlight)).
-		Part(widget.Part("msg-error"), style.As(style.Danger)).
+		// No box: a notification is coloured text on the header's own surface.
+		// Pad/Round existed to shape a slab that is no longer there. KeepSize
+		// keeps a toast from being squeezed by its sibling; the part itself is
+		// declared so the variant rules below have a shared home.
+		Part(widget.Part("msg"), style.KeepSize()).
+		// Glyph, not As: the variants tint the text and leave the background
+		// alone, so severity stays legible and no green/red slab breaks the
+		// header. Warning uses the accent family, not Highlight: Glyph(Highlight)
+		// resolves to the surface colour and would be invisible on the panel.
+		Part(widget.Part("msg-info"), style.Glyph(style.Subtle)).
+		Part(widget.Part("msg-success"), style.Glyph(style.Success)).
+		Part(widget.Part("msg-warning"), style.Glyph(style.Accent)).
+		Part(widget.Part("msg-error"), style.Glyph(style.Danger)).
 		Part(widget.Part("header-right"),
 			style.Row(style.Space2),
 			style.KeepSize(),
@@ -72,12 +99,15 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// Grow() for its min-width:0 — without it the rail is sized by whatever
 		// it contains, so revealing the labels on hover widened it and pushed
 		// the stage. Its width is the Sidebar's rail token and nothing else.
+		// EdgeToEdge: the rail is welded to the window frame on its right and
+		// bottom, where a radius leaves two background slivers.
 		Part(widget.Part("menu"),
 			style.Anchor(),
 			style.Stack(style.Space1),
 			style.As(style.Panel),
 			style.Fill(),
 			style.Grow(),
+			style.EdgeToEdge(),
 		).
 		// The drawer's copy of the identity exists only where there is no header
 		// to hold one. Two visible at once is the redundancy this whole change
@@ -145,14 +175,20 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// The active route reads as "current", the same vocabulary the rail and
 		// crudview's list rows share. It is a STATE, never a class.
 		// The route you are on is the one filled block in the rail; its icon
-		// rides the filled surface through currentColor.
+		// rides the filled surface through currentColor. Accent, not Primary:
+		// "where I am" means one colour — amber — across the whole chassis,
+		// matching the selected list row. OnAccent (#1C1C1E) keeps the icon
+		// legible on the light amber fill.
 		When(widget.Current, widget.Part("nav-link"),
-			style.As(style.Primary),
+			style.As(style.Accent),
 		).
 		// The whole control lights up, not just the glyph inside it: a hover is
 		// about the target you are aiming at, and the target is the button.
+		// Inset, not Accent: selection is now amber, and a hover in the same
+		// colour would be indistinguishable from it. A tonal shift — sunken
+		// surface and outline — says "aimed at" without saying "current".
 		Cue(widget.Hover, widget.Part("nav-link"),
-			style.As(style.Accent),
+			style.As(style.Inset),
 		).
 		// Hovering the rail floats the whole panel out over the content at label
 		// width. The panel leaves the flow, so the rail's box — already pinned

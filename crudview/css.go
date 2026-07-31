@@ -89,11 +89,16 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		).
 		// The primary action spans the column, mirroring the search bar above
 		// the list rather than sitting as a stray square beside it.
+		// ControlBox: the action is a control, and every control answers to
+		// --control-height — the same token the search bar now measures by, so
+		// the two ends of the column agree by construction instead of by
+		// hand-tuned padding.
 		Part(widget.Part("action"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
 			style.Pad(style.Space3),
 			style.Width(style.Full),
+			style.ControlBox(),
 			style.CenterContent(),
 		).
 		Part(widget.Part("action-new"),
@@ -105,19 +110,25 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.IconBox(style.IconMd),
 		).
 		// The search bar is a card in its own right, the same height treatment
-		// the action bar gets at the other end of the column.
+		// the action bar gets at the other end of the column. ControlBox pins
+		// both to --control-height, so they agree by construction.
 		Part(widget.Part("search"),
 			style.Row(style.Space1),
 			style.As(style.Panel),
 			style.Pad(style.Space3),
 			style.Round(style.RadiusMd),
+			style.ControlBox(),
 			style.KeepSize(),
 		).
-		// The magnifier reads as the card's button, not as decoration.
+		// The magnifier reads as the card's button edge to edge: no padding
+		// box — the button claims the whole control height and centres the
+		// glyph in it. The old Pad(Space2)+icon-box measured 40px against the
+		// card's 66, a mismatch that only existed because the two sides sized
+		// themselves differently.
 		Part(widget.Part("search-icon"),
 			style.As(style.Primary),
 			style.Round(style.RadiusSm),
-			style.Pad(style.Space2),
+			style.ControlBox(),
 			style.CenterContent(),
 			style.KeepSize(),
 		).
@@ -148,6 +159,9 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// has to stay reachable on the detail panel too, where its job is to
 		// cancel. It still disappears with the module: a fixed descendant of a
 		// display:none panel is not rendered, so no other route sees it.
+		// ControlBox's min-height stays on: the floating chip grows to the
+		// control token rather than hugging the IconLg glyph, which is a bigger
+		// target, not a fight.
 		On(css.Mobile, widget.Part("action"),
 			style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.Space4),
 			style.Width(style.Content),

@@ -19,12 +19,41 @@ func (testIdentity) UserName() string    { return "Tester" }
 func (testIdentity) UserAvatar() string  { return "" }
 func (testIdentity) UserRoles() []string { return []string{"QA", "Soporte"} }
 
+// testBrand is the smallest thing that satisfies the Brand contract.
+type testBrand struct {
+	name string
+	mark string
+}
+
+func (b testBrand) BrandName() string { return b.name }
+func (b testBrand) BrandMark() string { return b.mark }
+
+// ruleBlock returns the declaration block of the first rule whose selector
+// contains want, or "" when absent.
+func ruleBlock(cssStr, want string) string {
+	i := strings.Index(cssStr, want)
+	if i == -1 {
+		return ""
+	}
+	start := strings.Index(cssStr[i:], "{")
+	if start == -1 {
+		return ""
+	}
+	body := cssStr[i+start:]
+	end := strings.Index(body, "}")
+	if end == -1 {
+		return ""
+	}
+	return body[:end]
+}
+
 func TestPlatform_StylesheetAsserts(t *testing.T) {
-	// Identity and the actions slot are both supplied: the class-parity
+	// Identity, brand and the actions slot are all supplied: the class-parity
 	// assertion below is two-directional, so anything left nil would read as a
 	// stylesheet rule with no markup behind it.
 	p := &Platform{
 		AppName:     "Test App",
+		Brand:       testBrand{name: "Acme", mark: "https://example.com/logo.svg"},
 		User:        testIdentity{},
 		UserActions: func() dom.Component { return html.Div().Text("actions") },
 		Modules: []UIModule{
@@ -45,6 +74,54 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 
 	sheet := p.RenderSheet()
 	cssStr := p.RenderCSS().String()
+
+	// 0. Chrome-correctness assertions (PLAN v0.2.0)
+	// Header and rail are welded to the frame: the part rules must not carry a
+	// radius, and EdgeToEdge's border-radius: 0 must actually win over the
+	// surface's default (the layer-ordering bug that left crudview at 4px).
+	if b := ruleBlock(cssStr, ".pd__header {"); Contains(b, "border-radius") {
+		t.Errorf("header must not carry a radius (EdgeToEdge squares it), block:\n%s", b)
+	}
+	if !Contains(cssStr, "border-radius: 0;") {
+		t.Error("expected EdgeToEdge to emit border-radius: 0")
+	}
+	// The message block is centred, and the variants are tinted text with no
+	// background: severity stays legible without a slab breaking the header.
+	if b := ruleBlock(cssStr, ".pd__msg-slot {"); !Contains(b, "justify-content: center") {
+		t.Errorf("msg-slot must centre its content, block:\n%s", b)
+	}
+	for part, wantColor := range map[string]string{
+		".pd__msg-info {":    "--color-muted",
+		".pd__msg-success {": "--color-success",
+		".pd__msg-warning {": "--color-accent",
+		".pd__msg-error {":   "--color-danger",
+	} {
+		b := ruleBlock(cssStr, part)
+		if b == "" {
+			t.Errorf("expected a rule for %s", part)
+			continue
+		}
+		if Contains(b, "background-color") {
+			t.Errorf("%s must not paint a background, block:\n%s", part, b)
+		}
+		if !Contains(b, "fill: currentColor") {
+			t.Errorf("%s must be a Glyph (fill: currentColor), block:\n%s", part, b)
+		}
+		if !Contains(b, wantColor) {
+			t.Errorf("%s should use %s, block:\n%s", part, wantColor, b)
+		}
+	}
+	// "Where I am" is amber everywhere: the current nav item wears Accent, the
+	// hover wears a tonal Inset shift so the two cannot be confused.
+	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, "--color-accent") {
+		t.Errorf("current nav item must use Accent, block:\n%s", b)
+	}
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "--color-surface-sunken") {
+		t.Errorf("nav hover must be the tonal Inset shift, block:\n%s", b)
+	}
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); Contains(b, "--color-accent") {
+		t.Errorf("nav hover must not be amber (indistinguishable from current), block:\n%s", b)
+	}
 
 	// 1. Check "!important"
 	if Contains(cssStr, "!important") {

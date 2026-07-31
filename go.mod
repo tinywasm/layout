@@ -24,12 +24,14 @@ require (
 )
 
 // ── replaces de desarrollo local ─────────────────────────────────────────────
-// Desactivados en la migración al contrato visual: se migra contra versiones
-// publicadas. Descomenta el que necesites para depurar contra un checkout local
-// y vuelve a comentarlo antes de cerrar el PR.
-//
-//
-//
+// PLAN v0.2.0 spans layout/components/form/widget; everything works against
+// local checkouts and is NOT published. Revert to published versions when the
+// work lands.
+replace github.com/tinywasm/widget => ../widget
+
+replace github.com/tinywasm/components => ../components
+
+replace github.com/tinywasm/form => ../form
 
 //
 //
