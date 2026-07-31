@@ -243,6 +243,13 @@ half its height inside the box, so the value needs room to clear it"*. Re-check 
 the value still clears the legend after the change; the padding may now be larger
 than it needs to be.
 
+**Follow-up (landed):** `StartContent()` left the chip text flush against the
+leading edge — "no Pad" had over-corrected into "no air". `widget/style` gained
+**`PadInline(Space)`** (`padding-inline`, zero height cost) and the legend now
+carries `PadInline(Space2)`: the text sits 8 px off the chip's edges while the
+height stays at the badge's 18–20 px. The fieldset test's blanket `padding` ban
+was narrowed to height-affecting padding (`padding:` shorthand, `padding-block`).
+
 ---
 
 ## 5. Rounded corners on elements that touch the application frame
@@ -317,6 +324,19 @@ their padding adds up to.
 The mobile rules for `action` (`On(css.Mobile, widget.Part("action"), …)`) turn it
 into a floating square and must keep doing so — verify `ControlBox` does not fight
 `IconBox(IconLg)` there.
+
+**Follow-up (landed):** sizing by the token was necessary but not sufficient — the
+card's own `Pad(Space3)` still inflated it to 97.6 px (72 icon + 24 padding) and
+the input, with no height of its own, floated at 25.6 px in the middle. The bar is
+now **one fused control**, the shape in the reference: no card surface or padding,
+`Row(SpaceNone)`, the wrapper's `Round(RadiusMd)` + `HideOverflow()` clips the pair;
+the icon is a square via `MediaBox(AspectSquare)` (aspect-ratio, not padding, so the
+width derives from the token too) and the input gained its own `ControlBox()`.
+Measured: search = icon = input = action = **72 px** — criterion 9 holds exactly.
+The input also inherits the app font now: the `css` reset gained
+`input, textarea, select { font: inherit }` (UA default was Arial 13px inside a
+field measured for system-ui 16px). Buttons were deliberately excluded — the theme
+toggle's emoji is sized by that font.
 
 ---
 

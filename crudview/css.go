@@ -109,36 +109,39 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.RevealedBy(widget.Open),
 			style.IconBox(style.IconMd),
 		).
-		// The search bar is a card in its own right, the same height treatment
-		// the action bar gets at the other end of the column. ControlBox pins
-		// both to --control-height, so they agree by construction.
+		// The search bar is ONE control, not a card holding two loose pieces —
+		// the shape in the reference: the magnifier is the bar's leading cap,
+		// the input its body, and a gap or a card of its own between them saws
+		// the bar back into separate boxes. The wrapper carries the radius and
+		// clips, so cap and body stay square and still read as one rounded bar.
+		// ControlBox pins the bar to --control-height, the same token the
+		// action bar at the other end of the column answers to.
 		Part(widget.Part("search"),
-			style.Row(style.Space1),
-			style.As(style.Panel),
-			style.Pad(style.Space3),
+			style.Row(style.SpaceNone),
 			style.Round(style.RadiusMd),
+			style.HideOverflow(),
 			style.ControlBox(),
 			style.KeepSize(),
 		).
-		// The magnifier reads as the card's button edge to edge: no padding
-		// box — the button claims the whole control height and centres the
-		// glyph in it. The old Pad(Space2)+icon-box measured 40px against the
-		// card's 66, a mismatch that only existed because the two sides sized
-		// themselves differently.
+		// The magnifier is the bar's square cap: aspect-ratio, not padding,
+		// sets the width — a padded box drifts off the control token (the old
+		// Pad(Space2)+icon-box measured 40px against the card's 66), while the
+		// square derives from the same --control-height as everything else.
 		Part(widget.Part("search-icon"),
 			style.As(style.Primary),
-			style.Round(style.RadiusSm),
+			style.MediaBox(style.AspectSquare),
 			style.ControlBox(),
-			style.CenterContent(),
 			style.KeepSize(),
 		).
-		// The input takes what the icon leaves, so the field is the whole card
-		// instead of a short box with dead space beside it.
+		// The input is the body of the bar: it grows into whatever the cap
+		// leaves and answers to the same control height, so cap and body can
+		// never drift apart vertically — the mismatch that left a 25px field
+		// floating in the middle of the 72px strip.
 		Part(widget.Part("search-input"),
 			style.As(style.Inset),
-			style.Round(style.RadiusSm),
-			style.Pad(style.Space1),
+			style.Pad(style.Space2),
 			style.Grow(),
+			style.ControlBox(),
 		).
 		// On a phone the desktop Split becomes a horizontal scroll-snap strip:
 		// the list is what shows on arrival, and tapping a row slides the detail

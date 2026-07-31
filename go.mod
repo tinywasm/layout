@@ -33,5 +33,7 @@ replace github.com/tinywasm/components => ../components
 
 replace github.com/tinywasm/form => ../form
 
+replace github.com/tinywasm/css => ../css
+
 //
 //

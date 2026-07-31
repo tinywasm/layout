@@ -14,8 +14,14 @@ import (
 )
 
 // ruleBlock returns the declaration block of the first rule whose selector
-// contains want, or "" when absent.
+// contains want, or "" when absent. The search is scoped to @layer widgets:
+// the primitives layer groups shared flags (overflow, keepSize, flow) into
+// rules whose selector list can also match want, and those blocks carry none
+// of the per-part declarations the asserts below look for.
 func ruleBlock(cssStr, want string) string {
+	if i := strings.Index(cssStr, "@layer widgets {"); i != -1 {
+		cssStr = cssStr[i:]
+	}
 	i := strings.Index(cssStr, want)
 	if i == -1 {
 		return ""
