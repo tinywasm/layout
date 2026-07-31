@@ -22,15 +22,18 @@ import (
 	"github.com/tinywasm/view"
 )
 
-// Tiny model stub so layouts have an ID source.
+// Tiny model stub so layouts have an ID source. name is the route; label is
+// what the user reads — the rail and the module's own title have to say the
+// same thing, or the nav claims you are somewhere you are not.
 type mod struct {
-	name string
-	icon svg.Icon
-	p    *platformd.Platform
+	name  string
+	label string
+	icon  svg.Icon
+	p     *platformd.Platform
 }
 
 func (m mod) ModelName() string { return m.name }
-func (m mod) Label() string     { return m.name }
+func (m mod) Label() string     { return m.label }
 func (m mod) Icon() svg.Icon    { return m.icon }
 
 // deviceModel is a model with real widgets (input.Text() is a model.Kind).
@@ -197,8 +200,8 @@ func (m mod) View() Component {
 
 	return &rightpanel.RightPanel{
 		Module:  m,
-		Title:   m.name,
-		Article: Div().Text("Contenido de " + m.name),
+		Title:   m.label,
+		Article: Div().Text("Contenido de " + m.label),
 	}
 }
 
@@ -214,10 +217,10 @@ func main() {
 	}
 
 	p.Modules = []platformd.UIModule{
-		mod{"crud", platformd.IconProducts, p},
-		mod{"mod1", platformd.IconHome, p},
-		mod{"mod2", platformd.IconInfo, p},
-		mod{"hidden", platformd.IconInfo, p},
+		mod{"crud", "Computadores", platformd.IconProducts, p},
+		mod{"mod1", "Inicio", platformd.IconHome, p},
+		mod{"mod2", "Acerca de", platformd.IconInfo, p},
+		mod{"hidden", "Oculto", platformd.IconInfo, p},
 	}
 
 	Append("body", p)

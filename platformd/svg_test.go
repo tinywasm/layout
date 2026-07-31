@@ -3,30 +3,32 @@
 package platformd_test
 
 import (
-    "strings"
-    "testing"
-    "github.com/tinywasm/layout/platformd"
+	"github.com/tinywasm/layout/platformd"
+	"strings"
+	"testing"
 )
 
 func TestPlatform_IconSvg_HasRequiredIcons(t *testing.T) {
-    p := &platformd.Platform{}
-    sprite := p.IconSvg()
-    if sprite == nil { t.Fatal("IconSvg() returned nil") }
+	p := &platformd.Platform{}
+	sprite := p.IconSvg()
+	if sprite == nil {
+		t.Fatal("IconSvg() returned nil")
+	}
 
-    s := sprite.String()
-    required := []string{"home", "products", "info"}
-    for _, id := range required {
-        if !strings.Contains(s, `id="`+id+`"`) {
-            t.Errorf("missing icon: %s", id)
-        }
-    }
+	s := sprite.String()
+	required := []string{"home", "products", "info"}
+	for _, id := range required {
+		if !strings.Contains(s, `id="`+id+`"`) {
+			t.Errorf("missing icon: %s", id)
+		}
+	}
 }
 
 func TestPlatform_IconSvg_HasCurrentColor(t *testing.T) {
-    p := &platformd.Platform{}
-    sprite := p.IconSvg()
-    s := sprite.String()
-    if !strings.Contains(s, "currentColor") {
-        t.Error("icons must use fill=currentColor or stroke=currentColor")
-    }
+	p := &platformd.Platform{}
+	sprite := p.IconSvg()
+	s := sprite.String()
+	if !strings.Contains(s, "currentColor") {
+		t.Error("icons must use fill=currentColor or stroke=currentColor")
+	}
 }

@@ -19,6 +19,7 @@ var (
 	clsRoot          = NamePlatform.Root()
 	clsHeader        = NamePlatform.Class("header")
 	clsUserBlock     = NamePlatform.Class("user-block")
+	clsDrawerPanel   = NamePlatform.Class("drawer-panel")
 	clsDrawerHead    = NamePlatform.Class("drawer-head")
 	clsAppName       = NamePlatform.Class("app-name")
 	clsDrawerActions = NamePlatform.Class("drawer-actions")
@@ -275,6 +276,11 @@ func (p *Platform) Render() *Element {
 	// The drawer's head. On a phone this is where the identity chrome lives —
 	// there is no header to hold it — and on a wide screen it rides above the
 	// rail, revealed with it on hover.
+	// One panel holding the head and the navbar. On a wide screen the whole
+	// panel is what floats out over the content on hover — if the head expanded
+	// inside the rail's flow instead, the rail would widen and push the stage.
+	drawerPanel := Div().Set(clsDrawerPanel.AsAttr())
+
 	head := Div().Set(clsDrawerHead.AsAttr())
 	if p.AppName != "" {
 		head.Child(Div().Set(clsAppName.AsAttr()).Text(p.AppName))
@@ -285,9 +291,9 @@ func (p *Platform) Render() *Element {
 	if p.HeaderActions != nil {
 		head.Child(Div().Set(clsDrawerActions.AsAttr()).Child(p.HeaderActions))
 	}
-	nav.Child(head)
-
-	nav.Child(navbar)
+	drawerPanel.Child(head)
+	drawerPanel.Child(navbar)
+	nav.Child(drawerPanel)
 	body.Child(nav)
 
 	root.Child(body)

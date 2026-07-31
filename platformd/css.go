@@ -91,10 +91,18 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Stack(style.SpaceNone),
 			style.Scroll(),
 		).
+		// Grow() for its min-width:0 — without it the rail is sized by whatever
+		// it contains, so revealing the labels on hover widened it and pushed
+		// the stage. Its width is the Sidebar's rail token and nothing else.
 		Part(widget.Part("menu"),
 			style.Anchor(),
 			style.Stack(style.Space1),
 			style.As(style.Panel),
+			style.Fill(),
+			style.Grow(),
+		).
+		Part(widget.Part("drawer-panel"),
+			style.Stack(style.Space1),
 			style.Fill(),
 		).
 		Part(widget.Part("navbar"),
@@ -136,19 +144,23 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		When(widget.Current, widget.Part("nav-link"),
 			style.As(style.Primary),
 		).
+		// The whole control lights up, not just the glyph inside it: a hover is
+		// about the target you are aiming at, and the target is the button.
 		Cue(widget.Hover, widget.Part("nav-link"),
-			style.Glyph(style.Accent),
+			style.As(style.Accent),
 		).
-		// Hovering the rail floats its navbar out over the content at label
-		// width. The rail keeps its narrow slot in the Sidebar, so nothing
-		// reflows — only the overlay grows.
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("navbar"),
+		// Hovering the rail floats the whole panel out over the content at label
+		// width. The panel leaves the flow, so the rail's box — already pinned
+		// to the Sidebar's rail token by Grow's min-width:0 — cannot change, and
+		// nothing beside it moves.
+		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-panel"),
 			style.Docked(style.Parent, style.EdgeTop, style.SideEnd, style.SpaceNone),
 			style.Width(style.Content),
 			style.As(style.Panel),
 			style.Raise(style.Floating),
 			style.Pad(style.Space1),
 			style.Round(style.RadiusMd),
+			style.Stack(style.Space1),
 		).
 		// The labels only exist while the rail is expanded — or on a phone,
 		// where the drawer is two thirds of the viewport and has room for them.
