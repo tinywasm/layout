@@ -6,6 +6,8 @@ import (
 
 	"github.com/tinywasm/components/modaldialog"
 	"github.com/tinywasm/components/targetlist"
+	"github.com/tinywasm/fmt"
+	"github.com/tinywasm/fmt/lang"
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/layout/rightpanel"
 	"github.com/tinywasm/svg"
@@ -119,7 +121,7 @@ func (v *CrudView) Init(ctx Ctx) {
 	// nothing Cancelar does not. A destructive confirmation wants exactly two
 	// exits, both of them explicit.
 	v.confirmDelete = &modaldialog.ModalDialog{
-		Title:     "Confirmar",
+		Title:     lang.Translate("Confirm").String(),
 		HideClose: true,
 		Content:   v.renderDeleteConfirm(),
 	}
@@ -137,15 +139,19 @@ func (v *CrudView) Init(ctx Ctx) {
 func (v *CrudView) renderDeleteConfirm() *Element {
 	// The question names the action and the record. "¿Desea continuar?" would
 	// read as safe and be signed without thought — what makes someone stop is
-	// seeing the verb and the name of the thing it is about to happen to.
+	// seeing the verb and the name of the thing it is about to happen to. Each
+	// word is an independent dictionary key — joined with spaces at read time —
+	// so consumers reuse the same entries ("Delete" is already the confirm
+	// button's key).
 	msg := P().BindTextFunc(func() string {
-		return "¿Eliminar «" + v.deleteLabel.Get() + "»? Esta acción no se puede deshacer."
+		tmpl := lang.Translate("Delete", "%s?", "This", "action", "cannot", "be", "undone.").String()
+		return fmt.Sprintf(tmpl, "«"+v.deleteLabel.Get()+"»")
 	})
 
-	cancel := Button().Set(clsDelConfirmBtn.AsAttr()).Text("Cancelar").
+	cancel := Button().Set(clsDelConfirmBtn.AsAttr()).Text(lang.Translate("Cancel").String()).
 		On("click", func(Event) { v.confirmDelete.Close() })
 
-	confirm := Button().Set(clsDelConfirmBtn.AsAttr(), clsDelConfirmBtnDanger.AsAttr()).Text("Eliminar").
+	confirm := Button().Set(clsDelConfirmBtn.AsAttr(), clsDelConfirmBtnDanger.AsAttr()).Text(lang.Translate("Delete").String()).
 		On("click", func(Event) { v.confirmDeleteAction() })
 
 	actions := Div().Set(clsDelConfirmActions.AsAttr()).Child(cancel, confirm)

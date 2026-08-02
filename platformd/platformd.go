@@ -289,7 +289,7 @@ func (p *Platform) Render() *Element {
 	// either. It stays out of .pd__body, which is what the Sidebar contract
 	// there requires.
 	hamburger := Button().Set(clsHamburger.AsAttr()).
-		Attr("aria-label", "Menú").
+		Attr("aria-label", "Menu").
 		Child(iconMenu.Render(string(ClsNavIcon)))
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()

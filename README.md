@@ -5,18 +5,13 @@ Predefined UI layouts for tinywasm modules
 
 ## Docs
 
+Permanent documentation only — plans and stages live outside the README and are ephemeral.
+
 - [Architecture](docs/ARCHITECTURE.md) — package layout, platform lifecycle, signal fields, activation and notification flows
+- [Translation Dictionary](docs/DICTIONARY.md) — how consumers provide a translation dictionary for layout's UI chrome
 - [Refactor arquitectónico](docs/ARQ_REFACTOR.md) — por qué `crudview` y `rightpanel` deben fusionarse, evaluado contra el construction harness
 - [Reverse Engineering](docs/IE_LAYOUT.md) — Reference from pa100t shell
 - [Reverse Engineering Module](docs/IE_MODULE_CONTENT.md) — Reference from pa100t crud module
-- [Roadmap](docs/ROADMAP.md) — CRUD mobile + desktop design roadmap
-- [Visual Contract Master Plan](docs/VISUAL_CONTRACT_MASTER_PLAN.md) — Visual contract definition and migration guidelines
-- [Restoration Plan](docs/PLAN.md) — Detailed plan to fix and restore the platformd chassis
-- [Stage 1 Plan](docs/PLAN_STAGE_1_RIGHTPANEL.md) — rightpanel becomes the single module skeleton
-- [Stage 2 Plan](docs/PLAN_STAGE_2_CRUDVIEW.md) — crudview becomes a controller composing rightpanel
-- [Stage 3 Plan](docs/PLAN_STAGE_3_GUARDS.md) — conformance guards make the split un-reintroducible
-- [Widget v0.4 Plan](docs/PLAN_WIDGET_V4.md) — The visual contract widget v0.4 specifications
-- [Components Plan](docs/PLAN_COMPONENTS.md) — Layout component plans and guidelines
 
 ## Packages
 

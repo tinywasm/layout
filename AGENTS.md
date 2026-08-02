@@ -83,6 +83,31 @@ internal helpers and anything only this package uses. Struct fields stay unexpor
   `syscall/js`. `switch` not `map`. No `defer/recover`. Embed `dom.Element` by value.
 - **No `encoding/json`:** Direct use of the standard library `encoding/json` is prohibited in WASM paths. Use `github.com/tinywasm/json` instead.
 
+## Translatable messages — word keys, consumer dictionary
+
+Framework-authored UI chrome text (dialog titles, button labels, confirmation
+messages, aria-labels) MUST go through `lang.Translate(...)` from
+`github.com/tinywasm/fmt/lang` — never hardcoded literals:
+
+- **One word per argument.** `lang.Translate("Delete", "%s?", "This", "action",
+  "cannot", "be", "undone.")` — never a whole sentence as a single key.
+  Words are joined with spaces at read time and each word is an independent,
+  reusable dictionary entry. Punctuation rides with the word it belongs to.
+- **EN is the canonical key.** Unknown words pass through unchanged, so the
+  default render is English; other languages need a dictionary + activation.
+- **The dictionary is the consumer's, never the library's.** No
+  `lang.RegisterWords` call in production code — only in tests (registering a
+  dictionary simulates the consumer, mirroring `form/input`'s pattern) and in
+  the consumer app. Activating a language (`lang.OutLang(lang.ES)`) is the
+  consumer's job too.
+- **Scope is chrome only.** App-supplied literals (`CrudView.Title`,
+  `view.WithTitle(...)`, presenter labels) are parameterized input, not this
+  library's text — leave them alone.
+- **No translation when there is none.** A word identical in every language
+  ("Menu") stays a plain string — wrapping it in `Translate` is noise.
+
+Consumer instructions: `docs/DICTIONARY.md`.
+
 ## Testing
 
 ```bash
