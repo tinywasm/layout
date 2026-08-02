@@ -27,11 +27,8 @@ func TestCrudView_Render_Basic(t *testing.T) {
 	if !Contains(html, "The Form") {
 		t.Error("expected form")
 	}
-	// Full page variant (no presenter)
-	if !Contains(html, "crudview__detail-full") {
-		t.Error("expected full page class")
-	}
-	if Contains(html, "crudview__aside-content") {
+	// No presenter → no source → rightpanel omits the aside band entirely.
+	if Contains(html, "rp__aside") {
 		t.Error("did not expect aside without source")
 	}
 }
@@ -50,11 +47,11 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 
 	html := v.Render().String()
 
-	if !Contains(html, "crudview__detail") {
-		t.Error("expected standard article class")
+	if !Contains(html, "class='rp'") {
+		t.Error("expected the rightpanel skeleton")
 	}
-	if !Contains(html, "crudview__aside-content") {
-		t.Error("expected aside with source")
+	if !Contains(html, "rp__aside") {
+		t.Error("expected the aside band with a source")
 	}
 	if !Contains(html, "name='cv-crudtoggle'") {
 		t.Error("expected the single crud toggle button (+/↺)")
@@ -70,10 +67,10 @@ func TestCrudView_Render_WithSource(t *testing.T) {
 	if Contains(html, "name='cv-back'") {
 		t.Error("did not expect a back-to-list button")
 	}
-	// The list/aside panel needs a stable id — it is the scroll-snap target
-	// undoAction returns to (listPanelID()).
-	if !Contains(html, ".list'") {
-		t.Error("expected the list panel to carry a stable id (listPanelID)")
+	// The aside carries the scroll-snap target id rightpanel stamps — the id
+	// the delegated ShowAside() resolves on a phone.
+	if !Contains(html, ".aside'") {
+		t.Error("expected the aside to carry the scroll-snap target id")
 	}
 }
 

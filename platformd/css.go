@@ -19,22 +19,25 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.HideOverflow(),
 			style.As(style.Page),
 		).
+		// A slim bar, not a banner: Space1 padding and the IconMd avatar keep
+		// it near 40px — the header frames the stage, it does not compete
+		// with it.
 		Part(widget.Part("header"),
 			style.Row(style.Space2),
 			style.KeepSize(),
 			style.As(style.Panel),
-			style.Pad(style.Space2),
+			style.Pad(style.Space1),
 			style.EdgeToEdge(),
 		).
 		// The brand slot mirrors the user menu at the other end of the header:
-		// the mark is the avatar's exact box (IconLg, full round, clipped), the
+		// the mark is the avatar's exact box (IconMd, full round, clipped), the
 		// name the trigger's text treatment.
 		Part(widget.Part("brand"),
 			style.Row(style.Space2),
 			style.KeepSize(),
 		).
 		Part(widget.Part("brand-mark"),
-			style.IconBox(style.IconLg),
+			style.IconBox(style.IconMd),
 			style.Round(style.RadiusFull),
 			style.HideOverflow(),
 			style.KeepSize(),

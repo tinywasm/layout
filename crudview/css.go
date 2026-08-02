@@ -11,81 +11,24 @@ import (
 // RenderSheet returns the style Sheet containing the rules for crudview.
 func (v *CrudView) RenderSheet() *style.Sheet {
 	return style.For(v).
-		// Fill() so the view takes the whole height of the platform panel that
-		// hosts it; without it the module stops at its content and leaves dead
-		// space under the stage.
-		// Pad is what turns the primary surface into a visible frame: without it
-		// the detail card and the aside sit flush against the panel edges and
-		// the module reads as three stacked rectangles instead of one view.
-		Root(
-			style.Split(style.SplitTwoThirds, style.Space2),
-			style.Fill(),
-			style.As(style.Primary),
-			style.Pad(style.Space3),
-			style.EdgeToEdge(),
-		).
-		Part(widget.Part("detail"),
-			style.Stack(style.Space2),
-			style.Fill(),
-		).
-		Part(widget.Part("detail-full"),
-			style.Stack(style.Space2),
-			style.Fill(),
-		).
+		// crudview paints no frame: rightpanel owns the root, the columns and
+		// the mobile strip. What remains here are the widgets this controller
+		// puts INTO those slots.
+		// Fill: the fields are the article's whole content now — rp__article is
+		// a plain block (page surface, pad, scroll), not a flex column, so a
+		// content-height child would collapse to the form's natural height and
+		// leave the column floating at the top of the card.
 		Part(widget.Part("fields"),
 			style.As(style.Inset),
 			style.Pad(style.Space2),
 			style.Scroll(),
 			style.Round(style.RadiusMd),
-		).
-		Part(widget.Part("aside"),
-			style.Stack(style.Space1),
-			style.As(style.Panel),
-			style.Pad(style.Space1),
 			style.Fill(),
-		).
-		Part(widget.Part("aside-content"),
-			style.Fill(),
-			style.Stack(style.SpaceNone),
-		).
-		// The <article> between the title and the fields carries no style of
-		// its own, so without Fill() it stops at its content and the fields
-		// card floats halfway up the blue panel.
-		// The same frame the aside wears: a light panel with a sliver of padding
-		// around the sunken card inside it. Without it the form area reads as a
-		// slab dropped on the blue while the list next to it is framed.
-		Part(widget.Part("article"),
-			style.Stack(style.SpaceNone),
-			style.Fill(),
-			style.As(style.Panel),
-			style.Round(style.RadiusMd),
-			style.Pad(style.Space1),
 		).
 		Part(widget.Part("list"),
 			style.As(style.Inset),
 			style.Scroll(),
 			style.Round(style.RadiusMd),
-		).
-		Part(widget.Part("actions"),
-			style.Row(style.Space1),
-			style.KeepSize(),
-		).
-		// The heading needs its own indent: it sits directly on the primary
-		// surface with no card of its own to inset it.
-		Part(widget.Part("title"),
-			style.Row(style.Space1),
-			style.Pad(style.Space2),
-			style.KeepSize(),
-		).
-		// Explicit now that the reset stops <h1> from carrying 2em of its own.
-		Part(widget.Part("title-text"),
-			style.As(style.Primary),
-			style.FontSize(style.Text2xl),
-			style.FontWeight(style.WeightBold),
-		).
-		// A bare <svg> with no box falls back to 300x150; IconBox pins it.
-		Part(widget.Part("icon"),
-			style.IconBox(style.IconMd),
 		).
 		// The primary action spans the column, mirroring the search bar above
 		// the list rather than sitting as a stray square beside it.
@@ -109,53 +52,6 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.RevealedBy(widget.Open),
 			style.IconBox(style.IconMd),
 		).
-		// The search bar is ONE control, not a card holding two loose pieces —
-		// the shape in the reference: the magnifier is the bar's leading cap,
-		// the input its body, and a gap or a card of its own between them saws
-		// the bar back into separate boxes. The wrapper carries the radius and
-		// clips, so cap and body stay square and still read as one rounded bar.
-		// ControlBox pins the bar to --control-height, the same token the
-		// action bar at the other end of the column answers to.
-		Part(widget.Part("search"),
-			style.Row(style.SpaceNone),
-			style.Round(style.RadiusMd),
-			style.HideOverflow(),
-			style.ControlBox(),
-			style.KeepSize(),
-		).
-		// The magnifier is the bar's square cap: aspect-ratio, not padding,
-		// sets the width — a padded box drifts off the control token (the old
-		// Pad(Space2)+icon-box measured 40px against the card's 66), while the
-		// square derives from the same --control-height as everything else.
-		Part(widget.Part("search-icon"),
-			style.As(style.Primary),
-			style.MediaBox(style.AspectSquare),
-			style.ControlBox(),
-			style.KeepSize(),
-		).
-		// The input is the body of the bar: it grows into whatever the cap
-		// leaves and answers to the same control height, so cap and body can
-		// never drift apart vertically — the mismatch that left a 25px field
-		// floating in the middle of the 72px strip.
-		Part(widget.Part("search-input"),
-			style.As(style.Inset),
-			style.Pad(style.Space2),
-			style.Grow(),
-			style.ControlBox(),
-		).
-		// On a phone the desktop Split becomes a horizontal scroll-snap strip:
-		// the list is what shows on arrival, and tapping a row slides the detail
-		// in from the left, leaving a sliver of the list on the right so it is
-		// obvious where you came from. crudview.go already drives the snap with
-		// ScrollIntoView on select and on the back button.
-		// Pad(SpaceNone) is part of the contract, not a detail: the panels are
-		// sized as a share of the scroll container, and any padding on it makes
-		// each panel that much narrower than the window, so a strip of the
-		// neighbour shows through at rest.
-		On(css.Mobile, "",
-			style.MasterDetail(style.Most),
-			style.Pad(style.SpaceNone),
-		).
 		// On a phone the action is a floating square instead of a bar across the
 		// bottom: the list keeps the whole panel and the button matches the
 		// hamburger it shares the screen with. Viewport scope, not Parent — it
@@ -173,36 +69,16 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Raise(style.Floating),
 			style.CenterContent(),
 		).
-		// The title travels like the action button: fixed to the screen, so it is
-		// there on both pages of the swipe strip. On a phone the platform has no
-		// header, and this is the only thing naming the section.
-		// Compact on a phone: it floats over the content, so it has to read as a
-		// chip rather than a banner.
-		On(css.Mobile, widget.Part("title-text"),
-			style.FontSize(style.TextBase),
-			style.FontWeight(style.WeightBold),
-		).
-		On(css.Mobile, widget.Part("title"),
-			style.Docked(style.Parent, style.EdgeTop, style.SideStart, style.Space4),
-			style.Row(style.Space1),
-			style.As(style.Primary),
-			style.Round(style.RadiusMd),
-			style.Pad(style.Space2),
-			style.Raise(style.Floating),
-			style.Width(style.Content),
-		).
-		// Reserve the band the floating title and hamburger occupy, so the search
-		// bar and the form start below them instead of underneath.
-		On(css.Mobile, widget.Part("aside"),
-			style.PadEdge(style.EdgeTop, style.Space12),
-		).
-		On(css.Mobile, widget.Part("detail"),
-			style.PadEdge(style.EdgeTop, style.Space12),
-		).
 		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
 		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
+		// The delete-confirmation modal's holder must not cost the frame a flex
+		// share: as a plain in-flow child of rightpanel's Split it would take a
+		// third of the width (the skeleton's `.rp > *` grow beats this sheet's
+		// KeepSize across sheets). Pinning it fixed to the viewport corner takes
+		// it out of the flow entirely; it is 0x0 while the modal is closed, and
+		// the modal's own Backdrop(Viewport) covers the screen when it opens.
 		Part(widget.Part("delconfirm-mount"),
-			style.KeepSize(),
+			style.Docked(style.Viewport, style.EdgeTop, style.SideStart, style.SpaceNone),
 		).
 		// Space2: the same step modaldialog's panel puts between its header and
 		// its body, so title→question and question→buttons read as one rhythm.

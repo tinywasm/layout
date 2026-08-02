@@ -21,6 +21,7 @@ var (
 	clsAside        = NameRightPanel.Class("aside")
 	clsAsideHeader  = NameRightPanel.Class("aside-header")
 	clsAsideContent = NameRightPanel.Class("aside-content")
+	clsAsideFooter  = NameRightPanel.Class("aside-footer")
 )
 
 func (r *RightPanel) WidgetName() widget.Name { return NameRightPanel }
@@ -45,6 +46,7 @@ func (r *RightPanel) WidgetKind() widget.Kind { return widget.Region }
 //	    Article:       myTable,
 //	    AsideControls: myFilterBar,
 //	    Aside:         myDetailPanel,
+//	    AsideFooter:   myActionButton,
 //	}
 //	panel.Render()
 type RightPanel struct {
@@ -70,6 +72,11 @@ type RightPanel struct {
 
 	// Aside is the content area of the aside panel (e.g. detail view, info card).
 	Aside Component
+
+	// AsideFooter is rendered at the bottom of the aside panel, below the
+	// content (e.g. a primary action button). It keeps its size while the
+	// content between it and AsideControls takes the slack.
+	AsideFooter Component
 }
 
 // Render builds the layout element tree.
@@ -87,7 +94,7 @@ func (r *RightPanel) Render() *Element {
 	}
 
 	// ── main section ─────────────────────────────────────────────────────────
-	main := Section().Set(clsMain.AsAttr())
+	main := Section().Set(clsMain.AsAttr()).ID(r.MainPanelID())
 
 	// header row: title + Head slot + HeadControls slot
 	header := Div().Set(clsHeader.AsAttr())
@@ -116,8 +123,8 @@ func (r *RightPanel) Render() *Element {
 	wrapper.Child(main)
 
 	// ── aside panel ──────────────────────────────────────────────────────────
-	if r.AsideControls != nil || r.Aside != nil {
-		aside := Aside().Set(clsAside.AsAttr())
+	if r.AsideControls != nil || r.Aside != nil || r.AsideFooter != nil {
+		aside := Aside().Set(clsAside.AsAttr()).ID(r.AsidePanelID())
 
 		if r.AsideControls != nil {
 			aside.Child(Div().Set(clsAsideHeader.AsAttr()).Child(r.AsideControls))
@@ -125,9 +132,47 @@ func (r *RightPanel) Render() *Element {
 		if r.Aside != nil {
 			aside.Child(Div().Set(clsAsideContent.AsAttr()).Child(r.Aside))
 		}
+		if r.AsideFooter != nil {
+			aside.Child(Div().Set(clsAsideFooter.AsAttr()).Child(r.AsideFooter))
+		}
 
 		wrapper.Child(aside)
 	}
 
 	return wrapper
+}
+
+// MainPanelID and AsidePanelID identify the two scroll-snap targets of the
+// mobile strip. A host that drives the snap (see ShowMain/ShowAside) does not
+// need them; they are exported because a host may want to link to a panel.
+func (r *RightPanel) MainPanelID() string  { return r.panelID() + ".main" }
+func (r *RightPanel) AsidePanelID() string { return r.panelID() + ".aside" }
+
+// ShowMain brings the main panel into view; ShowAside brings the aside back.
+//
+// Both are no-ops on a wide screen, and that guard is the whole point:
+// ScrollIntoView walks EVERY scrollable ancestor, not just the nearest one the
+// caller had in mind. Side by side there is nothing to scroll here, so an
+// unguarded call reached the platform's module deck instead and slid the whole
+// application to the next module.
+func (r *RightPanel) ShowMain()  { r.showPanel(r.MainPanelID()) }
+func (r *RightPanel) ShowAside() { r.showPanel(r.AsidePanelID()) }
+
+func (r *RightPanel) showPanel(id string) {
+	strip, ok := Get(r.GetID())
+	if !ok || !strip.ScrollsX() {
+		return
+	}
+	if el, ok := Get(id); ok {
+		el.ScrollIntoView()
+	}
+}
+
+// panelID is the id stamped on the wrapper element: the module's name when one
+// is set, the element's own generated id otherwise.
+func (r *RightPanel) panelID() string {
+	if r.Module != nil {
+		return r.Module.ModelName()
+	}
+	return r.GetID()
 }

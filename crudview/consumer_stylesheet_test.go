@@ -39,8 +39,11 @@ func ruleBlock(cssStr, want string) string {
 }
 
 // TestCrudView_ControlAndEdgeAsserts guards PLAN v0.2.0 items 5 and 6: the
-// controls answer to --control-height by construction, and the root is squared
-// at the frame while the interior keeps its radius.
+// controls answer to --control-height by construction. The frame AND the form's
+// card left this package — rightpanel owns the root, the columns, the strip and
+// the article card (see rightpanel's EdgeAsserts and the article reconciliation
+// in PLAN_STAGE_2). A rule reappearing here means someone re-hardcoded a
+// skeleton into the controller.
 func TestCrudView_ControlAndEdgeAsserts(t *testing.T) {
 	caller := &conformance.FakeCaller{}
 	p := view.New(caller, &Device{}, "device_list",
@@ -54,26 +57,16 @@ func TestCrudView_ControlAndEdgeAsserts(t *testing.T) {
 
 	cssStr := v.RenderCSS().String()
 
-	// The search bar and the action button agree on the control token.
-	for _, part := range []string{".crudview__search {", ".crudview__action {"} {
-		if b := ruleBlock(cssStr, part); !fmt.Contains(b, "min-height: var(--control-height") {
-			t.Errorf("%s must be sized by --control-height, block:\n%s", part, b)
+	// The action button answers to the control token.
+	if b := ruleBlock(cssStr, ".crudview__action {"); !fmt.Contains(b, "min-height: var(--control-height") {
+		t.Errorf(".crudview__action must be sized by --control-height, block:\n%s", b)
+	}
+
+	for _, gone := range []string{".crudview__search", ".crudview__detail",
+		".crudview__aside", ".crudview__title", ".crudview__actions", ".crudview__article"} {
+		if fmt.Contains(cssStr, gone) {
+			t.Errorf("%s must not exist: rightpanel owns the frame and the article card", gone)
 		}
-	}
-	// The magnifier claims the whole card height instead of a padded box.
-	if b := ruleBlock(cssStr, ".crudview__search-icon {"); !fmt.Contains(b, "min-height: var(--control-height") {
-		t.Errorf("search-icon must fill the control height, block:\n%s", b)
-	}
-	if b := ruleBlock(cssStr, ".crudview__search-icon {"); fmt.Contains(b, "padding") {
-		t.Errorf("search-icon must not be a padded box, block:\n%s", b)
-	}
-	// The root is square where it meets the frame (EdgeToEdge now actually
-	// wins over the surface's default radius); the interior keeps its radius.
-	if b := ruleBlock(cssStr, ".crudview {"); fmt.Contains(b, "border-radius") {
-		t.Errorf("crudview root must be squared by EdgeToEdge, block:\n%s", b)
-	}
-	if b := ruleBlock(cssStr, ".crudview__article {"); !fmt.Contains(b, "border-radius") {
-		t.Errorf("interior article must keep its radius, block:\n%s", b)
 	}
 }
 
@@ -85,6 +78,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 		Title:     "CRUD",
 		Presenter: p,
 		Form:      html.Div(),
+		Filter:    html.Div(),
 	}
 	v.Init(&fakeCtx{})
 	_ = v.Reload()

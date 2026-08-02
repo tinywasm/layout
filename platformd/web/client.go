@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/tinywasm/components/searchbar"
 	"github.com/tinywasm/components/themetoggle"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
@@ -168,13 +169,16 @@ func (m mod) View() Component {
 		pres := view.New(&memCaller{db: deviceDB}, &Device{}, "device_list",
 			func() model.ModelSlice { return &DeviceList{} },
 			view.WithTitle("Computadores"),
-			view.WithSearchPlaceholder("Buscar..."),
 			view.WithSaveOp("device_save"),
 			view.WithDeleteOp("device_delete"),
 		)
 		cv, err := crudview.New(crudview.Config{
 			ParentID:  "crud",
 			Presenter: pres,
+			// The filter is the application's choice, not the layout's. This is
+			// the line a deployment swaps for a calendar or a category select;
+			// nothing in crudview or rightpanel changes when it does.
+			Filter: &searchbar.SearchBar{Placeholder: "Buscar..."},
 		})
 		if err != nil {
 			panic(err)

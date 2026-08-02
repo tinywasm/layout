@@ -38,9 +38,10 @@ func ruleBlock(cssStr, want string) string {
 	return body[:end]
 }
 
-// TestRightPanel_EdgeAsserts guards PLAN v0.2.0 item 5: the panel and its
-// header/title are welded to the application frame and must be square, while
-// interior parts keep their radius.
+// TestRightPanel_EdgeAsserts guards PLAN v0.2.0 item 5: the panel is welded to
+// the application frame and must be square, while interior parts keep their
+// radius. The aside-header is the deliberate exception: it sheds every
+// treatment (the consumer's control brings its own), so it carries no radius.
 func TestRightPanel_EdgeAsserts(t *testing.T) {
 	r := &RightPanel{
 		Module:        &mockModule{id: "test-module"},
@@ -54,13 +55,22 @@ func TestRightPanel_EdgeAsserts(t *testing.T) {
 
 	cssStr := r.RenderCSS().String()
 
-	for _, sel := range []string{".rp {", ".rp__header {", ".rp__title {"} {
-		if b := ruleBlock(cssStr, sel); fmt.Contains(b, "border-radius") {
+	// The mobile strip re-declares the root and the title inside a media query
+	// that comes after the desktop rules, so LastIndex would land there. The
+	// frame's square corners and the title's radius are desktop contracts;
+	// assert them on everything before the first @media block.
+	desktop := cssStr
+	if i := strings.Index(cssStr, "@media"); i != -1 {
+		desktop = cssStr[:i]
+	}
+
+	for _, sel := range []string{".rp {"} {
+		if b := ruleBlock(desktop, sel); fmt.Contains(b, "border-radius") {
 			t.Errorf("%s must be squared at the frame, block:\n%s", sel, b)
 		}
 	}
-	if b := ruleBlock(cssStr, ".rp__aside-header {"); !fmt.Contains(b, "border-radius") {
-		t.Errorf("interior aside-header must keep its radius, block:\n%s", b)
+	if b := ruleBlock(desktop, ".rp__title {"); !fmt.Contains(b, "border-radius") {
+		t.Errorf("interior title must keep its radius, block:\n%s", b)
 	}
 }
 
@@ -73,6 +83,7 @@ func TestRightPanel_StylesheetAsserts(t *testing.T) {
 		Article:       html.Div(),
 		AsideControls: html.Div(),
 		Aside:         html.Div(),
+		AsideFooter:   html.Div(),
 	}
 
 	sheet := r.RenderSheet()
@@ -159,5 +170,30 @@ func TestRightPanel_StylesheetAsserts(t *testing.T) {
 		if !fmt.Contains(allHTML, want) {
 			t.Errorf("stylesheet selects on %q but no element in the markup ever writes it", want)
 		}
+	}
+}
+
+func TestRightPanel_FlowIsSplitRootStackedMain(t *testing.T) {
+	r := &RightPanel{
+		Module:        &mockModule{id: "test-module"},
+		Title:         "Test Title",
+		Article:       html.Div(),
+		AsideControls: html.Div(),
+		Aside:         html.Div(),
+	}
+
+	cssStr := r.RenderCSS().String()
+
+	// The root splits the two columns; main stacks the title band above the body.
+	// These were swapped, and the swap was invisible because no demo module
+	// passed an Aside. ruleBlock's LastIndex would land on the mobile strip's
+	// re-flow of the root, so the desktop flow is asserted on the exact rule
+	// the style DSL emits for the Split/Stack pair. Main's stack is part of the
+	// primitives-layer compound selector it shares with the aside bands.
+	if !fmt.Contains(cssStr, ".rp {\n  display: flex;\n  flex-wrap: wrap") {
+		t.Errorf(".rp must carry the Split flow")
+	}
+	if !fmt.Contains(cssStr, ".rp__aside, .rp__aside-content, .rp__main {\n  display: flex;\n  flex-direction: column") {
+		t.Errorf(".rp__main must stack, not split")
 	}
 }

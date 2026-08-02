@@ -30,6 +30,7 @@ func TestRightPanel_RenderHTML_WithAllSlots(t *testing.T) {
 		Article:       &stubComponent{"<table></table>"},
 		AsideControls: &stubComponent{"<input type=search>"},
 		Aside:         &stubComponent{"<ul></ul>"},
+		AsideFooter:   &stubComponent{"<button></button>"},
 	}
 
 	el := panel.Render()
@@ -54,6 +55,8 @@ func TestRightPanel_RenderHTML_WithAllSlots(t *testing.T) {
 		{"AsideControls slot", "<input type=search>"},
 		{"aside content", "class='rp__aside-content'"},
 		{"Aside slot", "<ul></ul>"},
+		{"aside footer", "class='rp__aside-footer'"},
+		{"AsideFooter slot", "<button></button>"},
 	}
 
 	for _, c := range checks {
@@ -68,13 +71,45 @@ func TestRightPanel_RenderHTML_AsideOmittedWhenNil(t *testing.T) {
 		Module:  stubModule{"orders"},
 		Title:   "Orders",
 		Article: &stubComponent{"<table></table>"},
-		// No AsideControls, no Aside
+		// No AsideControls, no Aside, no AsideFooter
 	}
 
 	html := panel.Render().String()
 
 	if strings.Contains(html, "rp__aside") {
-		t.Error("expected rp__aside to be absent when both AsideControls and Aside are nil")
+		t.Error("expected rp__aside to be absent when all aside slots are nil")
+	}
+}
+
+func TestRightPanel_AsideRendersForFooterAlone(t *testing.T) {
+	panel := &rightpanel.RightPanel{
+		Module:      stubModule{"checkout"},
+		Title:       "Checkout",
+		AsideFooter: &stubComponent{"<button>Buy</button>"},
+	}
+
+	html := panel.Render().String()
+
+	for _, want := range []string{"class='rp__aside'", "class='rp__aside-footer'", "<button>Buy</button>"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected %q in HTML with only AsideFooter set:\n%s", want, html)
+		}
+	}
+}
+
+func TestRightPanel_PanelIDsAreStamped(t *testing.T) {
+	panel := &rightpanel.RightPanel{
+		Module: stubModule{"users"},
+		Title:  "Users",
+		Aside:  &stubComponent{"<ul></ul>"},
+	}
+
+	html := panel.Render().String()
+
+	for _, want := range []string{"id='users.main'", "id='users.aside'"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected %q in HTML:\n%s", want, html)
+		}
 	}
 }
 
@@ -82,7 +117,10 @@ func TestRightPanel_RenderHTML_NoModuleNoID(t *testing.T) {
 	panel := &rightpanel.RightPanel{Title: "No ID"}
 	html := panel.Render().String()
 
-	if strings.Contains(html, "id=") {
-		t.Error("expected no id attribute when Module is nil")
+	// The wrapper carries no module-derived id when Module is nil. The sections
+	// still stamp generated ids — they are the scroll-snap targets a host
+	// without a module (e.g. crudview composing the panel) drives.
+	if strings.HasPrefix(html, "<div id=") {
+		t.Errorf("expected the wrapper to have no id when Module is nil, got:\n%s", html)
 	}
 }

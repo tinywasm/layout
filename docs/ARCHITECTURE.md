@@ -4,12 +4,32 @@
 
     tinywasm/layout/
     ├── platformd/      # Shell: header, nav rail, hash routing, notifications
-    │   ├── platformd.go    # Main struct, Init(ctx), Render()
-    │   ├── css.go          # !wasm: RenderCSS() *css.Stylesheet
-    │   ├── svg.go          # !wasm: IconSvg() *svg.Sprite (built-in nav icons)
-    │   ├── tokens.go       # !wasm: CSS token definitions
-    │   └── web/            # Demo app (wasm binary entry point)
-    └── rightpanel/     # Content panel with header/body/aside slots
+    ├── rightpanel/     # THE module skeleton: frame, two columns, aside bands,
+    │                   # mobile master-detail strip. Owns every layout primitive.
+    └── crudview/       # CRUD controller: state machine + orchestration.
+                        # Renders NO frame — composes rightpanel.
+
+## Who owns what
+
+The module frame has exactly one owner: `rightpanel`. It owns every layout
+primitive — the split, the two columns, the aside bands, the mobile
+master-detail strip — and every module in this repository composes it.
+`crudview` renders NO frame: it is a CRUD controller that builds a
+`rightpanel.RightPanel`, fills its slots (Title, Article, Aside, AsideControls,
+AsideFooter) and keeps only the state machine. `platformd` is the shell
+(routing, chrome) and is a third thing.
+
+Three tests in `conformance_test.go` make the split un-reintroducible:
+
+- `TestOnlyOneOwnerOfTheGrid` fails if a second package emits
+  `Split`/`MasterDetail` — a second skeleton is how the duplication started.
+- `TestNoLocallyDeclaredSeams` rejects a locally-declared `Filterable`-style
+  interface that forks an upstream contract.
+- `TestEverySlotIsRendered` fails when a slot exists on `RightPanel` but is
+  never wired into `Render()`.
+
+See [ARQ_REFACTOR.md](ARQ_REFACTOR.md) for why the two skeletons diverged and
+what the construction harness has to say about it.
 
 ## Dependencies
 

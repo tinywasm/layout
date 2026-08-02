@@ -5,6 +5,7 @@ package crudview
 import (
 	"testing"
 
+	"github.com/tinywasm/components/searchbar"
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/model"
@@ -50,7 +51,17 @@ func TestConsumer_Wasm_Render(t *testing.T) {
 	}
 
 	html := root.String()
-	if !fmt.Contains(html, "Custom Search...") {
-		t.Errorf("expected html to contain custom search placeholder, got: %s", html)
+	if !fmt.Contains(html, "Custom Search Title") {
+		t.Errorf("expected html to contain the title, got: %s", html)
+	}
+
+	// The presenter's placeholder travels with the filter control — the
+	// default searchbar New installed — not in crudview's own markup.
+	sb, ok := v.Filter.(*searchbar.SearchBar)
+	if !ok {
+		t.Fatalf("expected the default Filter to be a *searchbar.SearchBar, got %T", v.Filter)
+	}
+	if sb.Placeholder != "Custom Search..." {
+		t.Errorf("expected the searchbar to carry the presenter's placeholder, got %q", sb.Placeholder)
 	}
 }

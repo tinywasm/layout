@@ -1,6 +1,8 @@
 package crudview
 
 import (
+	"github.com/tinywasm/components/searchbar"
+	"github.com/tinywasm/dom"
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/form"
 	"github.com/tinywasm/view"
@@ -14,6 +16,12 @@ type Config struct {
 	ParentID string
 	// Presenter is built by the module via view.New(...). Required.
 	Presenter view.Presenter
+
+	// Filter is the control that narrows the list. Optional: nil renders no
+	// controls band. When nil, New installs a searchbar.SearchBar carrying the
+	// presenter's placeholder — the ergonomic default, not a decision imposed:
+	// pass any widget.Filterable to replace it.
+	Filter dom.Component
 }
 
 // New builds the renderer around an already-constructed Presenter. It generates the form from
@@ -30,12 +38,20 @@ func New(cfg Config) (*CrudView, error) {
 	}
 	f.HideSubmit() // there is no Save button — auto-save (OnFieldChange) replaces it
 
+	// The default filter keeps every existing consumer compiling: a host that
+	// does not care which control it gets still gets a working search bar with
+	// the presenter's placeholder. The demo injects its own — see platformd.
+	filter := cfg.Filter
+	if filter == nil {
+		filter = &searchbar.SearchBar{Placeholder: cfg.Presenter.SearchPlaceholder()}
+	}
+
 	v := &CrudView{
-		Title:             cfg.Presenter.Title(),
-		Form:              f,
-		form:              f,
-		Presenter:         cfg.Presenter,
-		SearchPlaceholder: cfg.Presenter.SearchPlaceholder(),
+		Title:     cfg.Presenter.Title(),
+		Form:      f,
+		form:      f,
+		Presenter: cfg.Presenter,
+		Filter:    filter,
 	}
 
 	// Auto-save: every field commit (blur/change) persists immediately — see

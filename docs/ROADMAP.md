@@ -17,8 +17,10 @@ desktop AND an emulated mobile viewport, light + dark.
   only) also returns to the list without clearing the selection.
 
 ## Components (SRP — each owns its own CSS)
-- **search**: plain `<input type=search>` inside crudview (explicit decision,
-  do not swap in `selectsearch`).
+- **filter slot**: `rightpanel.AsideControls` takes any `widget.Filterable`.
+  `crudview.New` installs a `components/searchbar.SearchBar` by default; a
+  calendar or a select replaces it without touching either package.
+  (Supersedes the v0.1 decision to hardcode a plain input.)
 - **targetlist** (`components`): list + row cards + a ⋮ options menu
   (Editar/Eliminar), selected state, one shared native `<details
   name="tl-menu-group">` accordion group so only one row's menu is ever open.
