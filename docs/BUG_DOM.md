@@ -1,3 +1,15 @@
+# BUG: dom panic on second modal open — RESOLVED
+
+> **Fixed in `github.com/tinywasm/dom` v0.13.0 and `github.com/tinywasm/components`
+> v0.4.1.**
+> See the master plan `app-releases/docs/SHOW_HARNESS_MASTER_PLAN.md`, `dom/docs/PLAN.md`
+> (the fix) and `components/docs/PLAN_SHOW.md` (consumer migration). The harness is
+> closed: `Show` no longer takes a render callback, so the "second open re-attaches a
+> captured element" state cannot be written. The regression is pinned by
+> `dom/show_regression_wasm_test.go`.
+
+## Stack trace (v0.12.1 — historical)
+
 panic: dom: element div  is already a child of another element; one element has one parent — build a second instance instead of sharing this one
 script.js:2 
 script.js:2 goroutine 7 [running]:

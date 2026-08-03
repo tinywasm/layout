@@ -12,6 +12,8 @@ Permanent documentation only — plans and stages live outside the README and ar
 - [Refactor arquitectónico](docs/ARQ_REFACTOR.md) — por qué `crudview` y `rightpanel` deben fusionarse, evaluado contra el construction harness
 - [Reverse Engineering](docs/IE_LAYOUT.md) — Reference from pa100t shell
 - [Reverse Engineering Module](docs/IE_MODULE_CONTENT.md) — Reference from pa100t crud module
+- [Bug Analysis](docs/BUG_DOM.md) — resolved panic: dom `Show` on second modal open (fixed in dom v0.13.0 / components v0.4.1)
+- [Construction Harness](docs/CONSTRUCTION_HARNESS.md) — ecosystem principles: typed, explicit APIs that fail at compile time
 
 ## Packages
 
