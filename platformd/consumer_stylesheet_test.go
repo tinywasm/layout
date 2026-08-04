@@ -47,6 +47,28 @@ func ruleBlock(cssStr, want string) string {
 	return body[:end]
 }
 
+// TestHoverOnANavLinkDoesNotResizeIt is the net that keeps the rail from
+// flickering: the hover state of a nav item must paint an outline over the
+// same pixel, never a border — a border adds 2px of layout and the item grows
+// past --rail-narrow, leaves the pointer, loses :hover, and loops.
+func TestHoverOnANavLinkDoesNotResizeIt(t *testing.T) {
+	cssStr := (&Platform{}).RenderCSS().String()
+
+	b := ruleBlock(cssStr, ".pd__nav-link:hover")
+	if b == "" {
+		t.Fatalf("expected a rule for .pd__nav-link:hover")
+	}
+	if Contains(b, "border:") {
+		t.Errorf("hover must not paint a border (would resize the box), block:\n%s", b)
+	}
+	if !Contains(b, "outline:") {
+		t.Errorf("hover must paint an outline, block:\n%s", b)
+	}
+	if !Contains(b, "outline-offset: -1px;") {
+		t.Errorf("hover must use outline-offset: -1px, block:\n%s", b)
+	}
+}
+
 func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// Identity, brand and the actions slot are all supplied: the class-parity
 	// assertion below is two-directional, so anything left nil would read as a

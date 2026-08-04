@@ -15,8 +15,10 @@ func TestPlatform_IconSvg_HasRequiredIcons(t *testing.T) {
 		t.Fatal("IconSvg() returned nil")
 	}
 
+	// Content icons (home, products, info) live with their module packages —
+	// the chassis only draws its own chrome glyphs.
 	s := sprite.String()
-	required := []string{"home", "products", "info"}
+	required := []string{"pd-user", "pd-brand", "pd-menu"}
 	for _, id := range required {
 		if !strings.Contains(s, `id="`+id+`"`) {
 			t.Errorf("missing icon: %s", id)

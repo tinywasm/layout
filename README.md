@@ -20,10 +20,19 @@ Permanent documentation only — plans and stages live outside the README and ar
 ### platformd
 
 The platform shell, providing the header, navigation rail, and module hosting.
+The stage is a slide-deck of layers (not a scroller): the active module slides
+in left→right, and a swipe inside a module can never chain onto the stage. On a
+phone the hamburger carries the active module's icon and stows while you scroll
+down.
 
 - `NewUIModule(id, label, iconID, view)`: helper to create modules.
 - `CanView`: function field to gate module access.
 - `Platform.Brand` (`BrandName()`/`BrandMark()`): optional leading header slot; empty mark falls back to the shell's default glyph.
+
+Demo modules live one per package under `platformd/modules/<name>/`, each
+owning its view, its data and its icon; the chassis ships only its own chrome
+glyphs. Adding a module to an application is a package plus one line in
+`p.Modules` — no `if` in the shell.
 
 ### crudview
 

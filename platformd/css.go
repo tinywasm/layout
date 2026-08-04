@@ -80,22 +80,31 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Sidebar(style.SideEnd, style.RailNarrow, style.SpaceNone),
 			style.Fill(),
 		).
-		// A deck, not a stack of hidden panels: RevealedBy toggles `display`,
-		// which is discrete and cannot transition, so a route change jumped. The
-		// movement comes from the scroller instead — Activate() calls
-		// ScrollIntoView and the strip slides. Every module stays mounted.
+		// Capas, no tira: los paneles se apilan y el activo entra deslizándose desde
+		// el borde inicial. RevealedBy conmuta `display`, que es discreta y no puede
+		// transicionar, de ahí que el movimiento venga de un transform.
+		//
+		// Esto NO es un scroller, y esa es la razón de ser del cambio: cuando lo era,
+		// el scroll-snap horizontal de cada módulo (rightpanel MasterDetail, en móvil)
+		// encadenaba con este al llegar a su extremo y un gesto dentro del contenido
+		// arrastraba la aplicación al módulo siguiente. Un solo eje horizontal
+		// desplazable por página.
+		//
+		// Todos los módulos siguen montados; el estado Current decide cuál se ve.
 		Part(widget.Part("stage"),
-			style.Deck(style.SpaceNone),
+			style.SlideDeck(style.MotionBase),
 			style.Fill(),
 		).
-		// Scroll(), not Fill(): a module taller than the viewport has to scroll
-		// inside its own page of the deck. Scroll() is Fill() plus overflow-y.
-		// Anchor so a module's own floating chrome — a title, an action button —
-		// resolves against ITS page of the deck. Against the viewport it
-		// survived the route change: every panel stays mounted in a deck, so the
-		// crud module's title floated over every other module.
+		// Scroll(), no Fill(): un módulo más alto que el viewport tiene que
+		// desplazarse dentro de su propia capa. Scroll() es Fill() más overflow-y.
+		//
+		// Sin Anchor(): SlideDeck ya posiciona cada capa en absoluto, lo que la
+		// convierte en el bloque contenedor de su contenido — que es lo que el cromo
+		// flotante de un módulo necesita para resolverse contra SU panel. Añadir
+		// Anchor() aquí lo ROMPE: emite position:relative en @layer widgets, que gana
+		// sobre el position:absolute que el flujo emite en @layer primitives, y las
+		// capas volverían al flujo apiladas una debajo de otra.
 		Part(widget.Part("panel"),
-			style.Anchor(),
 			style.Stack(style.SpaceNone),
 			style.Scroll(),
 		).
@@ -185,11 +194,16 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		When(widget.Current, widget.Part("nav-link"),
 			style.As(style.Accent),
 		).
-		// The whole control lights up, not just the glyph inside it: a hover is
-		// about the target you are aiming at, and the target is the button.
-		// Inset, not Accent: selection is now amber, and a hover in the same
-		// colour would be indistinguishable from it. A tonal shift — sunken
-		// surface and outline — says "aimed at" without saying "current".
+// El control entero se ilumina, no solo el glifo: el hover habla del blanco
+		// al que apuntas, y el blanco es el botón. Inset, no Accent: la selección ya
+		// es ámbar y un hover del mismo color sería indistinguible de ella.
+		//
+		// El borde de Inset NO ensancha la caja: una regla de estado lo emite como
+		// outline (ver widget/style), así que el ítem mide lo mismo con y sin
+		// puntero encima. Esa igualdad es obligatoria aquí — el rail mide exactamente
+		// --rail-narrow y el panel flotante se dimensiona con width: max-content: dos
+		// píxeles de más y el ítem se sale del puntero que lo activó, lo pierde,
+		// encoge, y el menú entero entra en un bucle de parpadeo.
 		Cue(widget.Hover, widget.Part("nav-link"),
 			style.As(style.Inset),
 		).
@@ -235,6 +249,10 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Raise(style.Floating),
 			style.CenterContent(),
 			style.Docked(style.Viewport, style.EdgeTop, style.SideEnd, style.Space4),
+			// Se guarda mientras el usuario baja. Es un estado, no una clase: lo
+			// escribe Go y lo lee la hoja, y el atributo sale del propio State para
+			// que marcado y selector no puedan discrepar.
+			style.RevealedBy(widget.Open),
 		).
 		OnlyOn(css.Mobile, widget.Part("nav-overlay"),
 			style.Backdrop(style.Viewport),

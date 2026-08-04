@@ -92,31 +92,20 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 			style.MasterDetail(style.Most),
 			style.Pad(style.SpaceNone),
 		).
-		On(css.Mobile, widget.Part("title"),
-			style.FontSize(style.TextBase),
-			style.FontWeight(style.WeightBold),
-		).
-		// The title travels like the action button: fixed to the screen, so it is
-		// there on both pages of the swipe strip. On a phone the platform has no
-		// header, and this is the only thing naming the section.
-		// Compact on a phone: it floats over the content, so it has to read as a
-		// chip rather than a banner.
+		// En móvil no hay cabecera: el chasis lleva el nombre de la sección en su
+		// botón de menú, que es el único cromo que sobrevive ahí. Una chapa flotante
+		// con el título repetía ese dato encima del contenido y tapaba la barra de
+		// búsqueda del aside.
+		//
+		// Se apaga la cabecera entera y no solo el <h1>: ControlBox le fija una
+		// altura mínima de --control-height, así que ocultar únicamente el título
+		// dejaría una banda vacía de 50px en lo alto de cada módulo.
+		//
+		// HeadControls cae con ella. Es aceptable porque hoy no lo usa nadie en el
+		// repositorio salvo los tests; un control que deba sobrevivir en móvil va en
+		// AsideControls, que es la banda que sí se ve ahí.
 		On(css.Mobile, widget.Part("header"),
-			style.Docked(style.Parent, style.EdgeTop, style.SideStart, style.Space4),
-			style.Row(style.Space1),
-			style.As(style.Primary),
-			style.Round(style.RadiusMd),
-			style.Pad(style.Space2),
-			style.Raise(style.Floating),
-			style.Width(style.Content),
-		).
-		// Reserve the band the floating header and the hamburger occupy, so the
-		// content starts below them instead of underneath.
-		On(css.Mobile, widget.Part("main"),
-			style.PadEdge(style.EdgeTop, style.Space12),
-		).
-		On(css.Mobile, widget.Part("aside"),
-			style.PadEdge(style.EdgeTop, style.Space12),
+			style.Hide(),
 		)
 }
 

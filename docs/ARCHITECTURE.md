@@ -4,6 +4,8 @@
 
     tinywasm/layout/
     ├── platformd/      # Shell: header, nav rail, hash routing, notifications
+    │   └── modules/    # Demo modules, one package each (devices, home, about):
+    │                   # view + data + icon, owned by the module, not the chassis
     ├── rightpanel/     # THE module skeleton: frame, two columns, aside bands,
     │                   # mobile master-detail strip. Owns every layout primitive.
     └── crudview/       # CRUD controller: state machine + orchestration.
@@ -18,6 +20,12 @@ master-detail strip — and every module in this repository composes it.
 `rightpanel.RightPanel`, fills its slots (Title, Article, Aside, AsideControls,
 AsideFooter) and keeps only the state machine. `platformd` is the shell
 (routing, chrome) and is a third thing.
+
+Demo modules live one per package under `platformd/modules/`, each owning its
+view, its data and its icon (declared shared in the untagged file, drawn in a
+`//go:build !wasm` `svg.go` via `sprite.Define`). The chassis only ships its own
+chrome glyphs (`IconUser`, `IconBrand`, the menu button): content icons are a
+module decision, and the rail renders whatever `Module.Icon()` returns.
 
 Three tests in `conformance_test.go` make the split un-reintroducible:
 
@@ -45,13 +53,33 @@ what the construction harness has to say about it.
 
 `Platform` implements `Init(ctx dom.Ctx)` + `Render() *dom.Element`. The framework calls `Init` exactly once when the component is first mounted — no `mounted` guard is needed.
 
-The application chassis is built exclusively from the `Cover` and `Sidebar` layouts using the style DSL. Sizing, grid flow, mobile reflow, and drawer navigation are defined by widget-level tokens and layout models. Route selection and visibility are carried exclusively by reactive state attributes (`data-current`, `data-open`) tied to `widget.Current` and `widget.Open` states, completely eliminating legacy CSS class toggles.
+The application chassis is built exclusively from the `Cover`, `Sidebar` and
+`SlideDeck` layouts using the style DSL. Sizing, grid flow, mobile reflow, and
+drawer navigation are defined by widget-level tokens and layout models. Route
+selection and visibility are carried exclusively by reactive state attributes
+(`data-current`, `data-open`) tied to `widget.Current` and `widget.Open` states,
+completely eliminating legacy CSS class toggles.
 
-`Cover` fixes the shell to the viewport height, so the frame itself never scrolls; the active module panel carries `Scroll` and is the only element that does. Any part rendering a bare `<svg>` declares `IconBox` — without a box an svg falls back to 300×150 and breaks the layout. Both require `widget` v0.4.4 or later.
+`Cover` fixes the shell to the viewport height, so the frame itself never
+scrolls; the active module panel carries `Scroll` and is the only element that
+does. Any part rendering a bare `<svg>` declares `IconBox` — without a box an
+svg falls back to 300×150 and breaks the layout. Both require `widget` v0.4.4 or
+later.
+
+### The stage is a SlideDeck, not a scroller
+
+The module stage is **not** a horizontal scroller: panels are absolute layers
+parked at `translateX(-100%)`, and the panel carrying `widget.Current` enters
+sliding left→right (`SlideDeck`), each panel being an absolutely-positioned
+containing block for its own content (a module's floating chrome — crudview's
+Fab — resolves against ITS panel). Because the stage never scrolls, a swipe
+inside a module's `MasterDetail` strip (the only horizontal snap scroller on the
+page) can never chain onto it and drag the app to another section. `Activate`
+writes `data-current`; the CSS transition does the rest — no `ScrollIntoView`.
 
 ```flowchart TD
 A[New Platform] --> B[Render: build DOM tree with signal bindings]
-B --> C[Init: create signals, register OnHashChange]
+B --> C[Init: create signals, register OnHashChange + OnScrollCapture]
 C --> D{hash present?}
 D -- yes --> E[Activate hash module]
 D -- no --> F[Activate DefaultID / first module]
@@ -59,6 +87,7 @@ E & F --> G[Runtime — signals drive all UI updates]
 G --> H[user clicks hamburger] --> I[menuOpen.Toggle <br/> BindAttrBool data-open patches UI]
 G --> J[Notify called] --> K[notifications.Set <br/> BindChildren inserts toast row]
 G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel and link data-current]
+G --> N[user scrolls a module container] --> O[onScroll: navStowed.Set <br/> hamburger data-open hides/reveals it]
 ```
 
 ### Signal fields on `Platform`
@@ -68,6 +97,8 @@ G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel and link d
 | `active` | `*SignalString` | nav link `BindAttrBool("data-current", DeriveBool(...))`, panel `BindAttrBool("data-current", DeriveBool(...))`, header `BindText(DeriveString(...))` |
 | `menuOpen` | `*SignalBool` | nav overlay `BindAttrBool("data-open", ...)`, navigation rail `BindAttrBool("data-open", ...)` |
 | `notifications` | `*SignalNodes` | `msgSlot` container via `BindChildren` |
+| `navIcon` | `*SignalNodes` | hamburger button via `BindChildren` — the active module's glyph |
+| `navStowed` | `*SignalBool` | hamburger `BindStateFunc(widget.Open, !Get())` — stowed while scrolling down |
 
 ### Activation flow (`Activate`)
 
@@ -76,7 +107,21 @@ G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel and link d
 2. Check `p.CanView(moduleID)` if provided; fallback to default if denied.
 3. `p.active.Set(moduleID)` — signals patch nav/panel state attributes reactively.
 4. `p.menuOpen.Set(false)` — closes the mobile overlay.
-5. `SetHash("#" + moduleID)` — keeps the URL in sync.
+5. `p.navIcon.Set(activeIcon().Render(...))` — the hamburger carries the new
+   module's glyph on a phone, where no header names the section.
+6. `p.lastScrollTop = 0; p.navStowed.Set(false)` — the section refresh resets the
+   chrome: the new module starts from the top with the button in reach.
+7. `SetHash("#" + moduleID)` — keeps the URL in sync.
+
+### Scroll chrome (`onScroll`)
+
+`Init` registers `OnScrollCapture` (dom's capture-phase document listener): the
+`scroll` event does not bubble, and the vertical scrollers live inside other
+packages' containers. `onScroll` drives the `navStowed` signal — scrolling down
+past an 8px threshold stows the hamburger (`display: none` via
+`RevealedBy(widget.Open)` with a negated binding); scrolling up or returning to
+the top brings it back. It must be visible at rest: a module that fits without
+scrolling would otherwise leave the menu unreachable.
 
 ### Notification flow (`Notify` / `dismiss`)
 
@@ -108,6 +153,11 @@ Parts touching the application frame — header, nav, menu, msg, and the
   "where I am"), hover renders `As(Inset)` (tonal). The light selection tint
   (`Highlight`) is deliberately not used in the nav; selected rows in consumer
   lists re-point at `Accent` for the same reason.
+- **On a phone the module header is gone** (`rightpanel` hides it): the only
+  chrome naming the section is the hamburger, which renders the active module's
+  icon (`navIcon`) instead of a fixed hamburger glyph — "you are here, and from
+  here you change". The `iconMenu` glyph stays as fallback for a module that
+  declares `Icon() == ""`.
 
 ---
 

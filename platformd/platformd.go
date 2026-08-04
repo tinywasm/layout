@@ -46,12 +46,9 @@ var (
 )
 
 const (
-	IconHome     = svg.Icon("home")
-	IconProducts = svg.Icon("products")
-	IconInfo     = svg.Icon("info")
-	IconUser     = svg.Icon("pd-user")
-	IconBrand    = svg.Icon("pd-brand")
-	iconMenu     = svg.Icon("pd-menu")
+	IconUser  = svg.Icon("pd-user")
+	IconBrand = svg.Icon("pd-brand")
+	iconMenu  = svg.Icon("pd-menu")
 )
 
 // UIModule is a module that provides its UI to the platform chassis.
@@ -154,10 +151,25 @@ type Platform struct {
 	active        *SignalString
 	menuOpen      *SignalBool
 	notifications *SignalNodes
+	navIcon       *SignalNodes
+	navStowed     *SignalBool
 
 	rawNotifications []notification
 	mu               sync.Mutex
+
+	// lastScrollTop es el testigo de la última posición leída por onScroll. Los
+	// eventos de scroll llegan por el hilo de JS, igual que los click, así que no
+	// va bajo p.mu — ese mutex existe por time.AfterFunc, que descarta
+	// notificaciones desde otra goroutine.
+	lastScrollTop float64
 }
+
+// scrollStowThreshold son los píxeles de desplazamiento que hacen falta para que
+// el cromo reaccione. Sin umbral, un píxel de ruido lo haría entrar y salir; y
+// como en la página conviven varios scrollers y sus posiciones se intercalan en
+// un mismo handler, un salto pequeño puede venir de otro elemento y no de un
+// gesto.
+const scrollStowThreshold = 8
 
 type notification struct {
 	Type MessageType
@@ -170,11 +182,19 @@ func (p *Platform) Init(ctx Ctx) {
 	p.active = NewString("")
 	p.menuOpen = NewBool(false)
 	p.notifications = NewNodes()
+	p.navIcon = NewNodes()
+	p.navStowed = NewBool(false)
 
 	OnHashChange(func(hash string) {
 		if len(hash) > 0 && hash[0] == '#' {
 			p.Activate(hash[1:])
 		}
+	})
+
+	// El scroll no burbujea: en captura sobre el documento es la única forma de que
+	// el chasis vea el desplazamiento de un contenedor que pertenece a otro paquete.
+	OnScrollCapture(func(top float64) {
+		p.onScroll(top)
 	})
 
 	hash := GetHash()
@@ -199,6 +219,48 @@ func (p *Platform) isViewable(id string) bool {
 		return true
 	}
 	return p.CanView(id)
+}
+
+// activeIcon es el glifo del módulo en el que estamos. iconMenu es el respaldo:
+// UIModule permite que Icon() devuelva la cadena vacía, y un botón sin glifo no
+// se puede pulsar porque no se ve.
+func (p *Platform) activeIcon() svg.Icon {
+	id := p.active.Get()
+	for _, m := range p.Modules {
+		if m.ModelName() == id {
+			if ic := m.Icon(); ic != "" {
+				return ic
+			}
+			break
+		}
+	}
+	return iconMenu
+}
+
+// onScroll guarda el botón de menú mientras el usuario baja y lo devuelve en
+// cuanto sube. Arriba del todo siempre está a mano: una pantalla que no llega a
+// desplazarse — el listado de este demo, sin ir más lejos — dejaría el menú
+// inalcanzable si el botón naciera guardado.
+//
+// Limitación conocida: el handler recibe la posición de CUALQUIER scroller. Si
+// dos están en pantalla y se desplazan alternándose, sus posiciones se
+// intercalan en un mismo lastScrollTop y el botón puede parpadear. En móvil
+// solo hay una columna visible a la vez (MasterDetail enseña una), así que en
+// la práctica no ocurre, y el umbral de 8px absorbe el resto.
+func (p *Platform) onScroll(top float64) {
+	if top <= 0 {
+		p.lastScrollTop = 0
+		p.navStowed.Set(false)
+		return
+	}
+	switch {
+	case top > p.lastScrollTop+scrollStowThreshold:
+		p.lastScrollTop = top
+		p.navStowed.Set(true)
+	case top < p.lastScrollTop-scrollStowThreshold:
+		p.lastScrollTop = top
+		p.navStowed.Set(false)
+	}
 }
 
 func (p *Platform) fallback() {
@@ -290,7 +352,12 @@ func (p *Platform) Render() *Element {
 	// there requires.
 	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menu").
-		Child(iconMenu.Render(string(ClsNavIcon)))
+		// Open aquí significa "el cromo está desplegado", que es lo mismo que
+		// significa en el cajón: un control guardado no está desplegado. La señal
+		// dice lo contrario de lo que se pinta, de ahí la negación.
+		BindStateFunc(widget.Open, func() bool { return !p.navStowed.Get() }).
+		BindChildren(p.navIcon).
+		ID("pd-hamburger-btn")
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()
 	})
@@ -470,12 +537,14 @@ func (p *Platform) Activate(moduleID string) {
 	p.active.Set(moduleID)
 	p.menuOpen.Set(false)
 
-	// The stage is a Deck: the panels are all mounted side by side and this is
-	// what slides between them. `display` is discrete and cannot transition, so
-	// the movement has to come from the scroller.
-	if el, ok := Get(moduleID); ok {
-		el.ScrollIntoView()
-	}
+	// El botón de menú lleva el estado de la navegación: en móvil no hay cabecera
+	// ni rail visible, así que su glifo es lo único que dice en qué sección estás.
+	p.navIcon.Set([]*Element{p.activeIcon().Render(string(ClsNavIcon)).Key(moduleID)})
+
+	// Cambiar de sección reinicia el cromo: el módulo nuevo empieza desde arriba y
+	// con el botón a mano.
+	p.lastScrollTop = 0
+	p.navStowed.Set(false)
 
 	// Update window hash if needed
 	if GetHash() != "#"+moduleID {
