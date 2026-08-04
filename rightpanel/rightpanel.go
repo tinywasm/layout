@@ -83,15 +83,7 @@ type RightPanel struct {
 // Implements ViewRenderer.
 func (r *RightPanel) Render() *Element {
 	// ── root wrapper ─────────────────────────────────────────────────────────
-	id := ""
-	if r.Module != nil {
-		id = r.Module.ModelName()
-	}
-
-	wrapper := Div().Set(clsWrapper.AsAttr())
-	if id != "" {
-		wrapper.ID(id)
-	}
+	wrapper := Div().Set(clsWrapper.AsAttr()).ID(r.panelID())
 
 	// ── main section ─────────────────────────────────────────────────────────
 	main := Section().Set(clsMain.AsAttr()).ID(r.MainPanelID())
@@ -159,7 +151,7 @@ func (r *RightPanel) ShowMain()  { r.showPanel(r.MainPanelID()) }
 func (r *RightPanel) ShowAside() { r.showPanel(r.AsidePanelID()) }
 
 func (r *RightPanel) showPanel(id string) {
-	strip, ok := Get(r.GetID())
+	strip, ok := Get(r.panelID())
 	if !ok || !strip.ScrollsX() {
 		return
 	}
