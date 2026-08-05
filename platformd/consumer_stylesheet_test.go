@@ -69,6 +69,32 @@ func TestHoverOnANavLinkDoesNotResizeIt(t *testing.T) {
 	}
 }
 
+// TestDrawerPanelFloatIsFinePointerScoped is the net that keeps the double menu
+// off a phone: the floating drawer-panel must live inside
+// `@media (hover: hover)` and never in the plain states layer. A touch tap
+// fires :hover but never the fine-pointer capability, so a float emitted
+// without that gate activates on tap and duplicates inside the Drawer.
+func TestDrawerPanelFloatIsFinePointerScoped(t *testing.T) {
+	cssStr := (&Platform{}).RenderCSS().String()
+
+	mediaIdx := strings.Index(cssStr, "@media (hover: hover)")
+	if mediaIdx < 0 {
+		t.Fatalf("expected the fine-pointer gate, got:\n%s", cssStr)
+	}
+
+	block := ruleBlock(cssStr[mediaIdx:], ".pd__menu:hover .pd__drawer-panel")
+	if block == "" {
+		t.Fatalf("expected the floating drawer-panel rule inside the hover media query, got:\n%s", cssStr[mediaIdx:])
+	}
+	if !Contains(block, "position: absolute;") || !Contains(block, "box-shadow:") {
+		t.Errorf("expected the float (Docked + Raise) inside the gate, block:\n%s", block)
+	}
+
+	if b := ruleBlock(cssStr[:mediaIdx], ".pd__menu:hover .pd__drawer-panel"); b != "" {
+		t.Errorf("the float must not escape into the plain states layer, block:\n%s", b)
+	}
+}
+
 func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// Identity, brand and the actions slot are all supplied: the class-parity
 	// assertion below is two-directional, so anything left nil would read as a

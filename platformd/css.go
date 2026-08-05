@@ -210,10 +210,11 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// width. The panel leaves the flow, so the rail's box — already pinned
 		// to the Sidebar's rail token by Grow's min-width:0 — cannot change, and
 		// nothing beside it moves.
-		// Driven by JS mouseenter/leave, not CSS :hover: a touch tap fires
-		// :hover but not mouseenter, so the floating panel never activates on
-		// a phone and never duplicates inside the Drawer.
-		When(widget.Open, widget.Part("drawer-panel"),
+		// CueWithinHover, not CueWithin: the rule lives inside
+		// `@media (hover: hover)`. A touch tap fires :hover but never the
+		// fine-pointer capability, so the floating panel cannot activate on a
+		// phone and cannot duplicate inside the Drawer — no JS involved.
+		CueWithinHover(widget.Hover, widget.Part("menu"), widget.Part("drawer-panel"),
 			style.Docked(style.Parent, style.EdgeTop, style.SideEnd, style.SpaceNone),
 			style.Width(style.Content),
 			style.As(style.Panel),
@@ -224,14 +225,14 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		).
 		// The labels only exist while the rail is expanded — or on a phone,
 		// where the drawer is two thirds of the viewport and has room for them.
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("link-text"),
+		CueWithinHover(widget.Hover, widget.Part("menu"), widget.Part("link-text"),
 			style.Row(style.SpaceNone),
 			style.FontSize(style.TextBase),
 		).
 		// Left-aligned once expanded: centred is right for a lone icon in a
 		// narrow rail, wrong for an icon-and-label row where the labels have to
 		// start on the same line as each other.
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("nav-link"),
+		CueWithinHover(widget.Hover, widget.Part("menu"), widget.Part("nav-link"),
 			style.Row(style.Space2),
 			style.Pad(style.Space2),
 			style.StartContent(),

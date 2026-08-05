@@ -150,7 +150,6 @@ type Platform struct {
 	// internal state
 	active        *SignalString
 	menuOpen      *SignalBool
-	drawerHovered *SignalBool
 	notifications *SignalNodes
 	navIcon       *SignalNodes
 	navStowed     *SignalBool
@@ -182,7 +181,6 @@ type notification struct {
 func (p *Platform) Init(ctx Ctx) {
 	p.active = NewString("")
 	p.menuOpen = NewBool(false)
-	p.drawerHovered = NewBool(false)
 	p.notifications = NewNodes()
 	p.navIcon = NewNodes()
 	p.navStowed = NewBool(false)
@@ -362,7 +360,6 @@ func (p *Platform) Render() *Element {
 		ID("pd-hamburger-btn")
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()
-		p.drawerHovered.Set(false)
 	})
 	root.Child(hamburger)
 
@@ -371,7 +368,6 @@ func (p *Platform) Render() *Element {
 		BindStateFunc(widget.Open, func() bool { return p.menuOpen.Get() })
 	overlay.On("click", func(Event) {
 		p.menuOpen.Set(false)
-		p.drawerHovered.Set(false)
 	})
 	root.Child(overlay)
 
@@ -402,11 +398,6 @@ func (p *Platform) Render() *Element {
 	// ── navigation menu (rail) ───────────────────────────────────────────────
 	nav := Nav().Set(clsMenu.AsAttr()).
 		BindStateFunc(widget.Open, func() bool { return p.menuOpen.Get() })
-	// mouseenter/leave, not CSS :hover: a touch tap fires :hover but not
-	// mouseenter, so the floating drawer-panel only activates with a real
-	// pointer — no duplicate panel on a phone.
-	nav.On("mouseenter", func(Event) { p.drawerHovered.Set(true) })
-	nav.On("mouseleave", func(Event) { p.drawerHovered.Set(false) })
 	navbar := Ul().Set(clsNavbar.AsAttr())
 
 	for _, m := range p.Modules {
@@ -433,8 +424,7 @@ func (p *Platform) Render() *Element {
 	// One panel holding the head and the navbar. On a wide screen the whole
 	// panel is what floats out over the content on hover — if the head expanded
 	// inside the rail's flow instead, the rail would widen and push the stage.
-	drawerPanel := Div().Set(clsDrawerPanel.AsAttr()).
-		BindStateFunc(widget.Open, func() bool { return p.drawerHovered.Get() })
+	drawerPanel := Div().Set(clsDrawerPanel.AsAttr())
 
 	// Only on a phone, and deliberately with no CueWithin to reveal it on a
 	// wide screen: the drawer opens wholesale on a phone so a line of text
@@ -546,7 +536,6 @@ func (p *Platform) Activate(moduleID string) {
 
 	p.active.Set(moduleID)
 	p.menuOpen.Set(false)
-	p.drawerHovered.Set(false)
 
 	// El botón de menú lleva el estado de la navegación: en móvil no hay cabecera
 	// ni rail visible, así que su glifo es lo único que dice en qué sección estás.
