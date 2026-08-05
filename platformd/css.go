@@ -187,12 +187,11 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// The active route reads as "current", the same vocabulary the rail and
 		// crudview's list rows share. It is a STATE, never a class.
 		// The route you are on is the one filled block in the rail; its icon
-		// rides the filled surface through currentColor. Accent, not Primary:
-		// "where I am" means one colour — amber — across the whole chassis,
-		// matching the selected list row. OnAccent (#1C1C1E) keeps the icon
-		// legible on the light amber fill.
+		// rides the filled surface through currentColor. Primary keeps the icon
+		// white against a dark fill — the same scheme as the mobile hamburger
+		// button, for a familiar look on both viewports.
 		When(widget.Current, widget.Part("nav-link"),
-			style.As(style.Accent),
+			style.As(style.Primary),
 		).
 // El control entero se ilumina, no solo el glifo: el hover habla del blanco
 		// al que apuntas, y el blanco es el botón. Inset, no Accent: la selección ya

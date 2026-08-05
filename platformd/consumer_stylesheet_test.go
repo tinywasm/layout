@@ -133,16 +133,17 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 			t.Errorf("%s should use %s, block:\n%s", part, wantColor, b)
 		}
 	}
-	// "Where I am" is amber everywhere: the current nav item wears Accent, the
-	// hover wears a tonal Inset shift so the two cannot be confused.
-	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, "--color-accent") {
-		t.Errorf("current nav item must use Accent, block:\n%s", b)
+	// The active nav item wears Primary (filled icon on dark bg) matching the
+	// mobile hamburger; hover wears a tonal Inset shift so the two are never
+	// confused.
+	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, "--color-primary") {
+		t.Errorf("current nav item must use Primary, block:\n%s", b)
 	}
 	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "--color-surface-sunken") {
 		t.Errorf("nav hover must be the tonal Inset shift, block:\n%s", b)
 	}
-	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); Contains(b, "--color-accent") {
-		t.Errorf("nav hover must not be amber (indistinguishable from current), block:\n%s", b)
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); Contains(b, "--color-primary") {
+		t.Errorf("nav hover must not use Primary (indistinguishable from current), block:\n%s", b)
 	}
 
 	// 1. Check "!important"
