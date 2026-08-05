@@ -362,6 +362,7 @@ func (p *Platform) Render() *Element {
 		ID("pd-hamburger-btn")
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()
+		p.drawerHovered.Set(false)
 	})
 	root.Child(hamburger)
 
@@ -370,6 +371,7 @@ func (p *Platform) Render() *Element {
 		BindStateFunc(widget.Open, func() bool { return p.menuOpen.Get() })
 	overlay.On("click", func(Event) {
 		p.menuOpen.Set(false)
+		p.drawerHovered.Set(false)
 	})
 	root.Child(overlay)
 
@@ -544,6 +546,7 @@ func (p *Platform) Activate(moduleID string) {
 
 	p.active.Set(moduleID)
 	p.menuOpen.Set(false)
+	p.drawerHovered.Set(false)
 
 	// El botón de menú lleva el estado de la navegación: en móvil no hay cabecera
 	// ni rail visible, así que su glifo es lo único que dice en qué sección estás.
