@@ -150,6 +150,7 @@ type Platform struct {
 	// internal state
 	active        *SignalString
 	menuOpen      *SignalBool
+	drawerHovered *SignalBool
 	notifications *SignalNodes
 	navIcon       *SignalNodes
 	navStowed     *SignalBool
@@ -181,6 +182,7 @@ type notification struct {
 func (p *Platform) Init(ctx Ctx) {
 	p.active = NewString("")
 	p.menuOpen = NewBool(false)
+	p.drawerHovered = NewBool(false)
 	p.notifications = NewNodes()
 	p.navIcon = NewNodes()
 	p.navStowed = NewBool(false)
@@ -398,6 +400,11 @@ func (p *Platform) Render() *Element {
 	// ── navigation menu (rail) ───────────────────────────────────────────────
 	nav := Nav().Set(clsMenu.AsAttr()).
 		BindStateFunc(widget.Open, func() bool { return p.menuOpen.Get() })
+	// mouseenter/leave, not CSS :hover: a touch tap fires :hover but not
+	// mouseenter, so the floating drawer-panel only activates with a real
+	// pointer — no duplicate panel on a phone.
+	nav.On("mouseenter", func(Event) { p.drawerHovered.Set(true) })
+	nav.On("mouseleave", func(Event) { p.drawerHovered.Set(false) })
 	navbar := Ul().Set(clsNavbar.AsAttr())
 
 	for _, m := range p.Modules {
@@ -424,7 +431,8 @@ func (p *Platform) Render() *Element {
 	// One panel holding the head and the navbar. On a wide screen the whole
 	// panel is what floats out over the content on hover — if the head expanded
 	// inside the rail's flow instead, the rail would widen and push the stage.
-	drawerPanel := Div().Set(clsDrawerPanel.AsAttr())
+	drawerPanel := Div().Set(clsDrawerPanel.AsAttr()).
+		BindStateFunc(widget.Open, func() bool { return p.drawerHovered.Get() })
 
 	// Only on a phone, and deliberately with no CueWithin to reveal it on a
 	// wide screen: the drawer opens wholesale on a phone so a line of text

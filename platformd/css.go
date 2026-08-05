@@ -206,11 +206,14 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		Cue(widget.Hover, widget.Part("nav-link"),
 			style.As(style.Inset),
 		).
-		// Hovering the rail floats the whole panel out over the content at label
+		// Hovering the rail floats the drawer-panel out over the content at label
 		// width. The panel leaves the flow, so the rail's box — already pinned
 		// to the Sidebar's rail token by Grow's min-width:0 — cannot change, and
 		// nothing beside it moves.
-		CueWithin(widget.Hover, widget.Part("menu"), widget.Part("drawer-panel"),
+		// Driven by JS mouseenter/leave, not CSS :hover: a touch tap fires
+		// :hover but not mouseenter, so the floating panel never activates on
+		// a phone and never duplicates inside the Drawer.
+		When(widget.Open, widget.Part("drawer-panel"),
 			style.Docked(style.Parent, style.EdgeTop, style.SideEnd, style.SpaceNone),
 			style.Width(style.Content),
 			style.As(style.Panel),
