@@ -253,13 +253,22 @@ func (v *CrudView) newAction() {
 	if v.form != nil {
 		v.form.Reset()
 		v.form.SetLocked(false)
-		v.form.Focus()
 	}
 	v.composing.Set(true)
-	// It focused the first field; on a phone that field is on the panel next
-	// door, so bring the panel with it.
+	// ShowMain (a smooth-animated horizontal scrollIntoView, see rightpanel)
+	// runs BEFORE Focus, not after: focusing first, as this used to, fires the
+	// keyboard while the panel scroll is still starting, and on iOS Safari a
+	// smooth scroll that begins while the keyboard is mid-resize can be
+	// cancelled outright — the field ends up focused (keyboard opens) on a
+	// panel that never moved. Reported as the toggle "doing nothing" on a
+	// second press, right after a Cancel whose own keyboard-dismiss animation
+	// was likely still settling. editAction (via selectAction) already scrolls
+	// before it focuses; this matches it instead of racing the keyboard.
 	if v.panel != nil {
 		v.panel.ShowMain()
+	}
+	if v.form != nil {
+		v.form.Focus()
 	}
 	if v.OnNew != nil {
 		v.OnNew()
