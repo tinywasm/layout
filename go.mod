@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/tinywasm/components v0.4.15
 	github.com/tinywasm/css v0.4.8
-	github.com/tinywasm/dom v0.13.3
+	github.com/tinywasm/dom v0.13.4
 	github.com/tinywasm/fmt v0.25.5
 	github.com/tinywasm/form v0.3.17
 	github.com/tinywasm/html v0.0.12
@@ -17,6 +17,10 @@ require (
 	github.com/tinywasm/view v0.1.10
 	github.com/tinywasm/widget v0.5.9
 )
+
+// TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
+// dom. Quitar y volver a la versión publicada en cuanto el test manual confirme
+// el resultado (funcione o no).
 
 require (
 	github.com/tinywasm/color v0.1.1 // indirect
