@@ -76,11 +76,16 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 		// Page's white and list's identical Inset border sits on Secondary's
 		// grey, and the same border color reads as two different tones purely
 		// from contrast against two different backgrounds.
+		// EdgeToEdge for the same reason aside needs it below: Secondary
+		// defaults to RadiusSm, and on mobile article lands flush against the
+		// physical screen edge — a rounded corner there meets a square screen
+		// corner instead of framing anything.
 		Part(partArticle,
 			style.As(style.Secondary),
 			style.Pad(gutter),
 			style.Scroll(),
 			style.Fill(),
+			style.EdgeToEdge(),
 		).
 		// Borderless by default: on mobile the aside fills the viewport edge to
 		// edge (Root's Pad drops to SpaceNone below), so Panel's border and
