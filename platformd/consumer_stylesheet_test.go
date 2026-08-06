@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tinywasm/css"
 	"github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/html"
@@ -138,11 +139,16 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 	if b := ruleBlock(cssStr, ".pd__msg-slot {"); !Contains(b, "justify-content: center") {
 		t.Errorf("msg-slot must centre its content, block:\n%s", b)
 	}
-	for part, wantColor := range map[string]string{
-		".pd__msg-info {":    "--color-muted",
-		".pd__msg-success {": "--color-success",
-		".pd__msg-warning {": "--color-accent",
-		".pd__msg-error {":   "--color-danger",
+	// wantColor identifies the token by its static LightValue(), not by its
+	// custom-property name: every themed color is now a double declaration
+	// (see css.Token.EnhancedVar/NestedEnhanced) whose enhanced half is a
+	// fully literal light-dark()/color-mix() expression with no var()
+	// anywhere — checking for "--color-x" text would no longer find it.
+	for part, wantColor := range map[string]css.Token{
+		".pd__msg-info {":    css.ColorMuted,
+		".pd__msg-success {": css.ColorSuccess,
+		".pd__msg-warning {": css.ColorAccent,
+		".pd__msg-error {":   css.ColorDanger,
 	} {
 		b := ruleBlock(cssStr, part)
 		if b == "" {
@@ -155,20 +161,20 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 		if !Contains(b, "fill: currentColor") {
 			t.Errorf("%s must be a Glyph (fill: currentColor), block:\n%s", part, b)
 		}
-		if !Contains(b, wantColor) {
-			t.Errorf("%s should use %s, block:\n%s", part, wantColor, b)
+		if !Contains(b, wantColor.LightValue()) {
+			t.Errorf("%s should use %s (%s), block:\n%s", part, wantColor.Name, wantColor.LightValue(), b)
 		}
 	}
 	// The active nav item wears Primary (filled icon on dark bg) matching the
 	// mobile hamburger; hover wears a tonal Inset shift so the two are never
 	// confused.
-	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, "--color-primary") {
+	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, css.ColorPrimary.LightValue()) {
 		t.Errorf("current nav item must use Primary, block:\n%s", b)
 	}
-	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "--color-surface-sunken") {
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "color-mix(") || !Contains(b, css.ColorSurfaceSunken.LightValue()) {
 		t.Errorf("nav hover must be the tonal Inset shift, block:\n%s", b)
 	}
-	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); Contains(b, "--color-primary") {
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); Contains(b, css.ColorPrimary.LightValue()) {
 		t.Errorf("nav hover must not use Primary (indistinguishable from current), block:\n%s", b)
 	}
 
@@ -186,19 +192,33 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// 3. Extract markup and match classes starting with "pd"
 	allHTML := p.Render().String()
 
+	// pd__app-name is Brand's mutually-exclusive fallback (see Platform.Render):
+	// with a Brand set, as p has above, AppName never reaches markup, but its
+	// rule is still in cssStr — RenderSheet() is one fixed stylesheet for the
+	// widget type, not tailored to this instance's fields. A second render
+	// with no Brand is what actually exercises it, needed for the
+	// stylesheet-to-markup direction of the class-parity check below.
+	pNoBrand := &Platform{
+		AppName: "Test App",
+		User:    testIdentity{},
+		Modules: p.Modules,
+	}
+	pNoBrand.Init(NilCtx())
+	allHTML += pNoBrand.Render().String()
+
 	// Extract classes from HTML
-	importMatches := func() map[string]bool {
+	extractClasses := func(html string) map[string]bool {
 		classes := make(map[string]bool)
 		// We look for class='...' attributes
 		// HTML strings use single quotes for attributes in tinywasm/dom.
-		for i := 0; i < len(allHTML); i++ {
-			if strings.HasPrefix(allHTML[i:], "class='") {
+		for i := 0; i < len(html); i++ {
+			if strings.HasPrefix(html[i:], "class='") {
 				start := i + len("class='")
 				end := start
-				for end < len(allHTML) && allHTML[end] != '\'' {
+				for end < len(html) && html[end] != '\'' {
 					end++
 				}
-				clsGroup := allHTML[start:end]
+				clsGroup := html[start:end]
 				// split by space in case of multiple classes
 				for _, cls := range strings.Fields(clsGroup) {
 					if strings.HasPrefix(cls, "pd") {
@@ -208,7 +228,8 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 			}
 		}
 		return classes
-	}()
+	}
+	importMatches := extractClasses(allHTML)
 
 	// Extract classes from CSS
 	cssClasses := func() map[string]bool {

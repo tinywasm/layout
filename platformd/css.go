@@ -137,6 +137,22 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.FontSize(style.TextBase),
 			style.FontWeight(style.WeightBold),
 		).
+		// The drawer's copy of the brand exists only where there is no header
+		// to hold one — same reasoning as drawer-identity above. On a wide
+		// screen the header's own brand, top-left, is already permanently on
+		// screen; showing it again in the hover-revealed rail panel would say
+		// the app's own name twice at once.
+		OnlyOn(css.Mobile, widget.Part("drawer-brand"),
+			style.Row(style.SpaceNone),
+			style.KeepSize(),
+		).
+		// A tap target, not decoration: the same padded row a nav-link gets,
+		// so it reads as the first item of the list it leads rather than a
+		// caption above it.
+		On(css.Mobile, widget.Part("brand"),
+			style.Pad(style.Space2),
+			style.Width(style.Full),
+		).
 		Part(widget.Part("drawer-panel"),
 			style.Stack(style.Space1),
 			style.Fill(),
@@ -193,7 +209,7 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		When(widget.Current, widget.Part("nav-link"),
 			style.As(style.Primary),
 		).
-// El control entero se ilumina, no solo el glifo: el hover habla del blanco
+		// El control entero se ilumina, no solo el glifo: el hover habla del blanco
 		// al que apuntas, y el blanco es el botón. Inset, no Accent: la selección ya
 		// es ámbar y un hover del mismo color sería indistinguible de ella.
 		//

@@ -22,6 +22,7 @@ var (
 	clsDrawerPanel    = NamePlatform.Class("drawer-panel")
 	clsAppName        = NamePlatform.Class("app-name")
 	clsDrawerIdentity = NamePlatform.Class("drawer-identity")
+	clsDrawerBrand    = NamePlatform.Class("drawer-brand")
 	clsBrand          = NamePlatform.Class("brand")
 	clsBrandMark      = NamePlatform.Class("brand-mark")
 	clsBrandName      = NamePlatform.Class("brand-name")
@@ -109,20 +110,24 @@ type Brand interface {
 type Platform struct {
 	Element
 
-	// AppName titles the drawer on a phone, where the panel opens wholesale and
-	// there is room for it. The collapsed rail never shows it: text with no icon
-	// beside it would have to appear from nowhere when the rail expands.
+	// AppName titles the drawer on a phone when there is no Brand to lead it —
+	// the panel opens wholesale there and there is room for a line of text. The
+	// collapsed rail never shows it: text with no icon beside it would have to
+	// appear from nowhere when the rail expands.
 	//
-	// It is NOT the header brand: AppName belongs to the phone drawer and Brand
-	// belongs to the desktop header, two surfaces of which only one exists at a
-	// time. A Brand does not supersede it and it is not a fallback for a missing
-	// Brand — a platform without a Brand renders no header brand slot at all.
+	// It is a fallback for a missing Brand, not a second header: a Brand
+	// supersedes it in the drawer, since showing both would say the app's own
+	// name twice in the same panel. A platform with neither renders no head at
+	// all above the drawer's nav.
 	AppName string
 
-	// Brand is what the platform calls itself in the header's leading slot:
-	// the mark and the name at the header's start, mirrored against the user
-	// menu at its end. Optional — a platform without a logo renders no brand
-	// slot and the message block stays centred between nothing and the menu.
+	// Brand is what the platform calls itself: the mark and the name at the
+	// header's leading slot, mirrored at the head of the phone drawer where
+	// there is no header to hold it. Tapping it — either surface — is the "go
+	// home" control, landing on DefaultID (or the first viewable module).
+	// Optional — a platform without a logo renders no brand slot, AppName
+	// takes the drawer's head instead, and the header's message block stays
+	// centred between nothing and the menu.
 	Brand Brand
 
 	// User is the logged-in identity. Required: the header's outer thirds and
@@ -206,12 +211,19 @@ func (p *Platform) Init(ctx Ctx) {
 			p.fallback()
 		}
 	} else {
-		if p.DefaultID != "" && p.isViewable(p.DefaultID) {
-			p.Activate(p.DefaultID)
-		} else {
-			p.fallback()
-		}
+		p.goHome()
 	}
+}
+
+// goHome activa el módulo raíz: el mismo cálculo que Init usa cuando la app
+// abre sin hash, reutilizado por el clic en la marca — pulsar el logo lleva
+// al mismo sitio que abrir la app desde cero.
+func (p *Platform) goHome() {
+	if p.DefaultID != "" && p.isViewable(p.DefaultID) {
+		p.Activate(p.DefaultID)
+		return
+	}
+	p.fallback()
 }
 
 func (p *Platform) isViewable(id string) bool {
@@ -283,6 +295,10 @@ func (p *Platform) fallback() {
 // brand builds the header's leading slot from the Brand contract. The mark is
 // an <img> when the contract returns a URL and the default glyph otherwise —
 // the avatar's exact treatment, mirrored.
+// Clickable: the brand doubles as the "go home" control, the standard
+// meaning of tapping a logo. It fires the same navigation Init runs when the
+// app opens with no hash, on the header and the drawer alike — one behaviour
+// for one glyph, wherever it is drawn.
 func (p *Platform) brand() *Element {
 	slot := Div().Set(clsBrand.AsAttr())
 	if url := p.Brand.BrandMark(); url != "" {
@@ -295,6 +311,7 @@ func (p *Platform) brand() *Element {
 		slot.Child(IconBrand.Render(string(clsBrandMark)))
 	}
 	slot.Child(Span().Set(clsBrandName.AsAttr()).Text(p.Brand.BrandName()))
+	slot.On("click", func(Event) { p.goHome() })
 	return slot
 }
 
@@ -418,27 +435,41 @@ func (p *Platform) Render() *Element {
 		navbar.Child(Li().Set(clsNavItem.AsAttr()).Child(link))
 	}
 
-	// The drawer's head. On a phone this is where the identity chrome lives —
-	// there is no header to hold it — and on a wide screen it rides above the
-	// rail, revealed with it on hover.
+	// The drawer's head. On a phone this is where the brand rides — there is
+	// no header to hold it — and on a wide screen the header carries it while
+	// this panel floats out above the rail on hover.
 	// One panel holding the head and the navbar. On a wide screen the whole
 	// panel is what floats out over the content on hover — if the head expanded
 	// inside the rail's flow instead, the rail would widen and push the stage.
 	drawerPanel := Div().Set(clsDrawerPanel.AsAttr())
 
-	// Only on a phone, and deliberately with no CueWithin to reveal it on a
-	// wide screen: the drawer opens wholesale on a phone so a line of text
-	// costs nothing, while in the collapsed rail it would have to materialise
-	// when the rail expands and push everything under it down.
-	if p.AppName != "" {
+	// The brand leads the drawer and doubles as its "go home" control — tap
+	// the mark, land back on the root module, the same gesture the header
+	// offers. Wrapped in its own OnlyOn(Mobile) part: on a wide screen the
+	// header already carries the brand, top-left, at all times — showing it
+	// again in the hover-revealed rail panel would say the app's own name
+	// twice on screen at once. AppName is the fallback for a platform with no
+	// Brand: plain text, since there is no mark to make tappable. Brand and
+	// AppName never render together — a phone showing both would say the
+	// app's own name twice in the same panel — and AppName deliberately has
+	// no CueWithin to reveal it on a wide screen either: the drawer opens
+	// wholesale on a phone so a line of text costs nothing, while in the
+	// collapsed rail it would have to materialise when the rail expands and
+	// push everything under it down.
+	if p.Brand != nil {
+		drawerPanel.Child(Div().Set(clsDrawerBrand.AsAttr()).Child(p.brand()))
+	} else if p.AppName != "" {
 		drawerPanel.Child(Div().Set(clsAppName.AsAttr()).Text(p.AppName))
 	}
 
-	// A second menu, for the phone: there is no header there to hold the first
-	// one. This costs nothing now that the contract returns strings — two
-	// elements built from the same facts, of which exactly one is ever visible.
-	// It was impossible while identity was a Component slot: one element has
-	// one parent.
+	drawerPanel.Child(navbar)
+
+	// The identity block trails the nav, not leads it: on open, what to DO
+	// matters more than who is signed in. It is a second menu instance, for
+	// the phone — there is no header there to hold the first one. This costs
+	// nothing now that the contract returns strings — two elements built from
+	// the same facts, of which exactly one is ever visible. It was impossible
+	// while identity was a Component slot: one element has one parent.
 	// Wrapped in a part this package can switch off: the component's own class
 	// belongs to the component, and the shell needs somewhere to say "not on a
 	// wide screen, where the header already has one".
@@ -446,7 +477,6 @@ func (p *Platform) Render() *Element {
 		drawerPanel.Child(Div().Set(clsDrawerIdentity.AsAttr()).Child(p.userMenu()))
 	}
 
-	drawerPanel.Child(navbar)
 	nav.Child(drawerPanel)
 	body.Child(nav)
 

@@ -3,11 +3,11 @@ module github.com/tinywasm/layout
 go 1.25.2
 
 require (
-	github.com/tinywasm/components v0.4.3
-	github.com/tinywasm/css v0.4.7
-	github.com/tinywasm/dom v0.13.2-0.20260804190855-0a635b3b88e5
+	github.com/tinywasm/components v0.4.14
+	github.com/tinywasm/css v0.4.8
+	github.com/tinywasm/dom v0.13.2
 	github.com/tinywasm/fmt v0.25.5
-	github.com/tinywasm/form v0.3.13
+	github.com/tinywasm/form v0.3.16
 	github.com/tinywasm/html v0.0.12
 	github.com/tinywasm/model v0.1.2
 	github.com/tinywasm/orm v0.11.4
@@ -15,10 +15,11 @@ require (
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.10
-	github.com/tinywasm/widget v0.5.8
+	github.com/tinywasm/widget v0.5.9
 )
 
 require (
+	github.com/tinywasm/color v0.1.1 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/json v0.5.17 // indirect
 	github.com/tinywasm/router v0.1.13 // indirect
