@@ -28,3 +28,10 @@ require (
 	github.com/tinywasm/json v0.5.17 // indirect
 	github.com/tinywasm/router v0.1.13 // indirect
 )
+
+
+replace github.com/tinywasm/components => ../components
+
+replace github.com/tinywasm/widget => ../widget
+
+replace github.com/tinywasm/css => ../css

@@ -87,6 +87,13 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		).
 		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
 		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
+		// Amber while open, matching the selection language the list already
+		// uses: the button IS what is currently "selected" in the sense that
+		// its own panel is the one on screen. Cancelling (closing) drops it
+		// back to Primary blue, since at that point nothing is active anymore.
+		When(widget.Open, widget.Part("action"),
+			style.As(style.AccentInverse),
+		).
 		// The delete-confirmation modal's holder must not cost the frame a flex
 		// share: as a plain in-flow child of rightpanel's Split it would take a
 		// third of the width (the skeleton's `.rp > *` grow beats this sheet's

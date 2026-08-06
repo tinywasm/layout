@@ -2,6 +2,7 @@
 
 package rightpanel
 
+
 import (
 	"github.com/tinywasm/css"
 	"github.com/tinywasm/widget/style"

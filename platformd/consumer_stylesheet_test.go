@@ -49,9 +49,15 @@ func ruleBlock(cssStr, want string) string {
 }
 
 // TestHoverOnANavLinkDoesNotResizeIt is the net that keeps the rail from
-// flickering: the hover state of a nav item must paint an outline over the
-// same pixel, never a border — a border adds 2px of layout and the item grows
-// past --rail-narrow, leaves the pointer, loses :hover, and loops.
+// flickering: the hover state of a nav item must never add a border, which
+// would grow the box past --rail-narrow, push it out from under the pointer,
+// drop :hover, and loop. AccentHover (see platformd/css.go) carries no border
+// or outline at all — only background-color and color — so there is nothing
+// left that could resize the box. The outline-instead-of-border requirement
+// this test used to enforce was specific to Inset, which AccentHover replaced
+// as the nav-link hover treatment; a surface with no border property in the
+// first place satisfies the same invariant more simply than working around
+// one.
 func TestHoverOnANavLinkDoesNotResizeIt(t *testing.T) {
 	cssStr := (&Platform{}).RenderCSS().String()
 
@@ -59,14 +65,8 @@ func TestHoverOnANavLinkDoesNotResizeIt(t *testing.T) {
 	if b == "" {
 		t.Fatalf("expected a rule for .pd__nav-link:hover")
 	}
-	if Contains(b, "border:") {
-		t.Errorf("hover must not paint a border (would resize the box), block:\n%s", b)
-	}
-	if !Contains(b, "outline:") {
-		t.Errorf("hover must paint an outline, block:\n%s", b)
-	}
-	if !Contains(b, "outline-offset: -1px;") {
-		t.Errorf("hover must use outline-offset: -1px, block:\n%s", b)
+	if Contains(b, "border:") || Contains(b, "outline:") {
+		t.Errorf("hover must not paint a border or outline (would resize the box), block:\n%s", b)
 	}
 }
 
@@ -165,17 +165,22 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 			t.Errorf("%s should use %s (%s), block:\n%s", part, wantColor.Name, wantColor.LightValue(), b)
 		}
 	}
-	// The active nav item wears Primary (filled icon on dark bg) matching the
-	// mobile hamburger; hover wears a tonal Inset shift so the two are never
-	// confused.
-	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, css.ColorPrimary.LightValue()) {
-		t.Errorf("current nav item must use Primary, block:\n%s", b)
+	// The active nav item wears AccentInverse (white icon on the fully
+	// committed amber fill), matching the mobile hamburger and crudview's
+	// open action -- one "current" language across the whole chassis
+	// instead of the rail alone staying on Primary blue. Hover wears
+	// AccentHover: the same white icon on a weaker (70%) amber, so the two
+	// states are told apart by intensity rather than by icon color --
+	// AccentWash's 85%-faded tint was tried and rejected here specifically
+	// because it fades too close to the page background for white to read.
+	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, css.ColorAccent.LightValue()) || !Contains(b, css.ColorOnPrimary.LightValue()) {
+		t.Errorf("current nav item must use Accent bg + white (ColorOnPrimary) icon, block:\n%s", b)
 	}
-	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "color-mix(") || !Contains(b, css.ColorSurfaceSunken.LightValue()) {
-		t.Errorf("nav hover must be the tonal Inset shift, block:\n%s", b)
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "color-mix(") || !Contains(b, css.ColorAccentHover.LightValue()) {
+		t.Errorf("nav hover must be the weaker AccentHover tint, block:\n%s", b)
 	}
-	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); Contains(b, css.ColorPrimary.LightValue()) {
-		t.Errorf("nav hover must not use Primary (indistinguishable from current), block:\n%s", b)
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, css.ColorOnPrimary.LightValue()) {
+		t.Errorf("nav hover must keep the same white icon as current, block:\n%s", b)
 	}
 
 	// 1. Check "!important"

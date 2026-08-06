@@ -211,35 +211,49 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// The active route reads as "current", the same vocabulary the rail and
 		// crudview's list rows share. It is a STATE, never a class.
 		// The route you are on is the one filled block in the rail; its icon
-		// rides the filled surface through currentColor. Primary keeps the icon
-		// white against a dark fill — the same scheme as the mobile hamburger
-		// button, for a familiar look on both viewports.
+		// rides the filled surface through currentColor. AccentInverse keeps
+		// the icon white against the fully committed amber fill — the same
+		// "current" language as the mobile hamburger button and crudview's
+		// open action.
 		//
-		// Round(RadiusNone): Primary's own default is radius-sm, which rounds
-		// all four corners of the fill including the two welded to the rail's
-		// own edge — menu is EdgeToEdge specifically so IT has none there (see
-		// "menu" Part above), so a rounded badge butting against that square
-		// corner reads as a disconnected blob instead of a block that belongs
-		// to the rail. Square on every side is what the DSL can express today;
-		// Round() has no per-corner variant, so the "grows out of the edge
-		// like a tab" look (rounded only on the side facing the stage) is not
-		// reachable from here without a new primitive in tinywasm/widget.
+		// Round(RadiusNone): AccentInverse's own default is radius-sm, which
+		// rounds all four corners of the fill including the two welded to the
+		// rail's own edge — menu is EdgeToEdge specifically so IT has none
+		// there (see "menu" Part above), so a rounded badge butting against
+		// that square corner reads as a disconnected blob instead of a block
+		// that belongs to the rail. Square on every side is what the DSL can
+		// express today; Round() has no per-corner variant, so the "grows out
+		// of the edge like a tab" look (rounded only on the side facing the
+		// stage) is not reachable from here without a new primitive in
+		// tinywasm/widget.
 		When(widget.Current, widget.Part("nav-link"),
-			style.As(style.Primary),
+			style.As(style.AccentInverse),
 			style.Round(style.RadiusNone),
 		).
-		// El control entero se ilumina, no solo el glifo: el hover habla del blanco
-		// al que apuntas, y el blanco es el botón. Inset, no Accent: la selección ya
-		// es ámbar y un hover del mismo color sería indistinguible de ella.
+		// El control entero se ilumina, no solo el glifo: el hover habla del
+		// mismo ámbar al que apunta. AccentHover, no AccentWash: AccentWash
+		// diluye el ámbar al 15% -- casi el blanco de la página -- y un ícono
+		// blanco encima deja de leerse. AccentHover lo diluye solo un 30%, lo
+		// bastante fuerte para que el mismo blanco de AccentInverse siga
+		// siendo legible, y lo bastante mas suave que el ámbar sólido de
+		// Current para que las dos etapas se distingan por intensidad en vez
+		// de por color de ícono.
 		//
-		// El borde de Inset NO ensancha la caja: una regla de estado lo emite como
-		// outline (ver widget/style), así que el ítem mide lo mismo con y sin
-		// puntero encima. Esa igualdad es obligatoria aquí — el rail mide exactamente
-		// --rail-narrow y el panel flotante se dimensiona con width: max-content: dos
-		// píxeles de más y el ítem se sale del puntero que lo activó, lo pierde,
-		// encoge, y el menú entero entra en un bucle de parpadeo.
+		// AccentHover no lleva borde, así que el ítem mide lo mismo con y sin
+		// puntero encima sin necesitar el truco de outline que Inset requería
+		// -- el rail mide exactamente --rail-narrow y el panel flotante se
+		// dimensiona con width: max-content: un cambio de tamaño aquí saca el
+		// ítem del puntero que lo activó, lo pierde, encoge, y el menú entero
+		// entra en un bucle de parpadeo.
 		Cue(widget.Hover, widget.Part("nav-link"),
-			style.As(style.Inset),
+			style.As(style.AccentHover),
+		).
+		// Paired with Hover above on purpose: a keyboard user tabbing through
+		// the rail gets no :hover at all, so leaving Focus on its old default
+		// would strand keyboard navigation on a different, unrelated color
+		// from what a mouse hover now shows.
+		Cue(widget.Focus, widget.Part("nav-link"),
+			style.As(style.AccentHover),
 		).
 		// Hovering the rail floats the drawer-panel out over the content at label
 		// width. The panel leaves the flow, so the rail's box — already pinned
@@ -279,9 +293,14 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		On(css.Mobile, widget.Part("header"),
 			style.Hide(),
 		).
+		// AccentInverse, not Primary: the hamburger is the one control that is
+		// always "current" -- it is how the user reaches every module, so it
+		// wears the same amber-with-white-icon the rail's current nav-link and
+		// crudview's open action already use, instead of blending into the
+		// plain blue every other control defaults to.
 		OnlyOn(css.Mobile, widget.Part("hamburger"),
 			style.Row(style.Space1),
-			style.As(style.Primary),
+			style.As(style.AccentInverse),
 			style.Pad(style.Space2),
 			style.Round(style.RadiusSm),
 			style.Raise(style.Floating),
