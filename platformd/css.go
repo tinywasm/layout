@@ -113,10 +113,18 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// the stage. Its width is the Sidebar's rail token and nothing else.
 		// EdgeToEdge: the rail is welded to the window frame on its right and
 		// bottom, where a radius leaves two background slivers.
+		//
+		// Secondary, not Panel: same background as Panel but no border. Panel's
+		// border drew on that same welded edge — a 1px outline-grey line the
+		// selected item's Primary fill sat behind, visible as a mismatched seam
+		// rather than the flush edge EdgeToEdge already promises. The mobile
+		// drawer below keeps its own explicit Panel: it floats over the
+		// backdrop rather than sitting flush against the window, so its border
+		// is a real divider, not a seam against nothing.
 		Part(widget.Part("menu"),
 			style.Anchor(),
 			style.Stack(style.Space1),
-			style.As(style.Panel),
+			style.As(style.Secondary),
 			style.Fill(),
 			style.Grow(),
 			style.EdgeToEdge(),
@@ -206,8 +214,19 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// rides the filled surface through currentColor. Primary keeps the icon
 		// white against a dark fill — the same scheme as the mobile hamburger
 		// button, for a familiar look on both viewports.
+		//
+		// Round(RadiusNone): Primary's own default is radius-sm, which rounds
+		// all four corners of the fill including the two welded to the rail's
+		// own edge — menu is EdgeToEdge specifically so IT has none there (see
+		// "menu" Part above), so a rounded badge butting against that square
+		// corner reads as a disconnected blob instead of a block that belongs
+		// to the rail. Square on every side is what the DSL can express today;
+		// Round() has no per-corner variant, so the "grows out of the edge
+		// like a tab" look (rounded only on the side facing the stage) is not
+		// reachable from here without a new primitive in tinywasm/widget.
 		When(widget.Current, widget.Part("nav-link"),
 			style.As(style.Primary),
+			style.Round(style.RadiusNone),
 		).
 		// El control entero se ilumina, no solo el glifo: el hover habla del blanco
 		// al que apuntas, y el blanco es el botón. Inset, no Accent: la selección ya

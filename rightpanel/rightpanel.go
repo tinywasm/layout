@@ -10,18 +10,33 @@ import (
 
 const NameRightPanel widget.Name = "rp"
 
+// Part names, declared once so rightpanel.go (markup) and css.go (rules)
+// cannot drift apart by a typo in either string literal.
+const (
+	partMain         widget.Part = "main"
+	partHeader       widget.Part = "header"
+	partTitleRow     widget.Part = "title-row"
+	partTitle        widget.Part = "title"
+	partHeadControls widget.Part = "controls"
+	partArticle      widget.Part = "article"
+	partAside        widget.Part = "aside"
+	partAsideHeader  widget.Part = "aside-header"
+	partAsideContent widget.Part = "aside-content"
+	partAsideFooter  widget.Part = "aside-footer"
+)
+
 var (
 	clsWrapper      = NameRightPanel.Root()
-	clsMain         = NameRightPanel.Class("main")
-	clsHeader       = NameRightPanel.Class("header")
-	clsTitleRow     = NameRightPanel.Class("title-row")
-	clsTitle        = NameRightPanel.Class("title")
-	clsHeadControls = NameRightPanel.Class("controls")
-	clsArticle      = NameRightPanel.Class("article")
-	clsAside        = NameRightPanel.Class("aside")
-	clsAsideHeader  = NameRightPanel.Class("aside-header")
-	clsAsideContent = NameRightPanel.Class("aside-content")
-	clsAsideFooter  = NameRightPanel.Class("aside-footer")
+	clsMain         = NameRightPanel.Class(partMain)
+	clsHeader       = NameRightPanel.Class(partHeader)
+	clsTitleRow     = NameRightPanel.Class(partTitleRow)
+	clsTitle        = NameRightPanel.Class(partTitle)
+	clsHeadControls = NameRightPanel.Class(partHeadControls)
+	clsArticle      = NameRightPanel.Class(partArticle)
+	clsAside        = NameRightPanel.Class(partAside)
+	clsAsideHeader  = NameRightPanel.Class(partAsideHeader)
+	clsAsideContent = NameRightPanel.Class(partAsideContent)
+	clsAsideFooter  = NameRightPanel.Class(partAsideFooter)
 )
 
 func (r *RightPanel) WidgetName() widget.Name { return NameRightPanel }

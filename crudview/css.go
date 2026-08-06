@@ -8,6 +8,13 @@ import (
 	"github.com/tinywasm/widget/style"
 )
 
+// cardInset is the gap between a card's own border and its content. fields
+// and list are the two panels crudview paints into rightpanel's article and
+// aside — one named constant instead of two independently-chosen literals is
+// what keeps them from drifting apart the way they already had (fields
+// padded, list flush against its own border).
+const cardInset = style.Space1
+
 // RenderSheet returns the style Sheet containing the rules for crudview.
 func (v *CrudView) RenderSheet() *style.Sheet {
 	return style.For(v).
@@ -20,13 +27,14 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// leave the column floating at the top of the card.
 		Part(widget.Part("fields"),
 			style.As(style.Inset),
-			style.Pad(style.Space2),
+			style.Pad(cardInset),
 			style.Scroll(),
 			style.Round(style.RadiusMd),
 			style.Fill(),
 		).
 		Part(widget.Part("list"),
 			style.As(style.Inset),
+			style.Pad(cardInset),
 			style.Scroll(),
 			style.Round(style.RadiusMd),
 		).
@@ -61,6 +69,13 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// ControlBox's min-height stays on: the floating chip grows to the
 		// control token rather than hugging the IconLg glyph, which is a bigger
 		// target, not a fight.
+		//
+		// Docked gap and Pad are Space4/Space2, matching platformd's hamburger
+		// (OnlyOn(Mobile, "hamburger") in platformd/css.go) exactly, not
+		// cardInset: these two are the screen's floating chrome, a different
+		// pairing from fields/list's in-card content inset, and pinning both
+		// floating buttons to the same corner offset and padding is what makes
+		// them read as one design language instead of two unrelated badges.
 		On(css.Mobile, widget.Part("action"),
 			style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.Space4),
 			style.Width(style.Content),

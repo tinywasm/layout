@@ -4,9 +4,26 @@ package rightpanel
 
 import (
 	"github.com/tinywasm/css"
-	"github.com/tinywasm/widget"
 	"github.com/tinywasm/widget/style"
 )
+
+// frameGutter is Root's own rhythm: the blue frame that separates the
+// two-column content from the platform chrome around it (header, menu,
+// footer) on Tablet/Desktop, and the seam of the Split between article and
+// aside — the file's Pad and Split calls were always meant to agree with
+// each other, so they share this one constant. It is deliberately NOT gutter
+// below: the outer frame and the cards living inside it are two different
+// tiers, and forcing them to the same number one Space step apart is what
+// had made the whole screen read as flat rather than as a frame with panels
+// in it.
+const frameGutter = style.Space2
+
+// gutter is the inset every panel and card below the frame shares: article's
+// and aside's own Pad, and the rhythm inside aside (header→list→footer). One
+// constant instead of one-off Space values per Part is what keeps THESE from
+// drifting apart from each other — it does not extend to frameGutter above,
+// which is a coarser, outer-tier measurement on purpose.
+const gutter = style.Space1
 
 // RenderSheet returns the style Sheet containing the rules for rightpanel.
 func (r *RightPanel) RenderSheet() *style.Sheet {
@@ -18,13 +35,13 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 		// margin touching the four sides measures the same as the seam between
 		// the two columns.
 		Root(
-			style.Split(style.SplitTwoThirds, style.Space2),
+			style.Split(style.SplitTwoThirds, frameGutter),
 			style.Fill(),
 			style.As(style.Primary),
-			style.Pad(style.Space2),
+			style.Pad(frameGutter),
 			style.EdgeToEdge(),
 		).
-		Part(widget.Part("main"),
+		Part(partMain,
 			style.Stack(style.Space2),
 			style.Fill(),
 		).
@@ -33,53 +50,77 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 		// the indent is horizontal; vertically the band answers to
 		// --control-height, the same token every control measures by, so the
 		// frame reads as one rhythm.
-		Part(widget.Part("header"),
+		Part(partHeader,
 			style.Row(style.Space1),
 			style.PadInline(style.Space2),
 			style.ControlBox(),
 			style.KeepSize(),
 		).
-		Part(widget.Part("title-row"),
+		Part(partTitleRow,
 			style.Row(style.Space2),
 			style.Center(),
 		).
 		// Explicit now that the reset stops <h1> from carrying 2em of its own.
-		Part(widget.Part("title"),
+		Part(partTitle,
 			style.As(style.Primary),
 			style.FontSize(style.Text2xl),
 			style.FontWeight(style.WeightBold),
 		).
-		Part(widget.Part("controls"),
+		Part(partHeadControls,
 			style.Row(style.Space1),
 		).
-		Part(widget.Part("article"),
+		Part(partArticle,
 			style.As(style.Page),
-			style.Pad(style.Space2),
+			style.Pad(gutter),
 			style.Scroll(),
 			style.Fill(),
 		).
-		Part(widget.Part("aside"),
-			style.Stack(style.Space1),
-			style.As(style.Panel),
-			style.Pad(style.Space1),
+		// Borderless by default: on mobile the aside fills the viewport edge to
+		// edge (Root's Pad drops to SpaceNone below), so Panel's border and
+		// radius-md would sit flush against the physical screen edge AND stack
+		// with the list's own Inset border a few pixels in — two parallel lines
+		// where one is expected. Secondary carries Panel's exact background and
+		// text but no border; EdgeToEdge zeroes the radius Secondary would
+		// otherwise default to, so mobile gets a plain flush fill and the list
+		// card is the only border on screen. Tablet and Desktop restore Panel
+		// below, where Root's padding already keeps the aside off the frame's
+		// edge and the border reads as a proper card.
+		Part(partAside,
+			style.Stack(gutter),
+			style.As(style.Secondary),
+			style.Pad(gutter),
 			style.Fill(),
+			style.EdgeToEdge(),
 		).
 		// The controls band carries no surface, padding or radius of its own:
 		// whatever the consumer puts here — a search bar, a calendar, a select —
 		// brings its own. A second frame around a control that already has one
 		// reads as a box inside a box. All the band owes it is a refusal to be
 		// squashed when the content below grows, which is what KeepSize buys.
-		Part(widget.Part("aside-header"),
+		Part(partAsideHeader,
 			style.KeepSize(),
 		).
-		Part(widget.Part("aside-content"),
+		Part(partAsideContent,
 			style.Fill(),
 			style.Stack(style.SpaceNone),
 		).
-		Part(widget.Part("aside-footer"),
+		Part(partAsideFooter,
 			style.Row(style.Space1),
 			style.KeepSize(),
 		).
+		// Restores the aside's card border once there is room to show it — see
+		// the "aside" Part above for why it starts borderless.
+		On(css.Tablet, partAside, style.As(style.Panel)).
+		On(css.Desktop, partAside, style.As(style.Panel)).
+		// Article stays square on mobile for the same reason aside does: it is
+		// the panel that lands flush against the screen edge once the strip
+		// scrolls to it. From Tablet up it sits inset inside Root's frame same
+		// as aside, so it takes the same Panel treatment aside does — Round()
+		// alone would have rounded the corners but left Page's zero-width
+		// border, so the two cards would still disagree on the one line that
+		// actually separates them from the frame.
+		On(css.Tablet, partArticle, style.As(style.Panel)).
+		On(css.Desktop, partArticle, style.As(style.Panel)).
 		// On a phone the desktop Split becomes a horizontal scroll-snap strip:
 		// the aside is what shows on arrival, and selecting an item slides the
 		// main panel in from the left, leaving a sliver of the aside on the right
@@ -104,7 +145,7 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 		// HeadControls cae con ella. Es aceptable porque hoy no lo usa nadie en el
 		// repositorio salvo los tests; un control que deba sobrevivir en móvil va en
 		// AsideControls, que es la banda que sí se ve ahí.
-		On(css.Mobile, widget.Part("header"),
+		On(css.Mobile, partHeader,
 			style.Hide(),
 		)
 }
