@@ -167,7 +167,8 @@ func (v *CrudView) renderDeleteConfirm() *Element {
 // selectAction already loaded+locked it (read-only) if this wasn't already the
 // selected row. Focuses the first field so the user can start typing right
 // away — standard behavior, see the view/conformance "edit_focuses_first_field"
-// clause.
+// clause. Focus is synchronous, on purpose — see newAction below for why it
+// must never be deferred.
 func (v *CrudView) editAction(id string) {
 	v.selectAction(view.Item{ID: id})
 	if v.form != nil {
@@ -253,22 +254,19 @@ func (v *CrudView) newAction() {
 	if v.form != nil {
 		v.form.Reset()
 		v.form.SetLocked(false)
+		v.form.Focus()
 	}
 	v.composing.Set(true)
-	// ShowMain (a smooth-animated horizontal scrollIntoView, see rightpanel)
-	// runs BEFORE Focus, not after: focusing first, as this used to, fires the
-	// keyboard while the panel scroll is still starting, and on iOS Safari a
-	// smooth scroll that begins while the keyboard is mid-resize can be
-	// cancelled outright — the field ends up focused (keyboard opens) on a
-	// panel that never moved. Reported as the toggle "doing nothing" on a
-	// second press, right after a Cancel whose own keyboard-dismiss animation
-	// was likely still settling. editAction (via selectAction) already scrolls
-	// before it focuses; this matches it instead of racing the keyboard.
+	// Focus before ShowMain, both synchronous, is deliberate: iOS Safari only
+	// opens the keyboard for a focus() that happens inside the call stack of
+	// the user gesture, so deferring it by any amount (tried at several
+	// delays) moves DOM focus but leaves the keyboard shut. Order matters too
+	// — Focus must not be the last scroll-affecting thing to run, which is why
+	// ShowMain follows it and dom's Focus suppresses the browser's own
+	// focus-scroll (see elementWasm.Focus): otherwise the two scrolls race and
+	// the strip lands between snap points.
 	if v.panel != nil {
 		v.panel.ShowMain()
-	}
-	if v.form != nil {
-		v.form.Focus()
 	}
 	if v.OnNew != nil {
 		v.OnNew()
