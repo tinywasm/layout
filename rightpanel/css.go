@@ -69,8 +69,15 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 		Part(partHeadControls,
 			style.Row(style.Space1),
 		).
+		// Secondary, not Page: aside's own backdrop is Secondary/Panel's
+		// ColorSurface at every breakpoint (see the "aside" Part below), so on
+		// mobile — where neither panel is overridden to Panel yet — article
+		// must share that same backdrop. Otherwise fields' Inset border sits on
+		// Page's white and list's identical Inset border sits on Secondary's
+		// grey, and the same border color reads as two different tones purely
+		// from contrast against two different backgrounds.
 		Part(partArticle,
-			style.As(style.Page),
+			style.As(style.Secondary),
 			style.Pad(gutter),
 			style.Scroll(),
 			style.Fill(),
@@ -108,6 +115,7 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 			style.Row(style.Space1),
 			style.KeepSize(),
 		).
+		On(css.Mobile, partAsideFooter, style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.SpaceNone)).
 		// Restores the aside's card border once there is room to show it — see
 		// the "aside" Part above for why it starts borderless.
 		On(css.Tablet, partAside, style.As(style.Panel)).

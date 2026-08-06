@@ -37,6 +37,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Pad(cardInset),
 			style.Scroll(),
 			style.Round(style.RadiusMd),
+			style.Fill(),
 		).
 		// The primary action spans the column, mirroring the search bar above
 		// the list rather than sitting as a stray square beside it.
