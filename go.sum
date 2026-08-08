@@ -4,8 +4,8 @@ github.com/tinywasm/components v0.4.18 h1:YTRpUSjd89r1WH9N8byQnj2HHQZRm2lDr813ls
 github.com/tinywasm/components v0.4.18/go.mod h1:beuZSZo45m43OyFAQdhcIiURndimz+MG+gz6bSYfVMg=
 github.com/tinywasm/css v0.4.11 h1:y5HtVV4TUGtj+0YDVmGBhPqQa0EktJjprGM9k8dhZxc=
 github.com/tinywasm/css v0.4.11/go.mod h1:EyCY2mFW664qIyqTQKW1mgkg7cqAK3oF6igiwYdGV5k=
-github.com/tinywasm/dom v0.13.4 h1:yFczeuo4d2ETddZjk/E6R0Jj4ksn2FvNgZDIdg93jQ8=
-github.com/tinywasm/dom v0.13.4/go.mod h1:lc8B0WkIOTWmCLCBTtr2g1Om4igOQnGve/xvIZWOrdI=
+github.com/tinywasm/dom v0.13.5 h1:CklQl/U/pJn5Pka3n5xf8xEObFLxuKxrrpXPLGiprWY=
+github.com/tinywasm/dom v0.13.5/go.mod h1:foT4zhFHK4T8ZNPjgT539dAfdslSdY/hD7V0g9CUNgY=
 github.com/tinywasm/fmt v0.25.5 h1:2nBU5H1lszhkGIusm7m4S+rGM2rPiIJkhvQqwqN17qo=
 github.com/tinywasm/fmt v0.25.5/go.mod h1:2Y4hlsQxqVsZ5z9vQL5XQbEzLQtQOr1Bhp44nPGfydA=
 github.com/tinywasm/font v0.0.4 h1:dugQHev1xk2YzA01xpqV4WLCHxEmk6JEu2GkDbPxlfE=
