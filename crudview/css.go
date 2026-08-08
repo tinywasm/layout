@@ -39,8 +39,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Scroll(),
 			style.Round(style.RadiusMd),
 			style.Fill(),
-		).
-		// The primary action spans the column, mirroring the search bar above
+		).		// The primary action spans the column, mirroring the search bar above
 		// the list rather than sitting as a stray square beside it.
 		// ControlBox: the action is a control, and every control answers to
 		// --control-height — the same token the search bar now measures by, so
@@ -88,12 +87,29 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		).
 		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
 		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
-		// Flush on mobile, not cardInset: this eats into the sliver
-		// MasterDetail(Most) leaves visible of the list when the strip is
-		// scrolled to the form panel — the one place targetlist's row menu
-		// (docked to the row's leading edge) has to fit. A deliberate mobile
-		// exception to cardInset's own promise to keep fields and list from
-		// drifting apart — "fields" is on the other panel and is untouched.
+		// Bare, not Inset, on a phone: the grey card + border of fields/list
+		// adds nothing over the panel's own page surface, and the list is
+		// where the user first wants whitespace to breathe. Bare strips
+		// background and border without touching the text color — Subtle
+		// would also fix the grey but would silently mute inherited text,
+		// which is a different statement than "this is not a card".
+		// The rows (targetlist, white Page) and the inputs (fieldset, white
+		// Page) each declare their own surfaces, so nothing loses contrast.
+		On(css.Mobile, widget.Part("fields"),
+			style.As(style.Bare),
+		).
+		On(css.Mobile, widget.Part("list"),
+			style.As(style.Bare),
+		).
+		// cardInset even on mobile: fields and list keep the same pad between
+		// the panel border and the content on every breakpoint, because the
+		// list no longer has to buy space for the ⋮ menu in the sliver
+		// MasterDetail(Most) leaves visible of it — the ⋮ is unreachable from
+		// the sliver now (see targetlist/css.go's PartList comment), so the
+		// indent budget is simply the form's: rightpanel 4 + cardInset 4 +
+		// targetlist's own 8 = 16px on both columns. The old flush was a
+		// deliberate mobile exception to cardInset's promise; it is retired
+		// with the premise that justified it.
 		//
 		// FloatingChrome(EdgeBottom, IconLg, Space4): the action button above
 		// is Docked to THIS panel's corner, floating over content this Part
@@ -108,7 +124,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// nothing enforces the two staying in sync beyond that they are three
 		// lines apart.
 		On(css.Mobile, widget.Part("list"),
-			style.Pad(style.SpaceNone),
+			style.Pad(cardInset),
 			style.FloatingChrome(style.EdgeBottom, style.IconLg, style.Space4),
 		).
 		// Amber while open, matching the selection language the list already

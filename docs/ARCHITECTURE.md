@@ -85,9 +85,12 @@ D -- yes --> E[Activate hash module]
 D -- no --> F[Activate DefaultID / first module]
 E & F --> G[Runtime — signals drive all UI updates]
 G --> H[user clicks hamburger] --> I[menuOpen.Toggle <br/> BindAttrBool data-open patches UI]
-G --> J[Notify called] --> K[notifications.Set <br/> BindChildren inserts toast row]
-G --> L[hash changes] --> M[active.Set <br/> DeriveBool patches panel and link data-current]
-G --> N[user scrolls a module container] --> O[onScroll: navStowed.Set <br/> hamburger data-open hides/reveals it]
+G --> J[Notify called with a Duration] --> K[toastNodes builds desktop + mobile copies]
+K --> L[notifications.Set / notificationsMobile.Set <br/> each BindChildren inserts its row]
+L --> M{expires?} --> N[time.AfterFunc → dismiss]
+L --> O{tap / hover / focus} --> P[dismiss, or pause/resume countdown]
+G --> Q[hash changes] --> R[active.Set <br/> DeriveBool patches panel and link data-current]
+G --> S[user scrolls a module container] --> T[onScroll: navStowed.Set <br/> hamburger data-open hides/reveals it]
 ```
 
 ### Signal fields on `Platform`
@@ -96,7 +99,8 @@ G --> N[user scrolls a module container] --> O[onScroll: navStowed.Set <br/> ham
 |---|---|---|
 | `active` | `*SignalString` | nav link `BindAttrBool("data-current", DeriveBool(...))`, panel `BindAttrBool("data-current", DeriveBool(...))`, header `BindText(DeriveString(...))` |
 | `menuOpen` | `*SignalBool` | nav overlay `BindAttrBool("data-open", ...)`, navigation rail `BindAttrBool("data-open", ...)` |
-| `notifications` | `*SignalNodes` | `msgSlot` container via `BindChildren` |
+| `notifications` | `*SignalNodes` | header `msgSlot` container via `BindChildren` |
+| `notificationsMobile` | `*SignalNodes` | mobile `msg-slot-mobile` container via `BindChildren` |
 | `navIcon` | `*SignalNodes` | hamburger button via `BindChildren` — the active module's glyph |
 | `navStowed` | `*SignalBool` | hamburger `BindStateFunc(widget.Open, !Get())` — stowed while scrolling down |
 
@@ -125,9 +129,25 @@ scrolling would otherwise leave the menu unreachable.
 
 ### Notification flow (`Notify` / `dismiss`)
 
-- `Notify`: appends to `rawNotifications`, calls `notifications.Set(buildToasts())` → `BindChildren` inserts one keyed row.
-- `dismiss`: removes from `rawNotifications`, calls `notifications.Set(buildToasts())` → `BindChildren` removes one keyed row; untouched rows keep DOM identity.
-- `p.mu` protects `rawNotifications` (concurrent goroutines from `time.AfterFunc`).
+- `Notify(t, msg, d Duration)` appends to `rawNotifications` and calls
+  `notifications.Set(toastNodes(""))` and
+  `notificationsMobile.Set(toastNodes("-m"))`: every toast renders into BOTH
+  slots — the header's `msg-slot` on wide screens and the mobile stack under
+  the hamburger, because on a phone the header is `display:none` and a fixed
+  descendant of a hidden ancestor is never painted. One `*Element` cannot have
+  two parents, so the two copies carry distinct id/key suffixes.
+- The duration is a typed decision, not a number: `Auto()` sizes it to the
+  message (`clamp(2000ms, 1200ms + words×350ms, 8000ms)`), `Persistent()`
+  keeps the toast until dismissed (the right call for errors, WCAG 2.2.1),
+  `For(ms)` pins an exact window. Auto-dismiss runs on `time.AfterFunc`,
+  which is why `p.mu` guards `rawNotifications`.
+- A11y: `role="status"` (polite) for info/success, `role="alert"` (assertive)
+  for warning/error. Tapping a toast dismisses it; hovering or focusing pauses
+  the countdown (`pauseToast`/`resumeToast`) with the deadline fixed across the
+  pause.
+- `dismiss`: removes from `rawNotifications` (stopping a pending timer on the
+  manual path), re-renders both slots → each `BindChildren` removes one keyed
+  row; untouched rows keep DOM identity.
 
 No `Update()` is called anywhere — all UI changes go through signal `Set`.
 
@@ -149,6 +169,9 @@ Parts touching the application frame — header, nav, menu, msg, and the
   only one of the two surfaces exists at a time.
 - **Notifications** are plain text in severity colour: `Glyph(Subtle|Success|
   Accent|Danger)` emits `color` + `fill: currentColor` with no background box.
+  On a phone there is no header to tint, so the same toast becomes a slab —
+  `As(Inset)` + radius + `Raise(Floating)` — in the `msg-stack` under the
+  hamburger, the severity colours still carried by the glyph variants.
 - **Navigation semantics**: the current route renders `As(Accent)` (amber —
   "where I am"), hover renders `As(Inset)` (tonal). The light selection tint
   (`Highlight`) is deliberately not used in the nav; selected rows in consumer

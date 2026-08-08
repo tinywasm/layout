@@ -28,10 +28,6 @@ var (
 	clsBrandName      = NamePlatform.Class("brand-name")
 	clsMsgSlot        = NamePlatform.Class("msg-slot")
 	clsMsg            = NamePlatform.Class("msg")
-	clsMsgInfo        = NamePlatform.Class("msg-info")
-	clsMsgSuccess     = NamePlatform.Class("msg-success")
-	clsMsgWarning     = NamePlatform.Class("msg-warning")
-	clsMsgError       = NamePlatform.Class("msg-error")
 	clsHeaderRight    = NamePlatform.Class("header-right")
 	clsBody           = NamePlatform.Class("body")
 	clsStage          = NamePlatform.Class("stage")
@@ -44,6 +40,8 @@ var (
 	ClsNavIcon        = NamePlatform.Class("nav-icon")
 	clsHamburger      = NamePlatform.Class("hamburger")
 	clsNavOverlay     = NamePlatform.Class("nav-overlay")
+	clsMsgStack       = NamePlatform.Class("msg-stack")
+	clsMsgSlotMobile  = NamePlatform.Class("msg-slot-mobile")
 )
 
 const (
@@ -153,11 +151,12 @@ type Platform struct {
 	DefaultID string
 
 	// internal state
-	active        *SignalString
-	menuOpen      *SignalBool
-	notifications *SignalNodes
-	navIcon       *SignalNodes
-	navStowed     *SignalBool
+	active               *SignalString
+	menuOpen             *SignalBool
+	notifications        *SignalNodes // desktop toasts (header msg-slot)
+	notificationsMobile  *SignalNodes // mobile toasts (msg-stack under the hamburger)
+	navIcon              *SignalNodes
+	navStowed            *SignalBool
 
 	rawNotifications []notification
 	mu               sync.Mutex
@@ -180,6 +179,48 @@ type notification struct {
 	Type MessageType
 	Msg  string
 	ID   string
+	// expiryNs is the auto-dismiss deadline (UnixNano); 0 = persistent. The
+	// timer is stored on the notification so pause/resume can cancel and
+	// re-arm it — see pauseToast/resumeToast.
+	expiryNs int64
+	timer    time.Timer
+}
+
+// Duration is how long a notification stays before dismissing itself. A
+// Duration is a DECISION, not a number: 0-as-persistent and -1-as-automatic
+// were magic numbers nobody could read at the call site, and auto-sizing
+// needs the message text that only Notify has.
+type Duration struct {
+	millis func(msg string) int // nil = persistent
+}
+
+// Auto sizes the duration to the message: ~350ms per word plus ~1.2s to
+// notice the toast, floored at 2s (a one-word confirmation is fully read in
+// that time) and capped at 8s so a long message cannot hold the screen
+// hostage. One word → 2s; three words → 2.25s; a 15-word error → 6.45s.
+func Auto() Duration {
+	return Duration{millis: func(msg string) int {
+		words := Count(msg, " ") + 1
+		ms := 1200 + words*350
+		if ms < 2000 {
+			return 2000
+		}
+		if ms > 8000 {
+			return 8000
+		}
+		return ms
+	}}
+}
+
+// Persistent keeps the notification until the user dismisses it. The case
+// for it is error reporting: a message that vanishes before it is read
+// defeats the report (WCAG 2.2.1, Timing Adjustable — the user must be able
+// to extend or disable a time limit).
+func Persistent() Duration { return Duration{} }
+
+// For pins an exact duration in milliseconds.
+func For(ms int) Duration {
+	return Duration{millis: func(string) int { return ms }}
 }
 
 // Init initializes the platform state and routing.
@@ -187,6 +228,7 @@ func (p *Platform) Init(ctx Ctx) {
 	p.active = NewString("")
 	p.menuOpen = NewBool(false)
 	p.notifications = NewNodes()
+	p.notificationsMobile = NewNodes()
 	p.navIcon = NewNodes()
 	p.navStowed = NewBool(false)
 
@@ -362,11 +404,27 @@ func (p *Platform) Render() *Element {
 
 	root.Child(header)
 
-	// ── hamburger button (mobile only) ───────────────────────────────────────
-	// A sibling of the header, not a child of it: on a phone the header is
-	// display:none, and a fixed descendant of a hidden ancestor is not rendered
-	// either. It stays out of .pd__body, which is what the Sidebar contract
-	// there requires.
+	// ── mobile message stack (mobile only) ─────────────────────────────────
+	// The toasts' phone home, a sibling of the header for the same reason the
+	// hamburger is one: on a phone the header is display:none, and a fixed
+	// descendant of a hidden ancestor is not rendered either (that is exactly
+	// why the desktop msg-slot, inside the header, never painted on mobile).
+	//
+	// The hamburger rides INSIDE this wrapper so the stack can claim the same
+	// corner the button alone used to occupy — Docked to the top-end with the
+	// same Space4 gap — with the toasts hanging just below it through
+	// Stack(Space2). Two floating pieces pinned to the same corner would need
+	// an offset calculation to stay apart; one stack with both inside is
+	// positioned once.
+	//
+	// The slot is a dedicated child, never a sibling of the hamburger inside a
+	// shared BindChildren: the keyed reconcile treats every existing child of
+	// a bound container as a toast row, so a static sibling would be
+	// reordered by it and finally removed as excess. The slot declares its own
+	// Stack for the inter-toast gap — the wrapper's gap belongs between the
+	// button and the block, not inside it.
+	msgStack := Div().Set(clsMsgStack.AsAttr())
+
 	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menu").
 		// Open aquí significa "el cromo está desplegado", que es lo mismo que
@@ -378,7 +436,18 @@ func (p *Platform) Render() *Element {
 	hamburger.On("click", func(Event) {
 		p.menuOpen.Toggle()
 	})
-	root.Child(hamburger)
+
+	msgSlotMobile := Div().Set(clsMsgSlotMobile.AsAttr()).
+		BindChildren(p.notificationsMobile)
+	// Because elementToHTML/SSR doesn't process "children" bindings, initial
+	// nodes must be manually added — same as the desktop slot.
+	for _, n := range p.notificationsMobile.Get() {
+		msgSlotMobile.Child(n)
+	}
+
+	msgStack.Child(hamburger, msgSlotMobile)
+	// Added as the root's LAST child below — see that site for why DOM order
+	// matters there (the stack ties with the drawer/overlay at --z-dropdown).
 
 	// ── nav overlay backdrop (mobile) ────────────────────────────────────────
 	overlay := Div().Set(clsNavOverlay.AsAttr()).
@@ -482,67 +551,148 @@ func (p *Platform) Render() *Element {
 
 	root.Child(body)
 
+	// The mobile toast stack is the root's LAST child: its Docked(Viewport)
+	// ties with the drawer and the nav-overlay at --z-dropdown (platformd is
+	// a Menu-kind widget, so --z-toast is not reachable from here), and the
+	// cascade breaks the tie by DOM order — a toast must paint above the
+	// drawer's veil, not under it.
+	root.Child(msgStack)
+
 	return root
 }
 
-func (p *Platform) buildToasts() []*Element {
+// toastNodes builds one toast element per raw notification. Called twice per
+// refresh with different suffixes: the same notification renders into the
+// desktop header slot AND the mobile stack, and the two must be distinct
+// *Elements — one element cannot have two parents — so their IDs/keys differ
+// by suffix and each BindChildren reconciles its own set.
+//
+// Accessibility: role=status (aria-live polite) announces info/success
+// without stealing focus; role=alert (assertive) is for warnings and errors,
+// which are announcements, not focus grabs. This is the only thing severity
+// still drives — every message shares one visual class (clsMsg, styled once
+// in css.go with no per-type variant) after a reported bug where the mobile
+// and desktop toasts, and the delete-confirmation dialog, each showed a
+// different color because each was its own declaration. role isn't a CSS
+// class, so it never risked the same drift.
+//
+// The toast itself is the manual dismiss affordance — tapping it closes it.
+// Pause-on-hover lets a long message hold the screen; focusin/focusout mirror
+// it for the keyboard even though toasts are deliberately not focusable (a
+// focusable toast would add tab stops that appear and vanish with each
+// notification).
+func (p *Platform) toastNodes(suffix string) []*Element {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	nodes := make([]*Element, 0, len(p.rawNotifications))
 	for _, n := range p.rawNotifications {
-		var variantCls widget.Class
+		role := "status"
 		switch n.Type {
-		case Msg.Info:
-			variantCls = clsMsgInfo
-		case Msg.Success:
-			variantCls = clsMsgSuccess
-		case Msg.Warning:
-			variantCls = clsMsgWarning
-		case Msg.Error:
-			variantCls = clsMsgError
-		default:
-			variantCls = clsMsgInfo
+		case Msg.Warning, Msg.Error:
+			role = "alert"
 		}
 
-		nodes = append(nodes, Div().Set(clsMsg.AsAttr(), variantCls.AsAttr()).
-			ID(n.ID).
-			Key(n.ID).
-			Text(n.Msg))
+		id := n.ID
+		nodes = append(nodes, Div().Set(clsMsg.AsAttr()).
+			ID(id+suffix).
+			Key(id+suffix).
+			Attr("role", role).
+			Text(n.Msg).
+			On("click", func(Event) { p.dismiss(id) }).
+			On("mouseenter", func(Event) { p.pauseToast(id) }).
+			On("mouseleave", func(Event) { p.resumeToast(id) }).
+			On("focusin", func(Event) { p.pauseToast(id) }).
+			On("focusout", func(Event) { p.resumeToast(id) }))
 	}
 	return nodes
 }
 
-// Notify queues a typed notification in the proper viewport slot.
-// Any non-zero durationMs → schedule dismissal; duration 0 → persistent message.
-func (p *Platform) Notify(t MessageType, msg string, durationMs int) {
+// Notify queues a typed notification in both viewport slots (header on
+// desktop, msg-stack on mobile). The duration is a decision, not a number:
+// Auto() sizes it to the message, Persistent() leaves it until dismissed,
+// For(ms) pins it. Errors are the one case that must not vanish on their own
+// — hand them Persistent(), or a generous For().
+func (p *Platform) Notify(t MessageType, msg string, d Duration) {
 	p.mu.Lock()
+	ms := 0
+	if d.millis != nil {
+		ms = d.millis(msg)
+	}
 	n := notification{
 		Type: t,
 		Msg:  msg,
 		ID:   "pd-notification-" + p.GetID() + "-" + Sprint(time.Now()),
 	}
+	if ms > 0 {
+		n.expiryNs = time.Now() + int64(ms)*1e6
+		n.timer = time.AfterFunc(ms, func() { p.dismiss(n.ID) })
+	}
 	p.rawNotifications = append(p.rawNotifications, n)
 	p.mu.Unlock()
 
-	p.notifications.Set(p.buildToasts())
-
-	if durationMs > 0 {
-		time.AfterFunc(durationMs, func() {
-			p.dismiss(n.ID)
-		})
-	}
+	p.notifications.Set(p.toastNodes(""))
+	p.notificationsMobile.Set(p.toastNodes("-m"))
 }
 
+// dismiss removes the notification with the given id — from a tap on the
+// toast itself, or from the auto-dismiss timer firing. The timer is stopped
+// on the manual path so it cannot fire later against a removed notification
+// (the auto path's timer has already fired).
 func (p *Platform) dismiss(id string) {
 	p.mu.Lock()
 	for i, n := range p.rawNotifications {
 		if n.ID == id {
+			if n.timer != nil {
+				n.timer.Stop()
+				n.timer = nil
+			}
 			p.rawNotifications = append(p.rawNotifications[:i], p.rawNotifications[i+1:]...)
 			p.mu.Unlock()
-			p.notifications.Set(p.buildToasts())
+			p.notifications.Set(p.toastNodes(""))
+			p.notificationsMobile.Set(p.toastNodes("-m"))
 			return
 		}
+	}
+	p.mu.Unlock()
+}
+
+// pauseToast stops a notification's auto-dismiss timer, remembered so the
+// pause is transparent: the deadline stays fixed, and resume re-arms with
+// whatever remains of it. Hovering or focusing a toast is the user saying
+// "I'm still reading this" — the timer must not run through that.
+func (p *Platform) pauseToast(id string) {
+	p.mu.Lock()
+	for i := range p.rawNotifications {
+		n := &p.rawNotifications[i]
+		if n.ID != id {
+			continue
+		}
+		if n.timer != nil {
+			n.timer.Stop()
+			n.timer = nil
+		}
+		break
+	}
+	p.mu.Unlock()
+}
+
+// resumeToast re-arms the auto-dismiss timer for the time remaining on the
+// original deadline. A persistent notification (no deadline) or an already
+// dismissed one is a no-op.
+func (p *Platform) resumeToast(id string) {
+	p.mu.Lock()
+	for i := range p.rawNotifications {
+		n := &p.rawNotifications[i]
+		if n.ID != id {
+			continue
+		}
+		if n.expiryNs > 0 && n.timer == nil {
+			if remaining := n.expiryNs - time.Now(); remaining > 0 {
+				n.timer = time.AfterFunc(int(remaining/1e6), func() { p.dismiss(n.ID) })
+			}
+		}
+		break
 	}
 	p.mu.Unlock()
 }

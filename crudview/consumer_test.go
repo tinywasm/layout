@@ -588,9 +588,11 @@ func TestConsumer_SearchFiltering(t *testing.T) {
 	}
 }
 
-// Case 11: selecting a row shows the form read-only; ⋮ → Editar unlocks it;
-// "+"/undo (new/undoAction) always leave it editable.
-func TestConsumer_ReadOnlyGating(t *testing.T) {
+// Case 11: the form lock is gone. Selecting a row loads it EDITABLE — there is
+// no Save button, auto-save persists every field commit, so nothing needs
+// protecting; and new/undo always leave the form editable too. The "disabled"
+// gate that used to appear on selection is the regression this guards.
+func TestConsumer_NoLockGating(t *testing.T) {
 	caller := &conformance.FakeCaller{
 		Reply: func(op string, into model.Decodable) {
 			dl := into.(*DeviceList)
@@ -616,28 +618,28 @@ func TestConsumer_ReadOnlyGating(t *testing.T) {
 		t.Error("expected the blank/new form to be editable, got disabled fields")
 	}
 
-	// Selecting an existing row: read-only.
+	// Selecting an existing row: still editable — the lock no longer exists.
 	v.selectAction(view.Item{ID: "12"})
 	html = v.form.Render().String()
-	if !fmt.Contains(html, "disabled") {
-		t.Error("expected selecting a row to lock the form (disabled fields)")
+	if fmt.Contains(html, "disabled") {
+		t.Error("expected selecting a row to leave the form editable (no lock), got disabled fields")
 	}
 
-	// ⋮ -> Editar: unlocked again.
+	// editAction (kept for the conformance driver): also editable, always.
 	v.editAction("12")
 	html = v.form.Render().String()
 	if fmt.Contains(html, "disabled") {
-		t.Error("expected editAction to unlock the form")
+		t.Error("expected editAction to leave the form editable")
 	}
 
-	// Re-select the same row (simulating a fresh row click): locked again.
+	// Re-select the same row (simulating a fresh row click): still editable.
 	v.selectAction(view.Item{ID: "12"})
 	html = v.form.Render().String()
-	if !fmt.Contains(html, "disabled") {
-		t.Error("expected re-selecting the row to lock the form again")
+	if fmt.Contains(html, "disabled") {
+		t.Error("expected re-selecting the row to leave the form editable")
 	}
 
-	// undoAction ("↺"): back to editable.
+	// undoAction ("↺"): editable as ever.
 	v.undoAction()
 	html = v.form.Render().String()
 	if fmt.Contains(html, "disabled") {

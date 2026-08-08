@@ -212,7 +212,7 @@ func TestPlatform_CanView(t *testing.T) {
 func TestPlatform_Notify_Renders(t *testing.T) {
 	p := &Platform{Element: *Div()}
 	p.Init(NilCtx())
-	p.Notify(Msg.Error, "boom", 0)
+	p.Notify(Msg.Error, "boom", Persistent())
 
 	html := p.Render().String()
 	t.Logf("HTML: %s", html)
@@ -221,18 +221,57 @@ func TestPlatform_Notify_Renders(t *testing.T) {
 	if !contains(html, "id='pd-msg-slot'") {
 		t.Error("expected pd-msg-slot")
 	}
-	if !contains(html, "pd__msg-error") {
-		t.Error("expected pd__msg-error")
-	}
 	if !contains(html, "boom") {
 		t.Error("expected boom")
+	}
+
+	// The same notification renders into the mobile stack too — one element
+	// cannot have two parents, so the second copy gets its own id/key suffix.
+	if !contains(html, "pd__msg-stack") {
+		t.Error("expected the mobile msg-stack")
+	}
+	if !contains(html, "pd__msg-slot-mobile") {
+		t.Error("expected the mobile msg slot")
+	}
+}
+
+func TestPlatform_Notify_A11yRoles(t *testing.T) {
+	// role=status (polite) for info/success; role=alert (assertive) for
+	// warnings and errors — announcements, never focus steals.
+	p := &Platform{Element: *Div()}
+	p.Init(NilCtx())
+
+	p.Notify(Msg.Info, "informational", Persistent())
+	p.Notify(Msg.Success, "ok", Persistent())
+	p.Notify(Msg.Warning, "careful", Persistent())
+	p.Notify(Msg.Error, "broken", Persistent())
+
+	nodes := p.notifications.Get()
+	if len(nodes) != 4 {
+		t.Fatalf("expected 4 toasts, got %d", len(nodes))
+	}
+	for i, want := range []string{"status", "status", "alert", "alert"} {
+		if html := nodes[i].String(); !contains(html, "role='"+want+"'") {
+			t.Errorf("toast %d: expected role=%s, got: %s", i, want, html)
+		}
+	}
+
+	// The mobile copies carry the same semantics.
+	mobile := p.notificationsMobile.Get()
+	if len(mobile) != 4 {
+		t.Fatalf("expected 4 mobile toasts, got %d", len(mobile))
+	}
+	for i, want := range []string{"status", "status", "alert", "alert"} {
+		if html := mobile[i].String(); !contains(html, "role='"+want+"'") {
+			t.Errorf("mobile toast %d: expected role=%s, got: %s", i, want, html)
+		}
 	}
 }
 
 func TestPlatform_Notify_Dismiss(t *testing.T) {
 	p := &Platform{Element: *Div()}
 	p.Init(NilCtx())
-	p.Notify(Msg.Info, "hi", 10) // 10ms
+	p.Notify(Msg.Info, "hi", For(10)) // 10ms
 
 	if p.notificationCount() != 1 {
 		t.Fatalf("expected 1 notification, got %d", p.notificationCount())
@@ -244,6 +283,88 @@ func TestPlatform_Notify_Dismiss(t *testing.T) {
 	if p.notificationCount() != 0 {
 		t.Errorf("expected 0 notifications after dismissal, got %d", p.notificationCount())
 	}
+}
+
+func TestPlatform_Notify_ManualDismiss(t *testing.T) {
+	// A persistent toast must survive its window untouched — only a tap (or
+	// the consumer) removes it. dismissal via a tap is the dismiss(id) path;
+	// the timer was never armed, so nothing can fire it later.
+	p := &Platform{Element: *Div()}
+	p.Init(NilCtx())
+	p.Notify(Msg.Info, "stay", Persistent())
+
+	if p.notificationCount() != 1 {
+		t.Fatalf("expected 1 notification, got %d", p.notificationCount())
+	}
+	time.Sleep(30 * time.Millisecond)
+	if p.notificationCount() != 1 {
+		t.Errorf("persistent notification must not auto-dismiss, got %d", p.notificationCount())
+	}
+}
+
+func TestPlatform_Notify_AutoDuration(t *testing.T) {
+	// Auto() sizes the window to the message: floor 2s for a one-word toast,
+	// then ~350ms per extra word, capped at 8s. The deadline is computed at
+	// Notify time and stays fixed across pause/resume.
+	p := &Platform{Element: *Div()}
+	p.Init(NilCtx())
+
+	if got := autoMillis("Guardado"); got != 2000 {
+		t.Errorf("one word: expected 2000ms, got %d", got)
+	}
+	if got := autoMillis("Dispositivo guardado correctamente"); got != 2250 {
+		t.Errorf("three words: expected 2250ms, got %d", got)
+	}
+	// Exactly 15 words: 1200 + 15×350 = 6450ms
+	long := "un error muy largo de quince palabras a b c d e f g h"
+	if got := autoMillis(long); got != 6450 {
+		t.Errorf("fifteen words: expected 6450ms, got %d", got)
+	}
+	if got := autoMillis(Repeat("muy ", 30) + "larga"); got != 8000 {
+		t.Errorf("long message must be capped at 8000ms, got %d", got)
+	}
+
+	p.Notify(Msg.Success, "Guardado", Auto())
+	if n := p.notifications.Get(); len(n) != 1 {
+		t.Fatalf("expected 1 notification, got %d", len(n))
+	}
+}
+
+func TestPlatform_Notify_PauseResume(t *testing.T) {
+	// Hovering/focusing a toast pauses it; leaving resumes with the time
+	// remaining on the original deadline. A deadline that passes entirely
+	// while paused stays — the user is still reading it, which is the whole
+	// point of pausing.
+	p := &Platform{Element: *Div()}
+	p.Init(NilCtx())
+
+	p.Notify(Msg.Info, "linger", For(60))
+	id := p.rawNotifications[0].ID
+	p.pauseToast(id)
+	time.Sleep(150 * time.Millisecond) // well past the original 60ms window
+	if p.notificationCount() != 1 {
+		t.Fatalf("paused toast must not dismiss, got %d", p.notificationCount())
+	}
+
+	// A pause inside the window is a true pause: resume re-arms with the
+	// remaining time, so the toast still goes away shortly after. The linger
+	// toast above stays by design, so exactly one must remain at the end.
+	p.Notify(Msg.Info, "resume", For(100))
+	id = p.rawNotifications[1].ID
+	p.pauseToast(id)
+	time.Sleep(30 * time.Millisecond)
+	p.resumeToast(id)
+	time.Sleep(200 * time.Millisecond) // ~70ms remaining, comfortably under
+	if p.notificationCount() != 1 {
+		t.Errorf("resumed toast must dismiss after its remaining window (linger stays), got %d", p.notificationCount())
+	}
+	if p.rawNotifications[0].Msg != "linger" {
+		t.Errorf("the surviving toast must be the paused-past-deadline one, got %q", p.rawNotifications[0].Msg)
+	}
+}
+
+func autoMillis(msg string) int {
+	return Auto().millis(msg)
 }
 
 func TestRenderCSS_NonEmpty(t *testing.T) {

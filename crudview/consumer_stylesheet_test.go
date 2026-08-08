@@ -145,15 +145,15 @@ func TestNoManualFloatingReservation(t *testing.T) {
 	}
 }
 
-// TestListCardIsFlushOnMobile is the net for PLAN.md Stage B2: the list
-// card's own Pad(cardInset) was eating into the ~37.5px sliver
-// MasterDetail(Most) leaves visible of the list when the mobile strip is
-// scrolled to the form panel — the one place targetlist's row menu (docked to
-// the row's leading edge) has to fit. "fields" is on the other panel and must
-// be untouched: cardInset otherwise still keeps the two cards from drifting
-// apart, so this is a deliberate, scoped mobile exception, not cardInset
-// being abandoned.
-func TestListCardIsFlushOnMobile(t *testing.T) {
+// TestListCardMatchesFormIndentOnMobile is the net for the indent budget:
+// fields and list carry the same cardInset on mobile as on desktop, so the
+// distance from the panel border to the content is identical in both columns
+// (rightpanel 4 + cardInset 4 + targetlist's own 8 = 16px, the same 16px as
+// the form column). The old mobile flush was a scoped exception buying room
+// for the ⋮ menu in the master-detail sliver; the sliver no longer has to fit
+// the ⋮ (see targetlist/css.go's PartList comment), so the exception is
+// retired with the premise that justified it.
+func TestListCardMatchesFormIndentOnMobile(t *testing.T) {
 	caller := &conformance.FakeCaller{}
 	p := view.New(caller, &Device{}, "device_list",
 		func() model.ModelSlice { return &DeviceList{} })
@@ -172,13 +172,25 @@ func TestListCardIsFlushOnMobile(t *testing.T) {
 	}
 	mobileRegion := cssStr[mediaIdx:]
 
-	if b := ruleBlock(mobileRegion, ".crudview__list {"); !fmt.Contains(b, "padding: 0") {
-		t.Errorf(".crudview__list must be flush (padding: 0) on mobile, block:\n%s", b)
+	// The list declares its own cardInset on mobile (it used to flush to 0);
+	// fields relies on its base rule's cardInset, which applies everywhere.
+	if b := ruleBlock(mobileRegion, ".crudview__list {"); !fmt.Contains(b, "padding: var(--space-1") {
+		t.Errorf(".crudview__list must carry cardInset (padding: var(--space-1...)) on mobile, block:\n%s", b)
+	}
+	// The base rules (every breakpoint) must also still carry the pad, so the
+	// mobile list override cannot have silenced it.
+	if b := ruleBlock(cssStr, ".crudview__fields {"); !fmt.Contains(b, "padding: var(--space-1") {
+		t.Errorf(".crudview__fields base rule must carry cardInset, block:\n%s", b)
+	}
+	if b := ruleBlock(cssStr, ".crudview__list {"); !fmt.Contains(b, "padding: var(--space-1") {
+		t.Errorf(".crudview__list base rule must carry cardInset, block:\n%s", b)
 	}
 
-	// "fields" is on the other panel and must be untouched by this exception.
-	if b := ruleBlock(mobileRegion, ".crudview__fields {"); fmt.Contains(b, "padding: 0") {
-		t.Errorf(".crudview__fields must keep its cardInset on mobile, block:\n%s", b)
+	// And both panels drop the card look on a phone: Bare background, no border.
+	for _, sel := range []string{".crudview__list", ".crudview__fields"} {
+		if b := ruleBlock(mobileRegion, sel+" {"); !fmt.Contains(b, "background-color: transparent;") {
+			t.Errorf("%s must be Bare (background-color: transparent) on mobile, block:\n%s", sel, b)
+		}
 	}
 }
 

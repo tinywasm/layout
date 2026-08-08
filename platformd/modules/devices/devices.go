@@ -57,17 +57,19 @@ func (m *Module) View() Component {
 	// aviso ahí no aporta nada y en móvil, donde el módulo llena la pantalla, el
 	// mensaje se superpone a la vista entera. Guardar y borrar SÍ notifican, porque
 	// confirman una mutación real.
-	cv.OnNew = func() { m.p.Notify(Msg.Info, "Nuevo", 2000) }
+	cv.OnNew = func() { m.p.Notify(Msg.Info, "Nuevo", platformd.Auto()) }
 	cv.OnSaved = func(err error) {
 		if err == nil {
-			m.p.Notify(Msg.Success, "Guardado", 2000)
+			m.p.Notify(Msg.Success, "Guardado", platformd.Auto())
 		}
 	}
 	cv.OnDeleted = func(id string, err error) {
 		if err == nil {
-			m.p.Notify(Msg.Error, "Eliminado "+id, 2000)
+			// Éxito, no Error: la mutación se aplicó. El tipo informa de la
+			// severidad, no del verbo.
+			m.p.Notify(Msg.Success, "Eliminado "+id, platformd.Auto())
 		}
 	}
-	cv.OnCancel = func() { m.p.Notify(Msg.Info, "Cancelado", 2000) }
+	cv.OnCancel = func() { m.p.Notify(Msg.Info, "Cancelado", platformd.Auto()) }
 	return cv
 }

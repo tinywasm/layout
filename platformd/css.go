@@ -56,19 +56,33 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Fill(),
 			style.CenterContent(),
 		).
-		// No box: a notification is coloured text on the header's own surface.
-		// Pad/Round existed to shape a slab that is no longer there. KeepSize
-		// keeps a toast from being squeezed by its sibling; the part itself is
-		// declared so the variant rules below have a shared home.
-		Part(widget.Part("msg"), style.KeepSize()).
-		// Glyph, not As: the variants tint the text and leave the background
-		// alone, so severity stays legible and no green/red slab breaks the
-		// header. Warning uses the accent family, not Highlight: Glyph(Highlight)
-		// resolves to the surface colour and would be invisible on the panel.
-		Part(widget.Part("msg-info"), style.Glyph(style.Subtle)).
-		Part(widget.Part("msg-success"), style.Glyph(style.Success)).
-		Part(widget.Part("msg-warning"), style.Glyph(style.Accent)).
-		Part(widget.Part("msg-error"), style.Glyph(style.Danger)).
+		// No per-severity tint: every notification carries the SAME identity,
+		// the system's own Primary blue — never a severity color (green/amber/
+		// red) and never the plain body ink. One shared color instead of one
+		// per Msg type is what closes a reported bug: the mobile rule below
+		// and four variant Glyph() rules used to each declare their own
+		// `color:` at equal specificity, and — because @media rules are
+		// grouped and emitted after the base rules regardless of declaration
+		// order — the mobile declaration always won the cascade, so a success
+		// toast read green on desktop and near-black on mobile, and the
+		// delete-confirmation dialog (a plain, unstyled <p>) was a third color
+		// again. Three places that could each drift on their own. With one
+		// color and one mechanism there is nothing left to disagree.
+		//
+		// Two ROLES of that one color, not two colors: Glyph(Primary) here is
+		// blue TEXT with no background — a slab would compete with the
+		// header's own Panel surface it sits on. Plain ColorOnSurface (body
+		// ink) was tried first and read as flat against the header's grey; the
+		// system's own blue reads as "this is the platform talking," not
+		// ambient chrome text.
+		//
+		// role="status"/"alert" (see toastNodes in platformd.go) is what
+		// carries severity to assistive tech; it never depended on color, so
+		// dropping the four-way tint costs sighted users nothing they could
+		// already rely on (a plain-text toast never had an icon to pair the
+		// color with anyway — WCAG 1.4.1 wants a second channel for a
+		// color-coded signal, and there wasn't one).
+		Part(widget.Part("msg"), style.KeepSize(), style.Glyph(style.Primary)).
 		Part(widget.Part("header-right"),
 			style.Row(style.Space2),
 			style.KeepSize(),
@@ -298,6 +312,13 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// wears the same amber-with-white-icon the rail's current nav-link and
 		// crudview's open action already use, instead of blending into the
 		// plain blue every other control defaults to.
+		//
+		// The position comes from the msg-stack wrapper it rides inside, not
+		// from this rule: two docked boxes in the same corner would need an
+		// offset calculation to stay apart. Width(Content) keeps the button
+		// from stretching to the stack's width, and PushEnd pushes it to the
+		// end edge — the same corner it always had — while the toast block
+		// below widens with its messages.
 		OnlyOn(css.Mobile, widget.Part("hamburger"),
 			style.Row(style.Space1),
 			style.As(style.AccentInverse),
@@ -305,7 +326,8 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Round(style.RadiusSm),
 			style.Raise(style.Floating),
 			style.CenterContent(),
-			style.Docked(style.Viewport, style.EdgeTop, style.SideEnd, style.Space4),
+			style.Width(style.Content),
+			style.PushEnd(),
 			// Se guarda mientras el usuario baja. Es un estado, no una clase: lo
 			// escribe Go y lo lee la hoja, y el atributo sale del propio State para
 			// que marcado y selector no puedan discrepar.
@@ -315,6 +337,68 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Backdrop(style.Viewport),
 			style.Veil(),
 			style.RevealedBy(widget.Open),
+		).
+		// The toast stack is the hamburger's phone home. It docks the button
+		// exactly where the button used to sit alone (top-end, Space4 from the
+		// edge), then lets the toasts hang below it. One wrapper positioned
+		// once beats two floating pieces that would each need an offset
+		// calculation to stay apart — the plan's "justo debajo del botón"
+		// falls out of the Stack gap, no arithmetic.
+		//
+		// Stack(Space2): the wrapper's own gap lands between the button and
+		// the toast block; the gap BETWEEN toasts is the slot's own Stack
+		// (declared below), so both seams read the same.
+		//
+		// No Raise here: the wrapper is transparent, and a box-shadow follows
+		// the border box even when nothing is painted inside it — a shadow
+		// hugging the rectangle around button+toasts would be a visible seam
+		// around an invisible box. Each toast raises itself instead.
+		//
+		// Stacking: a Viewport dock claims the widget's layer (LayerDropdown,
+		// the same --z-dropdown the drawer and the overlay ride), so the stack
+		// ties with them and DOM order breaks the tie — which is why
+		// msg-stack is the ROOT'S LAST CHILD in Render(): a toast must paint
+		// above the drawer's overlay when both are on screen. (The --z-toast
+		// layer exists for widgets whose Kind is Alert; platformd is a Menu,
+		// and switching kinds to steal the layer would change its role.)
+		OnlyOn(css.Mobile, widget.Part("msg-stack"),
+			style.Stack(style.Space2),
+			style.KeepSize(),
+			style.Docked(style.Viewport, style.EdgeTop, style.SideEnd, style.Space4),
+		).
+		OnlyOn(css.Mobile, widget.Part("msg-slot-mobile"),
+			style.Stack(style.Space2),
+			style.Width(style.Content),
+			style.KeepSize(),
+			// Width(Content) sizes the slot to its widest toast's max-content;
+			// the toasts stretch to that width, so the stack reads as one
+			// aligned column hugging the end edge. A long message wraps inside
+			// its box instead of overflowing the screen — the DSL has no
+			// max-width, so the honest behaviour is max-content: the box is as
+			// wide as the widest word and the text wraps below it.
+		).
+		// The msg part is shared with the DESKTOP header slot (blue text on
+		// the header's own Panel), so this is On, not OnlyOn: OnlyOn's
+		// display:none off-device would switch the desktop toasts off too.
+		//
+		// On a phone the toast floats over CONTENT, not chrome — the rows,
+		// cards and fields around it are all Page-white now (see targetlist
+		// and crudview's own mobile rules), so blue TEXT with no fill (the
+		// desktop treatment above) would read as one more line of pale ink
+		// lost against that white, exactly the "se pierde" this replaced.
+		// A filled Primary chip — blue fill, white text (ColorOnPrimary) —
+		// is what actually separates "this is a message" from "this is
+		// content": the same commit-to-color-not-tint move this chassis
+		// already makes for every other floating mobile chip (the hamburger's
+		// AccentInverse two rules up, crudview's own mobile action button),
+		// none of which try to blend into a neutral panel. Primary's own
+		// triplet carries no border, so the chip is a clean fill with no
+		// outline to clash with Raise's shadow.
+		On(css.Mobile, widget.Part("msg"),
+			style.As(style.Primary),
+			style.Round(style.RadiusSm),
+			style.Raise(style.Floating),
+			style.Pad(style.Space2),
 		).
 		// On a phone the rail stops being a column and becomes a panel that
 		// slides in from the edge, gated by the same Open state as the overlay.

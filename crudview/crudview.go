@@ -101,7 +101,6 @@ func (v *CrudView) Init(ctx Ctx) {
 		OnSelect: func(it targetlist.Item) {
 			v.selectAction(view.Item{ID: it.ID, Label: it.Label, Description: it.Description})
 		},
-		OnEdit:   func(id string) { v.editAction(id) },
 		OnDelete: func(id string) { v.deleteRequest(id) },
 	}
 
@@ -163,16 +162,15 @@ func (v *CrudView) renderDeleteConfirm() *Element {
 	return Div().Set(clsDelConfirmBody.AsAttr()).Child(msg, actions)
 }
 
-// editAction (⋮ → Editar): load the record and unlock the form for editing.
-// selectAction already loaded+locked it (read-only) if this wasn't already the
-// selected row. Focuses the first field so the user can start typing right
-// away — standard behavior, see the view/conformance "edit_focuses_first_field"
-// clause. Focus is synchronous, on purpose — see newAction below for why it
-// must never be deferred.
+// editAction: load the record and focus the first field so the user can start
+// typing right away. Kept as a method although no UI path calls it anymore —
+// the ⋮ menu lost Editar with the lock it existed to undo — because the
+// view/conformance suite's "edit_focuses_first_field" clause drives it
+// directly (see conformance_test.go). Focus is synchronous, on purpose — see
+// newAction below for why it must never be deferred.
 func (v *CrudView) editAction(id string) {
 	v.selectAction(view.Item{ID: id})
 	if v.form != nil {
-		v.form.SetLocked(false)
 		v.form.Focus()
 	}
 }
@@ -216,17 +214,19 @@ func (v *CrudView) Reload() error {
 	return nil
 }
 
-// selectAction: card click / driver Select. Selecting an existing row shows it
-// read-only — only the ⋮ → Editar path (editAction) unlocks it. On mobile
-// (horizontal scroll-snap strip) it also snaps the viewport to the form panel;
-// a no-op on desktop, where both columns are already visible.
+// selectAction: card click / driver Select. Selecting an existing row loads it
+// into the form — immediately editable, because the form lock is gone: there
+// is no Save button, every field commit persists on its own (autoSaveAction),
+// so nothing needs protecting from edits. On mobile (horizontal scroll-snap
+// strip) it also snaps the viewport to the form panel; a no-op on desktop,
+// where both columns are already visible.
 //
 // CloseMenus: this only ever runs from a row BODY tap (⋮ stops its click from
 // propagating here — see targetlist's buildRow), so it is reachable while a
 // DIFFERENT row's ⋮ menu is still open. Native <details name="..."> only
 // auto-closes a sibling when another one in the group is explicitly opened,
 // never from an unrelated click, so without this a stray row's floating
-// Editar/Eliminar icons would keep floating over the just-selected record.
+// Eliminar icon would keep floating over the just-selected record.
 func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
@@ -239,7 +239,6 @@ func (v *CrudView) selectAction(it view.Item) {
 	rec := v.Presenter.Select(it.ID)
 	if v.form != nil {
 		_ = v.form.LoadValues(rec) // nil record → LoadValues resets; not an error
-		v.form.SetLocked(it.ID != "")
 	}
 	if it.ID != "" {
 		if v.panel != nil {
@@ -266,7 +265,6 @@ func (v *CrudView) newAction() {
 	v.Presenter.Deselect()
 	if v.form != nil {
 		v.form.Reset()
-		v.form.SetLocked(false)
 		v.form.Focus()
 	}
 	v.composing.Set(true)
@@ -295,11 +293,11 @@ func (v *CrudView) newAction() {
 // editable state and focus the first field on purpose.
 //
 // CloseMenus alongside selected.Set(""): a row's ⋮ tap sets Selected directly
-// (see targetlist's buildRow) so the mobile-docked Editar/Eliminar icons read
+// (see targetlist's buildRow) so the mobile-docked Eliminar icon reads
 // as belonging to that row, but native <details open> is a separate piece of
 // state Selected does not touch. Without this, cancelling clears the amber
-// highlight while the floating icons for whichever row's menu was last
-// opened stay on screen with nothing left for them to act on.
+// highlight while the floating icon for whichever row's menu was last
+// opened stays on screen with nothing left for it to act on.
 func (v *CrudView) undoAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
@@ -310,7 +308,6 @@ func (v *CrudView) undoAction() {
 	v.Presenter.Deselect()
 	if v.form != nil {
 		v.form.Reset() // also clears the tracked FocusedFieldID()
-		v.form.SetLocked(false)
 	}
 	// The list is the resting view: cancelling has to put the user back on it,
 	// or on a phone the strip stays parked on an empty form with nothing left
@@ -363,7 +360,6 @@ func (v *CrudView) saveAction(saver view.Saver) {
 					v.canDelete.Set(false)
 					v.Presenter.Deselect()
 					v.form.Reset()
-					v.form.SetLocked(false)
 				}
 				_ = v.Reload()
 			}
@@ -436,7 +432,7 @@ func (v *CrudView) Render() *Element {
 		v.panel.AsideControls = v.Filter
 
 		// Single toggle button — "+" when nothing is selected, "↺" when a row
-		// is; Editar/Eliminar live in the targetlist row's ⋮ menu instead.
+		// is; Eliminar lives in the targetlist row's ⋮ menu instead.
 		toggle := Button().Set(clsBtnCrud.AsAttr()).
 			// NOT "btn_..." — actionbutton's global `button[name*="btn"]` rule
 			// matches any button whose name contains that substring and, being

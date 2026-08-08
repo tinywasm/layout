@@ -78,7 +78,7 @@ func main() {
 
 	Append("body", p)
 
-	p.Notify(Msg.Success, "Plataforma cargada", 3000)
+	p.Notify(Msg.Success, "Plataforma cargada", platformd.Auto())
 
 	select {}
 }
