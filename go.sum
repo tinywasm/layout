@@ -26,3 +26,5 @@ github.com/tinywasm/time v0.5.0 h1:M17DNgKrMYfkCK42V6miL9AcwfN/FHghbKOSTXJrkMo=
 github.com/tinywasm/time v0.5.0/go.mod h1:vxGAkKA40im4ObiTS6hcsJYiIsVVLSz/A63JC/+TwvA=
 github.com/tinywasm/view v0.1.10 h1:d3+wRzmYL6K/YwNx50QYSKb7hKH2bGyGKOiGLmzFi4I=
 github.com/tinywasm/view v0.1.10/go.mod h1:N3qogE/qn5RMs/L+5zoUsZ3t35oZPmMb5NkZg7JeN3Y=
+github.com/tinywasm/widget v0.6.3 h1:+0WTQqC8BzfZVHcxjdvszSacKjm9AuMp6kFR0u8VqH0=
+github.com/tinywasm/widget v0.6.3/go.mod h1:U9WxsjKBJW5S4hCnvU5pJCjHU3g0cRMLm4JpHOc/9HQ=

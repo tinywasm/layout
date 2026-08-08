@@ -15,7 +15,7 @@ require (
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.10
-	github.com/tinywasm/widget v0.6.0
+	github.com/tinywasm/widget v0.6.3
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
@@ -30,7 +30,5 @@ require (
 )
 
 replace github.com/tinywasm/components => ../components
-
-replace github.com/tinywasm/widget => ../widget
 
 replace github.com/tinywasm/css => ../css
