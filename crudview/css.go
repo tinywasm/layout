@@ -2,6 +2,7 @@
 
 package crudview
 
+
 import (
 	"github.com/tinywasm/css"
 	"github.com/tinywasm/widget"
@@ -87,6 +88,29 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		).
 		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
 		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
+		// Flush on mobile, not cardInset: this eats into the sliver
+		// MasterDetail(Most) leaves visible of the list when the strip is
+		// scrolled to the form panel — the one place targetlist's row menu
+		// (docked to the row's leading edge) has to fit. A deliberate mobile
+		// exception to cardInset's own promise to keep fields and list from
+		// drifting apart — "fields" is on the other panel and is untouched.
+		//
+		// FloatingChrome(EdgeBottom, IconLg, Space4): the action button above
+		// is Docked to THIS panel's corner, floating over content this Part
+		// contains — the icon (IconLg, matching action-new/action-cancel's own
+		// mobile size two rules up) plus the same Space4 the button is offset
+		// from the edge by, doubled, is its measured 56px-tall + 16px-offset =
+		// 72px footprint. This Part is not itself what scrolls — targetlist's
+		// own Fill()+Scroll() two levels in is — but --floating-bottom is an
+		// inherited custom property, so it reaches that descendant without
+		// either package knowing the other's class name. Whoever changes the
+		// button's icon size or its Docked gap must update this call to match;
+		// nothing enforces the two staying in sync beyond that they are three
+		// lines apart.
+		On(css.Mobile, widget.Part("list"),
+			style.Pad(style.SpaceNone),
+			style.FloatingChrome(style.EdgeBottom, style.IconLg, style.Space4),
+		).
 		// Amber while open, matching the selection language the list already
 		// uses: the button IS what is currently "selected" in the sense that
 		// its own panel is the one on screen. Cancelling (closing) drops it

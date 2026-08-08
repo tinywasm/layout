@@ -70,6 +70,118 @@ func TestCrudView_ControlAndEdgeAsserts(t *testing.T) {
 	}
 }
 
+// TestListDeclaresFloatingChromeOnMobileOnly is the net for layout/docs/PLAN.md
+// stage 1: the mobile action button is Docked over the list's own scrollable
+// content, and the badge of a scrolled-to-end row used to land underneath it
+// because nothing declared that the button occupies that strip. FloatingChrome
+// crosses the boundary to targetlist's Scroll() without either package naming
+// the other's class. Desktop, where the button sits in normal flow instead of
+// floating, must NOT carry a --floating-bottom reservation — a scroller with
+// nothing floating over it should not pad for one anyway.
+func TestListDeclaresFloatingChromeOnMobileOnly(t *testing.T) {
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+	v := &CrudView{
+		Title:     "CRUD",
+		Presenter: p,
+		Form:      html.Div(),
+	}
+	v.Init(&fakeCtx{})
+
+	cssStr := v.RenderCSS().String()
+
+	desktop := cssStr
+	if i := strings.Index(cssStr, "@media"); i != -1 {
+		desktop = cssStr[:i]
+	}
+	if b := ruleBlock(desktop, ".crudview__list {"); fmt.Contains(b, "--floating-bottom") {
+		t.Errorf("desktop .crudview__list must not reserve floating-chrome space, block:\n%s", b)
+	}
+
+	mediaIdx := strings.Index(cssStr, "@media (max-width")
+	if mediaIdx == -1 {
+		t.Fatal("expected a mobile (max-width) media query")
+	}
+	mobileRegion := cssStr[mediaIdx:]
+	if next := strings.Index(mobileRegion[1:], "@media"); next != -1 {
+		mobileRegion = mobileRegion[:next+1]
+	}
+	mb := ruleBlock(mobileRegion, ".crudview__list {")
+	if mb == "" {
+		t.Fatal("expected a mobile rule for .crudview__list")
+	}
+	// 2.5em (IconLg, matching action-new/action-cancel's own mobile size) +
+	// 2 * Space4 (matching the button's own Docked gap) — traceable to the
+	// button's real construction, not an invented number.
+	if !fmt.Contains(mb, "--floating-bottom: calc(2.5em + 2 * var(--space-4,1rem));") {
+		t.Errorf(".crudview__list must declare its FloatingChrome reservation, block:\n%s", mb)
+	}
+}
+
+// TestNoManualFloatingReservation guards against reintroducing the exact
+// antipattern layout/docs/PLAN.md replaced: a host reaching into a child's own
+// padding to compensate for chrome the child cannot see, instead of declaring
+// FloatingChrome and letting Scroll() reserve it through the inherited
+// var(--floating-bottom, 0px) seam. Scroll()'s OWN reservation emits that
+// exact var() reference; a hand-rolled PadEdge(EdgeBottom, someSpaceToken)
+// would instead emit a literal "var(--space-N" — that pattern, not the
+// property name itself (Scroll() legitimately emits padding-block-end every
+// time it is used), is the thing to catch.
+func TestNoManualFloatingReservation(t *testing.T) {
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+	v := &CrudView{
+		Title:     "CRUD",
+		Presenter: p,
+		Form:      html.Div(),
+	}
+	v.Init(&fakeCtx{})
+
+	cssStr := v.RenderCSS().String()
+	if fmt.Contains(cssStr, "padding-block-end: var(--space-") {
+		t.Error("found a hand-rolled bottom-edge padding reservation; declare FloatingChrome on the host instead")
+	}
+}
+
+// TestListCardIsFlushOnMobile is the net for PLAN.md Stage B2: the list
+// card's own Pad(cardInset) was eating into the ~37.5px sliver
+// MasterDetail(Most) leaves visible of the list when the mobile strip is
+// scrolled to the form panel — the one place targetlist's row menu (docked to
+// the row's leading edge) has to fit. "fields" is on the other panel and must
+// be untouched: cardInset otherwise still keeps the two cards from drifting
+// apart, so this is a deliberate, scoped mobile exception, not cardInset
+// being abandoned.
+func TestListCardIsFlushOnMobile(t *testing.T) {
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+	v := &CrudView{
+		Title:     "CRUD",
+		Presenter: p,
+		Form:      html.Div(),
+	}
+	v.Init(&fakeCtx{})
+
+	cssStr := v.RenderCSS().String()
+
+	mediaIdx := strings.Index(cssStr, "@media (max-width")
+	if mediaIdx == -1 {
+		t.Fatal("expected a mobile (max-width) media query")
+	}
+	mobileRegion := cssStr[mediaIdx:]
+
+	if b := ruleBlock(mobileRegion, ".crudview__list {"); !fmt.Contains(b, "padding: 0") {
+		t.Errorf(".crudview__list must be flush (padding: 0) on mobile, block:\n%s", b)
+	}
+
+	// "fields" is on the other panel and must be untouched by this exception.
+	if b := ruleBlock(mobileRegion, ".crudview__fields {"); fmt.Contains(b, "padding: 0") {
+		t.Errorf(".crudview__fields must keep its cardInset on mobile, block:\n%s", b)
+	}
+}
+
 func TestConsumer_StylesheetAsserts(t *testing.T) {
 	caller := &conformance.FakeCaller{}
 	p := view.New(caller, &Device{}, "device_list",

@@ -173,6 +173,59 @@ func TestRightPanel_StylesheetAsserts(t *testing.T) {
 	}
 }
 
+// TestAsideKeepsGutterOnMobile guards the reversal of what used to be PLAN.md
+// Stage B1. Flush (Pad(SpaceNone)) on mobile was tried there to make room for
+// targetlist's row ⋮ menu in the sliver MasterDetail(Most) leaves visible —
+// but zeroing the aside's OWN outer inset put crudview__list's Inset border
+// exactly flush with the aside's own edge, with nothing left to frame against
+// (the fields/article side, whose gutter was untouched, kept its border
+// legible the whole time — the asymmetry is what made this visible). The
+// menu's clearance is reclaimed instead from targetlist's own PartList
+// padding, INSIDE the card, which does not touch this outer edge — see
+// components/targetlist/css.go's mobile PartList rule.
+func TestAsideKeepsGutterOnMobile(t *testing.T) {
+	r := &RightPanel{
+		Module:        &mockModule{id: "test-module"},
+		Title:         "Test Title",
+		Article:       html.Div(),
+		AsideControls: html.Div(),
+		Aside:         html.Div(),
+		AsideFooter:   html.Div(),
+	}
+
+	cssStr := r.RenderCSS().String()
+
+	// The base/desktop widgets-layer rule carries the gutter padding.
+	desktop := cssStr
+	if i := strings.Index(cssStr, "@media"); i != -1 {
+		desktop = cssStr[:i]
+	}
+	base := ruleBlock(desktop, ".rp__aside {")
+	if base == "" {
+		t.Fatal("expected a base rule for .rp__aside")
+	}
+	if !strings.Contains(base, "padding: var(--space-1") {
+		t.Errorf("expected .rp__aside to carry its gutter padding, block:\n%s", base)
+	}
+	if !strings.Contains(base, "--gap:") {
+		t.Errorf("expected .rp__aside to keep its Stack(gutter) gap, block:\n%s", base)
+	}
+
+	// No mobile override should zero it back out.
+	mediaIdx := strings.Index(cssStr, "@media (max-width")
+	if mediaIdx == -1 {
+		t.Fatal("expected a mobile (max-width) media query")
+	}
+	nextMediaIdx := strings.Index(cssStr[mediaIdx+1:], "@media")
+	mobileRegion := cssStr[mediaIdx:]
+	if nextMediaIdx != -1 {
+		mobileRegion = cssStr[mediaIdx : mediaIdx+1+nextMediaIdx]
+	}
+	if mobile := ruleBlock(mobileRegion, ".rp__aside {"); strings.Contains(mobile, "padding: 0") {
+		t.Errorf(".rp__aside must NOT be zeroed back to flush on mobile, block:\n%s", mobile)
+	}
+}
+
 func TestRightPanel_FlowIsSplitRootStackedMain(t *testing.T) {
 	r := &RightPanel{
 		Module:        &mockModule{id: "test-module"},

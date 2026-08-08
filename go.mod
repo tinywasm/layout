@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/tinywasm/components v0.4.15
-	github.com/tinywasm/css v0.4.9
+	github.com/tinywasm/css v0.4.10
 	github.com/tinywasm/dom v0.13.4
 	github.com/tinywasm/fmt v0.25.5
 	github.com/tinywasm/form v0.3.17
@@ -15,7 +15,7 @@ require (
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.10
-	github.com/tinywasm/widget v0.5.9
+	github.com/tinywasm/widget v0.6.0
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en

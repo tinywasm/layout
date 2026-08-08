@@ -220,9 +220,19 @@ func (v *CrudView) Reload() error {
 // read-only — only the ⋮ → Editar path (editAction) unlocks it. On mobile
 // (horizontal scroll-snap strip) it also snaps the viewport to the form panel;
 // a no-op on desktop, where both columns are already visible.
+//
+// CloseMenus: this only ever runs from a row BODY tap (⋮ stops its click from
+// propagating here — see targetlist's buildRow), so it is reachable while a
+// DIFFERENT row's ⋮ menu is still open. Native <details name="..."> only
+// auto-closes a sibling when another one in the group is explicitly opened,
+// never from an unrelated click, so without this a stray row's floating
+// Editar/Eliminar icons would keep floating over the just-selected record.
 func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
+	if v.list != nil {
+		v.list.CloseMenus()
+	}
 	if it.ID != "" {
 		v.composing.Set(false) // picking an existing row abandons any new-record draft
 	}
@@ -250,6 +260,9 @@ func (v *CrudView) selectAction(it view.Item) {
 func (v *CrudView) newAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
+	if v.list != nil {
+		v.list.CloseMenus()
+	}
 	v.Presenter.Deselect()
 	if v.form != nil {
 		v.form.Reset()
@@ -280,10 +293,20 @@ func (v *CrudView) newAction() {
 // selected/focused (standard behavior, see the view/conformance
 // "cancel_clears_focus" clause) — unlike newAction/editAction, which enter an
 // editable state and focus the first field on purpose.
+//
+// CloseMenus alongside selected.Set(""): a row's ⋮ tap sets Selected directly
+// (see targetlist's buildRow) so the mobile-docked Editar/Eliminar icons read
+// as belonging to that row, but native <details open> is a separate piece of
+// state Selected does not touch. Without this, cancelling clears the amber
+// highlight while the floating icons for whichever row's menu was last
+// opened stay on screen with nothing left for them to act on.
 func (v *CrudView) undoAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
 	v.composing.Set(false)
+	if v.list != nil {
+		v.list.CloseMenus()
+	}
 	v.Presenter.Deselect()
 	if v.form != nil {
 		v.form.Reset() // also clears the tracked FocusedFieldID()

@@ -24,6 +24,18 @@ func newSeededDeviceDB() *orm.DB {
 		{Id: "10", Name: "Pc Administracion", Ip: "192.168.122.10"},
 		{Id: "11", Name: "Pc Ventas", Ip: "192.168.122.11"},
 		{Id: "12", Name: "Servidor Web", Ip: "192.168.122.20"},
+		{Id: "13", Name: "Pc Soporte", Ip: "192.168.122.13"},
+		{Id: "14", Name: "Pc Bodega", Ip: "192.168.122.14"},
+		{Id: "15", Name: "Servidor Backup", Ip: "192.168.122.21"},
+		{Id: "16", Name: "Pc Recepcion", Ip: "192.168.122.16"},
+		{Id: "17", Name: "Pc Gerencia", Ip: "192.168.122.17"},
+		{Id: "18", Name: "Servidor Impresion", Ip: "192.168.122.22"},
+		{Id: "19", Name: "Pc Contabilidad", Ip: "192.168.122.19"},
+		{Id: "20", Name: "Pc Taller", Ip: "192.168.122.30"},
+		{Id: "21", Name: "Servidor Archivos", Ip: "192.168.122.23"},
+		{Id: "22", Name: "Pc Despacho", Ip: "192.168.122.31"},
+		{Id: "23", Name: "Pc Calidad", Ip: "192.168.122.32"},
+		{Id: "24", Name: "Servidor Monitoreo", Ip: "192.168.122.24"},
 	} {
 		_ = db.Create(d)
 	}

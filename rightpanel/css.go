@@ -135,6 +135,16 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 		// actually separates them from the frame.
 		On(css.Tablet, partArticle, style.As(style.Panel)).
 		On(css.Desktop, partArticle, style.As(style.Panel)).
+		// gutter (not SpaceNone) is kept here on purpose, on every breakpoint
+		// including mobile: this is the buffer between crudview__list's own
+		// Inset border and the physical screen edge. Without it the card's
+		// border sits exactly flush with the aside's edge — border and edge
+		// coincide, so the border reads as invisible with nothing to frame
+		// against, exactly the article/fields side's gutter is what keeps ITS
+		// border legible. The ⋮ menu's mobile clearance (the reason this was
+		// ever tried at SpaceNone) is now reclaimed instead from targetlist's
+		// own PartList padding — inside the card, not at its outer edge — see
+		// components/targetlist/css.go.
 		// On a phone the desktop Split becomes a horizontal scroll-snap strip:
 		// the aside is what shows on arrival, and selecting an item slides the
 		// main panel in from the left, leaving a sliver of the aside on the right
