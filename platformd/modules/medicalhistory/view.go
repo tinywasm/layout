@@ -8,58 +8,6 @@ import (
 	. "github.com/tinywasm/html"
 )
 
-// Patient and Visit are LOCAL FAKE types for this demo only. A real
-// deployment replaces todayAgenda/visits below with router.Caller calls
-// into appointment_booking (today's reservations for a staff member) and
-// clinical_encounter (ListVisitsByPatient) — this repo never imports either.
-type Patient struct {
-	ID   string
-	Name string
-	Time string
-}
-
-type Visit struct {
-	Date      string
-	Reason    string
-	Diagnosis string
-}
-
-type patientVisit struct {
-	PatientID string
-	Visit     Visit
-}
-
-// todayAgenda is the demo doctor's (see web/client.go's demoIdentity) fake
-// schedule for today, seeded once at package init.
-var todayAgenda = []Patient{
-	{ID: "p1", Name: "Juan Pérez", Time: "09:00"},
-	{ID: "p2", Name: "María Soto", Time: "09:30"},
-	{ID: "p3", Name: "Diego Rojas", Time: "10:15"},
-	{ID: "p4", Name: "Camila Vidal", Time: "11:00"},
-}
-
-// visits is a flat slice, scanned linearly, never a map — 4 patients and a
-// handful of visits each is small enough that a map buys nothing, and this
-// keeps the demo consistent with the ecosystem's no-Go-map-in-WASM-paths
-// discipline (a map ships TinyGo's map runtime into the binary for no
-// benefit at this size).
-var visits = []patientVisit{
-	{"p1", Visit{Date: "2026-07-20", Reason: "Control", Diagnosis: "Sin hallazgos"}},
-	{"p1", Visit{Date: "2026-03-11", Reason: "Dolor abdominal", Diagnosis: "Gastritis"}},
-	{"p2", Visit{Date: "2026-06-02", Reason: "Chequeo anual", Diagnosis: "Saludable"}},
-	{"p3", Visit{Date: "2026-01-15", Reason: "Fractura", Diagnosis: "Fractura de radio"}},
-}
-
-func historyFor(patientID string) []Visit {
-	var out []Visit
-	for _, pv := range visits {
-		if pv.PatientID == patientID {
-			out = append(out, pv.Visit)
-		}
-	}
-	return out
-}
-
 func agendaOptions() []selectsearch.SsOption {
 	opts := make([]selectsearch.SsOption, len(todayAgenda))
 	for i, p := range todayAgenda {
