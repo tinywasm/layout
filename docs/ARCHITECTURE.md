@@ -4,7 +4,7 @@
 
     tinywasm/layout/
     ├── platformd/      # Shell: header, nav rail, hash routing, notifications
-    │   └── modules/    # Demo modules, one package each (devices, home, about):
+    │   └── modules/    # Demo modules, one package each (devices, medicalhistory, about):
     │                   # view + data + icon, owned by the module, not the chassis
     ├── rightpanel/     # THE module skeleton: frame, two columns, aside bands,
     │                   # mobile master-detail strip. Owns every layout primitive.

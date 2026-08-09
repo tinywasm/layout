@@ -12,6 +12,7 @@ import (
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/layout/platformd/modules/about"
 	"github.com/tinywasm/layout/platformd/modules/devices"
+	"github.com/tinywasm/layout/platformd/modules/medicalhistory"
 	"github.com/tinywasm/svg"
 )
 
@@ -72,6 +73,7 @@ func main() {
 
 	p.Modules = []platformd.UIModule{
 		devices.New(p),
+		medicalhistory.New(),
 		about.New(),
 		hiddenModule{},
 	}
