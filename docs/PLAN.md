@@ -3,6 +3,8 @@ PLAN: "feat(platformd): medicalhistory demo — SelectSearch-driven agenda/histo
 TAG: v0.1.12
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 761761415412234203
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
