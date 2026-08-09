@@ -26,10 +26,6 @@ type View struct {
 	rows       *SignalNodes
 }
 
-// ModelName satisfies layout.Module — RightPanel uses it for the wrapper's
-// element id (rightpanel.go's panelID()).
-func (v *View) ModelName() string { return "medicalhistory" }
-
 func (v *View) Init(ctx Ctx) {
 	v.selectedID = NewString("")
 	v.rows = NewNodes(v.emptyState()...)
@@ -103,7 +99,6 @@ func (v *View) Render() *Element {
 	}
 
 	panel := &rightpanel.RightPanel{
-		Module:       v,
 		Title:        "Agenda de hoy",
 		HeadControls: &v.picker,
 		Article:      agenda,
