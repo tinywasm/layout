@@ -29,6 +29,3 @@ require (
 	github.com/tinywasm/router v0.1.13 // indirect
 	github.com/tinywasm/unixid v0.2.26 // indirect
 )
-
-// components' targethour/selectsearch/crudview.ListView changes — not
-// published yet.

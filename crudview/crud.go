@@ -22,6 +22,13 @@ type Config struct {
 	// presenter's placeholder — the ergonomic default, not a decision imposed:
 	// pass any widget.Filterable to replace it.
 	Filter dom.Component
+
+	// List builds the row-rendering widget. Optional: nil installs a
+	// targetlist.TargetList factory — the ergonomic default, not a decision
+	// imposed: pass a targethour.TargetHour (or anything satisfying
+	// ListView) factory instead when the data wants a leading date/time
+	// badge (view.Item's LeadTop/Main/Bottom) rather than a plain label.
+	List func(selected *dom.SignalString, onSelect func(view.Item), onDelete func(string)) ListView
 }
 
 // New builds the renderer around an already-constructed Presenter. It generates the form from
@@ -52,6 +59,10 @@ func New(cfg Config) (*CrudView, error) {
 		form:      f,
 		Presenter: cfg.Presenter,
 		Filter:    filter,
+		// List is passed through as-is, nil included: Init resolves the
+		// same targetlist.TargetList default that a nil List would get
+		// here, so there is exactly one place that decision lives.
+		List: cfg.List,
 	}
 
 	// Auto-save: every field commit (blur/change) persists immediately — see

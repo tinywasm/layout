@@ -6,6 +6,7 @@ import (
 	"github.com/tinywasm/components/themetoggle"
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/fmt"
+
 	// Global form skin: one import at the composition root makes EVERY form in the
 	// app render as labeled fieldset boxes (CSS-only, collected via SSR).
 	_ "github.com/tinywasm/components/fieldset"
@@ -58,7 +59,7 @@ func main() {
 	p := &platformd.Platform{
 		AppName:   "Demo Platform",
 		Brand:     demoBrand{},
-		DefaultID: "devices",
+		DefaultID: "medicalhistory",
 		User:      demoIdentity{},
 		// A factory, not an instance: the shell renders one menu for the header
 		// and one for the drawer, and a single component in both places would
@@ -73,7 +74,7 @@ func main() {
 
 	p.Modules = []platformd.UIModule{
 		devices.New(p),
-		medicalhistory.New(),
+		medicalhistory.New(p),
 		about.New(),
 		hiddenModule{},
 	}

@@ -36,6 +36,19 @@ const (
 	iconCrudCancel = svg.Icon("icon-crud-cancel") // "↺" — a row is selected (undo)
 )
 
+// ListView is the row-rendering half of a CrudView. targetlist.TargetList
+// (plain label rows) and targethour.TargetHour (a leading date/time badge
+// instead of a plain label — see view.Item's LeadTop/Main/Bottom) both
+// satisfy it, so Config.List can swap one for the other without CrudView
+// ever knowing which it got.
+type ListView interface {
+	Component
+	SetItems(items []view.Item)
+	Items() []view.Item
+	Count() int
+	CloseMenus()
+}
+
 func (v *CrudView) WidgetName() widget.Name { return NameCrudView }
 func (v *CrudView) WidgetKind() widget.Kind { return widget.Disclosure }
 
@@ -56,6 +69,12 @@ type CrudView struct {
 	// would never fire.
 	Filter Component
 
+	// List builds the row-rendering widget, given the Selected signal and the
+	// OnSelect/OnDelete callbacks CrudView owns — Init calls it once. Set by
+	// New from Config.List; nil there resolves to a targetlist.TargetList
+	// factory, same "ergonomic default, not a decision imposed" as Filter.
+	List func(selected *SignalString, onSelect func(view.Item), onDelete func(string)) ListView
+
 	// Additive user hooks — called AFTER the built-in behavior. Assigning them
 	// can never disable list→form fill, save or delete wiring.
 	OnSelect  func(it view.Item)
@@ -66,7 +85,7 @@ type CrudView struct {
 
 	// internal
 	form          *form.Form             // typed handle set by New; nil when standalone
-	list          *targetlist.TargetList // owns the row rendering + ⋮ menu
+	list          ListView               // owns the row rendering + ⋮ menu
 	panel         *rightpanel.RightPanel // the skeleton this controller fills
 	confirmDelete *modaldialog.ModalDialog
 	selected      *SignalString
@@ -94,15 +113,19 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.deleteLabel = NewString("")
 	v.composing = NewBool(false)
 
-	// The list is a targetlist component: it owns row rendering + the ⋮ menu and
-	// shares the selected signal so its highlight follows the form.
-	v.list = &targetlist.TargetList{
-		Selected: v.selected,
-		OnSelect: func(it targetlist.Item) {
-			v.selectAction(view.Item{ID: it.ID, Label: it.Label, Description: it.Description})
-		},
-		OnDelete: func(id string) { v.deleteRequest(id) },
+	// The list owns row rendering + the ⋮ menu and shares the selected signal
+	// so its highlight follows the form. New resolves Config.List's default
+	// before this runs, but Init must not assume it always went through
+	// New — direct struct construction (&CrudView{...}; v.Init(ctx)) is an
+	// established pattern in this package's own tests, same as Filter being
+	// left nil is fine. Default here mirrors New's own default exactly.
+	buildList := v.List
+	if buildList == nil {
+		buildList = func(selected *SignalString, onSelect func(view.Item), onDelete func(string)) ListView {
+			return &targetlist.TargetList{Selected: selected, OnSelect: onSelect, OnDelete: onDelete}
+		}
 	}
+	v.list = buildList(v.selected, v.selectAction, v.deleteRequest)
 
 	// The filter control reports terms; crudview owns what a term means.
 	// Assigned here, not in Render, so it survives a re-render and so a host
@@ -398,12 +421,7 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 }
 
 func (v *CrudView) filter() {
-	src := v.Presenter.Filter(v.search.Get())
-	items := make([]targetlist.Item, 0, len(src))
-	for _, it := range src {
-		items = append(items, targetlist.Item{ID: it.ID, Label: it.Label, Description: it.Description})
-	}
-	v.list.SetItems(items)
+	v.list.SetItems(v.Presenter.Filter(v.search.Get()))
 }
 
 func (v *CrudView) Render() *Element {

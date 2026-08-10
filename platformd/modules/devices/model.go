@@ -14,7 +14,7 @@ import (
 var deviceDef = model.Definition{
 	Name: "device",
 	Fields: model.Fields{
-		{Name: "id", Type: input.Text(), NotNull: true},
+		{Name: "id", Type: input.Text(), NotNull: true, DB: &model.FieldDB{PK: true}},
 		{Name: "name", Type: input.Text(), NotNull: true},
 		{Name: "ip", Type: input.IP(), NotNull: true},
 	},

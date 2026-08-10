@@ -225,15 +225,15 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 
 	v.selectAction(view.Item{ID: "12"})
 
-	// Check form values
+	// Check form values. "id" is a PK — form.New hides it by default now
+	// (see form.New's ShowField comment), so it is never one of f.Inputs
+	// and there is nothing id-specific left to assert here directly: the
+	// name/ip checks below only pass for device "12"'s actual record, which
+	// is proof enough that selectAction resolved and loaded the right one.
 	f := v.form
-	idInput := f.Input("id")
 	nameInput := f.Input("name")
 	ipInput := f.Input("ip")
 
-	if len(idInput.GetValues()) == 0 || idInput.GetValues()[0] != "12" {
-		t.Errorf("expected id input to be '12', got %v", idInput.GetValues())
-	}
 	if len(nameInput.GetValues()) == 0 || nameInput.GetValues()[0] != "Device One" {
 		t.Errorf("expected name input to be 'Device One', got %v", nameInput.GetValues())
 	}
@@ -243,8 +243,8 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 
 	// Nil record on Fill should reset the form
 	v.selectAction(view.Item{ID: "unknown"})
-	if len(idInput.GetValues()) != 0 && idInput.GetValues()[0] != "" {
-		t.Errorf("expected id input to be reset/empty, got %v", idInput.GetValues())
+	if len(nameInput.GetValues()) != 0 && nameInput.GetValues()[0] != "" {
+		t.Errorf("expected name input to be reset/empty, got %v", nameInput.GetValues())
 	}
 }
 
