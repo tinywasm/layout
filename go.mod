@@ -14,8 +14,8 @@ require (
 	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
-	github.com/tinywasm/view v0.1.10
-	github.com/tinywasm/widget v0.6.3
+	github.com/tinywasm/view v0.1.13
+	github.com/tinywasm/widget v0.6.5
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
@@ -27,4 +27,16 @@ require (
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/json v0.5.17 // indirect
 	github.com/tinywasm/router v0.1.13 // indirect
+	github.com/tinywasm/unixid v0.2.26 // indirect
 )
+
+// components' targethour/selectsearch/crudview.ListView changes — not
+// published yet.
+replace github.com/tinywasm/components => ../components
+
+// form.New's hidden-PK-by-default + ShowField — not published yet.
+replace github.com/tinywasm/form => ../form
+
+// widget/style's new Divider() option (targethour depends on it transitively
+// through components' own replace, which does not propagate to this
+// module's build) — not published yet.
