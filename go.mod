@@ -7,7 +7,7 @@ require (
 	github.com/tinywasm/css v0.4.11
 	github.com/tinywasm/dom v0.13.5
 	github.com/tinywasm/fmt v0.25.5
-	github.com/tinywasm/form v0.3.17
+	github.com/tinywasm/form v0.3.27
 	github.com/tinywasm/html v0.0.12
 	github.com/tinywasm/model v0.1.2
 	github.com/tinywasm/orm v0.11.4
@@ -35,8 +35,3 @@ require (
 replace github.com/tinywasm/components => ../components
 
 // form.New's hidden-PK-by-default + ShowField — not published yet.
-replace github.com/tinywasm/form => ../form
-
-// widget/style's new Divider() option (targethour depends on it transitively
-// through components' own replace, which does not propagate to this
-// module's build) — not published yet.
