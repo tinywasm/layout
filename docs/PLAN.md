@@ -1,5 +1,7 @@
 ---
 PLAN: "login/html.go — que el login se sirva ya renderizado"
+STATUS: running
+SESSION: 3670314565912608008
 ---
 Depende de: el cambio de `#app` en `tinywasm/assetmin` (ver su `docs/PLAN.md`).
 Sin eso, el HTML de acá cae fuera de `#app` y se ve duplicado.
