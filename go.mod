@@ -5,10 +5,12 @@ go 1.25.2
 require (
 	github.com/tinywasm/components v0.5.1
 	github.com/tinywasm/css v0.4.12
+	github.com/tinywasm/css v0.4.12
 	github.com/tinywasm/dom v0.13.5
 	github.com/tinywasm/fmt v0.25.5
-	github.com/tinywasm/form v0.3.27
+	github.com/tinywasm/form v0.3.28
 	github.com/tinywasm/html v0.0.12
+	github.com/tinywasm/input v0.0.2
 	github.com/tinywasm/model v0.1.2
 	github.com/tinywasm/orm v0.11.4
 	github.com/tinywasm/storage v0.0.2

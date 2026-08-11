@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/form/input"
+	"github.com/tinywasm/input"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"

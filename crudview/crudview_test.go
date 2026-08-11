@@ -83,7 +83,7 @@ func (m *mockCtx) OnCleanup(fn func()) {}
 // framework-owned chrome, so its text is a lang.Translate call — resolved
 // from the English canonical keys, never hardcoded. The dictionary is the
 // consumer's concern (registered here, in the test — never in production
-// code), mirroring form/input's lazy-resolution test.
+// code), mirroring tinywasm/input's lazy-resolution test.
 func TestCrudView_DeleteConfirm_Language(t *testing.T) {
 	openDialog := func(v *CrudView) string {
 		v.confirmDelete.Init(&mockCtx{})

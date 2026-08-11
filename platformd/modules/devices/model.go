@@ -1,7 +1,7 @@
 package devices
 
 import (
-	"github.com/tinywasm/form/input"
+	"github.com/tinywasm/input"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 )

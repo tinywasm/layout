@@ -97,7 +97,7 @@ messages, aria-labels) MUST go through `lang.Translate(...)` from
   default render is English; other languages need a dictionary + activation.
 - **The dictionary is the consumer's, never the library's.** No
   `lang.RegisterWords` call in production code — only in tests (registering a
-  dictionary simulates the consumer, mirroring `form/input`'s pattern) and in
+  dictionary simulates the consumer, mirroring `tinywasm/input`'s pattern) and in
   the consumer app. Activating a language (`lang.OutLang(lang.ES)`) is the
   consumer's job too.
 - **Scope is chrome only.** App-supplied literals (`CrudView.Title`,
