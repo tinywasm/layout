@@ -137,7 +137,7 @@ func TestCrudView_FilterableDrivesTheList(t *testing.T) {
 func TestCrudView_NewInstallsADefaultFilter(t *testing.T) {
 	p := view.New(fakeListCaller(), &Device{}, "device_list",
 		func() model.ModelSlice { return &DeviceList{} })
-	v, err := New(Config{ParentID: "compose", Presenter: p})
+	v, err := New(Config{ParentID: "compose", Presenter: p, IDs: testIDs})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

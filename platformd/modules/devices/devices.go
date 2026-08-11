@@ -9,6 +9,7 @@ import (
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/svg"
+	"github.com/tinywasm/unixid"
 	"github.com/tinywasm/view"
 
 	. "github.com/tinywasm/dom"
@@ -42,9 +43,14 @@ func (m *Module) View() Component {
 		view.WithSaveOp("device_save"),
 		view.WithDeleteOp("device_delete"),
 	)
+	ids, err := unixid.NewUnixID()
+	if err != nil {
+		panic(err)
+	}
 	cv, err := crudview.New(crudview.Config{
 		ParentID:  m.ModelName(),
 		Presenter: pres,
+		IDs:       ids,
 		// El filtro lo elige la aplicación, no el layout. Esta es la línea que un
 		// despliegue cambia por un calendario o un select de categoría; ni crudview
 		// ni rightpanel se enteran.

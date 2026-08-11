@@ -15,6 +15,17 @@ type fakeCtx struct{}
 
 func (f *fakeCtx) OnCleanup(fn func()) {}
 
+// testIDGenerator is the composition-root double for Config.IDs — crudview
+// never constructs its own generator, so every test injects one.
+type testIDGenerator struct{ n int }
+
+func (g *testIDGenerator) NewID() string {
+	g.n++
+	return "test-id-" + fmt.Convert(g.n).String()
+}
+
+var testIDs = &testIDGenerator{}
+
 // deviceModel is a model with real widgets (input.Text() is a model.Kind)
 var deviceModel = model.Definition{
 	Name: "device",
@@ -121,6 +132,8 @@ func TestConsumer_NewNoWidgets(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err == nil {
@@ -145,6 +158,8 @@ func TestConsumer_ListOp(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -179,6 +194,8 @@ func TestConsumer_ListRendersCards(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -216,6 +233,8 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -266,6 +285,8 @@ func TestConsumer_SaveWithFormData(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -332,6 +353,8 @@ func TestConsumer_SaveInvalidForm(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -391,6 +414,8 @@ func TestConsumer_DeleteSelected(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -464,6 +489,8 @@ func TestConsumer_DeleteNoSelection(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -511,6 +538,8 @@ func TestConsumer_ListErrorPropagated(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -553,6 +582,8 @@ func TestConsumer_SearchFiltering(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -605,7 +636,7 @@ func TestConsumer_NoLockGating(t *testing.T) {
 	p := view.New(caller, &Device{}, "device_list",
 		func() model.ModelSlice { return &DeviceList{} })
 
-	cfg := Config{ParentID: "my-id", Presenter: p}
+	cfg := Config{ParentID: "my-id", Presenter: p, IDs: testIDs}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -665,7 +696,7 @@ func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
 		func() model.ModelSlice { return &DeviceList{} },
 		view.WithDeleteOp("device_delete"))
 
-	cfg := Config{ParentID: "my-id", Presenter: p}
+	cfg := Config{ParentID: "my-id", Presenter: p, IDs: testIDs}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -724,7 +755,7 @@ func TestConsumer_NewFlipsToggleActive(t *testing.T) {
 	p := view.New(caller, &Device{}, "device_list",
 		func() model.ModelSlice { return &DeviceList{} })
 
-	cfg := Config{ParentID: "my-id", Presenter: p}
+	cfg := Config{ParentID: "my-id", Presenter: p, IDs: testIDs}
 	v, err := New(cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

@@ -10,7 +10,7 @@ import (
 func TestViewConformance(t *testing.T) {
 	conformance.Run(t, conformance.Factory{
 		New: func(t *testing.T, p view.Presenter) conformance.Driver {
-			v, err := New(Config{ParentID: "conformance", Presenter: p})
+			v, err := New(Config{ParentID: "conformance", Presenter: p, IDs: testIDs})
 			if err != nil {
 				t.Fatalf("crudview.New: %v", err)
 			}

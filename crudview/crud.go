@@ -5,6 +5,7 @@ import (
 	"github.com/tinywasm/dom"
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/form"
+	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 )
 
@@ -16,6 +17,10 @@ type Config struct {
 	ParentID string
 	// Presenter is built by the module via view.New(...). Required.
 	Presenter view.Presenter
+	// IDs supplies new ids for hidden text-PK auto-assignment on submit (the
+	// form's composition-root injection, see form.New). Required — New fails
+	// if nil. Pass unixid.NewUnixID() at your composition root.
+	IDs model.IDGenerator
 
 	// Filter is the control that narrows the list. Optional: nil renders no
 	// controls band. When nil, New installs a searchbar.SearchBar carrying the
@@ -38,8 +43,11 @@ func New(cfg Config) (*CrudView, error) {
 	if cfg.Presenter == nil {
 		return nil, fmt.Errf("crudview.New: Presenter is required")
 	}
+	if cfg.IDs == nil {
+		return nil, fmt.Errf("crudview.New: IDs is required (e.g. unixid.NewUnixID())")
+	}
 
-	f, err := form.New(cfg.ParentID, cfg.Presenter.Record())
+	f, err := form.New(cfg.ParentID, cfg.Presenter.Record(), cfg.IDs)
 	if err != nil {
 		return nil, err // a record with no widgets fails HERE, loudly
 	}

@@ -27,6 +27,8 @@ func TestConsumer_Wasm_Render(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-wasm-id",
 		Presenter: p,
+
+IDs:        testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {

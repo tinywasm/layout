@@ -15,6 +15,7 @@ import (
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/svg"
+	"github.com/tinywasm/unixid"
 	"github.com/tinywasm/view"
 
 	. "github.com/tinywasm/dom"
@@ -114,9 +115,14 @@ func (m *Module) View() Component {
 	}
 	picker.Options = opts
 
+	ids, err := unixid.NewUnixID()
+	if err != nil {
+		panic(err)
+	}
 	cv, err := crudview.New(crudview.Config{
 		ParentID:  m.ModelName(),
 		Presenter: pres,
+		IDs:       ids,
 		Filter:    picker,
 		// The fichas list leads with the visit's date (see Visit.Item's
 		// LeadTop/Main/Bottom) instead of a plain label — targethour reads
