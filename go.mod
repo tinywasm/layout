@@ -29,3 +29,9 @@ require (
 	github.com/tinywasm/router v0.1.13 // indirect
 	github.com/tinywasm/unixid v0.2.26 // indirect
 )
+
+// style.Compact (login card width) + widget.PartSubmit — not published yet.
+replace github.com/tinywasm/widget => ../widget
+
+// The text-field reset now drops the UA's own border — not published yet.
+replace github.com/tinywasm/css => ../css
