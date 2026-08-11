@@ -54,6 +54,10 @@ The pre-authentication screen: an elevated card centered on a full-bleed brand
 backdrop (`As(Primary)`, so each app brings its own `--color-primary`), with an
 optional corner mark pinned to the viewport independently of the card's height.
 
+It is served pre-rendered from the server using `RenderHTML()`, and the supplied `Form`
+component should be configured in SSR mode (e.g. `SetSSR(true)`) to support functioning
+without JavaScript.
+
 It owns none of the form's fields or validation. `Form` is built by the
 composition root exactly like `platformd.Platform.Modules` are, so the package
 never assumes a shape for what it centers — only that it renders.

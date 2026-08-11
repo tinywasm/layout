@@ -44,3 +44,35 @@ func TestLogin_MarkIsOptional(t *testing.T) {
 		t.Errorf("expected the mark's src to carry LogoMark, got\n%s", html)
 	}
 }
+
+func TestLogin_RenderHTMLZeroValueReturnsEmptyString(t *testing.T) {
+	inst := &Login{}
+	got := inst.RenderHTML()
+	if got != "" {
+		t.Errorf("expected RenderHTML on zero value to return empty string, got: %q", got)
+	}
+}
+
+func TestLogin_RenderHTMLMatchesRenderString(t *testing.T) {
+	buildLogin := func() *Login {
+		form := Div().Attr("id", "ssr-form").Text("SSR content")
+		return &Login{
+			Title:    "Test SSR Login",
+			Subtitle: "Please login",
+			Form:     form,
+		}
+	}
+
+	htmlRender := buildLogin().Render().String()
+	htmlRenderHTML := buildLogin().RenderHTML()
+
+	if htmlRenderHTML != htmlRender {
+		t.Errorf("RenderHTML() and Render().String() mismatch:\nRenderHTML: %s\nRender().String(): %s", htmlRenderHTML, htmlRender)
+	}
+
+	for _, want := range []string{"login__card", "ssr-form", "SSR content"} {
+		if !strings.Contains(htmlRenderHTML, want) {
+			t.Errorf("RenderHTML output missing expected element/content %q:\n%s", want, htmlRenderHTML)
+		}
+	}
+}

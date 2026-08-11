@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/tinywasm/components v0.5.1
-	github.com/tinywasm/css v0.4.11
+	github.com/tinywasm/css v0.4.12
 	github.com/tinywasm/dom v0.13.5
 	github.com/tinywasm/fmt v0.25.5
 	github.com/tinywasm/form v0.3.27
@@ -15,7 +15,7 @@ require (
 	github.com/tinywasm/svg v0.1.8
 	github.com/tinywasm/time v0.5.0
 	github.com/tinywasm/view v0.1.13
-	github.com/tinywasm/widget v0.6.5
+	github.com/tinywasm/widget v0.6.7
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
@@ -29,9 +29,3 @@ require (
 	github.com/tinywasm/router v0.1.13 // indirect
 	github.com/tinywasm/unixid v0.2.26 // indirect
 )
-
-// style.Compact (login card width) + widget.PartSubmit — not published yet.
-replace github.com/tinywasm/widget => ../widget
-
-// The text-field reset now drops the UA's own border — not published yet.
-replace github.com/tinywasm/css => ../css
