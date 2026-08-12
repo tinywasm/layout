@@ -17,7 +17,7 @@ require (
 	github.com/tinywasm/time v0.5.2
 	github.com/tinywasm/unixid v0.2.26
 	github.com/tinywasm/view v0.1.17
-	github.com/tinywasm/widget v0.6.7
+	github.com/tinywasm/widget v0.6.8
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
