@@ -1,7 +1,7 @@
 github.com/tinywasm/color v0.1.1 h1:S00T0XR42Q3sDpfJELNnF0HFxMh9gApH4SnA0Ml6Q7A=
 github.com/tinywasm/color v0.1.1/go.mod h1:0wqAVE1k2GxXIX/v1G+w97J8YRpispYcDa7M75H+umI=
-github.com/tinywasm/components v0.5.6 h1:6y1Oq0RxiTpfE9aIPeiL0Go5aZOjmW7q2IPcbmTqJXU=
-github.com/tinywasm/components v0.5.6/go.mod h1:wtnT6khsFn3ZehYaczS25VG3BhYB+7VS5Ig+1d1uWNQ=
+github.com/tinywasm/components v0.5.7 h1:7lI2ZbDaZWef+97g6NXRP9L3KmD05PwTmFC02/gCtho=
+github.com/tinywasm/components v0.5.7/go.mod h1:db7ciuBbKfoKfBgbImDq/F65Y6wYIMoKvn7vFWifeo8=
 github.com/tinywasm/css v0.4.12 h1:0yXhVBFWYz+0yEKd4tHaU/dLBqDx0U1rwFYBA6zQMhA=
 github.com/tinywasm/css v0.4.12/go.mod h1:EyCY2mFW664qIyqTQKW1mgkg7cqAK3oF6igiwYdGV5k=
 github.com/tinywasm/dom v0.13.5 h1:CklQl/U/pJn5Pka3n5xf8xEObFLxuKxrrpXPLGiprWY=
