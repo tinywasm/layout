@@ -8,7 +8,7 @@ require (
 	github.com/tinywasm/dom v0.13.5
 	github.com/tinywasm/fmt v0.25.5
 	github.com/tinywasm/form v0.3.29
-	github.com/tinywasm/html v0.0.16
+	github.com/tinywasm/html v0.0.17
 	github.com/tinywasm/input v0.0.3
 	github.com/tinywasm/model v0.1.4
 	github.com/tinywasm/orm v0.11.6
