@@ -2,8 +2,9 @@
 PLAN: "feat: layout landing — sitio público multipágina desde datos tipados"
 EXECUTOR: none
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12917703816221456080
+PR: https://github.com/tinywasm/layout/pull/26
 ---
 
 > Este plan se despacha con el flujo CodeJob **cuando sus bloqueantes estén

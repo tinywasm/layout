@@ -8,8 +8,11 @@
     │                   # view + data + icon, owned by the module, not the chassis
     ├── rightpanel/     # THE module skeleton: frame, two columns, aside bands,
     │                   # mobile master-detail strip. Owns every layout primitive.
-    └── crudview/       # CRUD controller: state machine + orchestration.
-                        # Renders NO frame — composes rightpanel.
+    ├── crudview/       # CRUD controller: state machine + orchestration.
+    │                   # Renders NO frame — composes rightpanel.
+    ├── login/          # Pre-authentication screen: card on a brand backdrop.
+    └── landing/        # Public multi-page website: typed sections in call
+                        # order, explicit anchors, RenderPages() per URL.
 
 ## Who owns what
 
@@ -20,6 +23,16 @@ master-detail strip — and every module in this repository composes it.
 `rightpanel.RightPanel`, fills its slots (Title, Article, Aside, AsideControls,
 AsideFooter) and keeps only the state machine. `platformd` is the shell
 (routing, chrome) and is a third thing.
+
+`landing` sits outside that trio: it is not an application shell but a public
+site, so it owns page-level concerns the others never have — one document per
+URL, per-page SEO metadata, and navigation by anchor. A section there holds a
+*builder*, not an element: the header and footer are rendered once per emitted
+page, and a `dom.Element` has exactly one parent, so a shared instance would
+panic on the second page. Components (`infobar`, `sitenav`, `herobanner`,
+`statgrid`, `contentcard`) are always embedded through `Render()` — a component
+handed to `Child()` as itself serializes from its zero embedded `Element` and
+disappears as an empty `<></>`.
 
 Demo modules live one per package under `platformd/modules/`, each owning its
 view, its data and its icon (declared shared in the untagged file, drawn in a
