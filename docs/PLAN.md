@@ -2,7 +2,8 @@
 PLAN: "feat: layout landing — sitio público multipágina desde datos tipados"
 EXECUTOR: none
 REVIEWER: none
-BLOCKED_BY: "tinywasm/components (infobar, sitenav, herobanner, statgrid) y tinywasm/sitec (RenderPages) publicados"
+STATUS: running
+SESSION: 12917703816221456080
 ---
 
 > Este plan se despacha con el flujo CodeJob **cuando sus bloqueantes estén
