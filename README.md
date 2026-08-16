@@ -73,3 +73,36 @@ never assumes a shape for what it centers — only that it renders.
 
 `LogoMark` mirrors `platformd.Brand.BrandMark`'s contract: a crest or seal is a
 full-color image, not a `currentColor` glyph this package could recolor.
+
+### landing
+
+The public website layout: several URLs, each with its own metadata, built from
+typed data instead of session state. The other four packages are application
+shells — one screen, logged in, internal navigation; this one is a site.
+
+Sections are composed in call order and each one names its navigation anchor
+explicitly with `.At(id)` — an id derived from the title breaks silently the day
+someone fixes an accent in it.
+
+```go
+site := landing.New(brand,
+    landing.InfoBar(contact),
+    landing.Header(menu...),
+    landing.Hero(headline, tagline, cta, slides...).At("home"),
+    landing.Split("Our Story", photo, paragraphs...).At("about"),
+    landing.Cards("Services", cards...).At("services"),
+    landing.Stats(figures...).At("commitment"),
+    landing.Hours("Contact", contact, schedules...).At("contact"),
+    landing.MapEmbed("Location", mapURL).At("location"),
+    landing.Footer(menu...),
+).WithSEO(homeDoc).WithSubPages(detailPages...)
+
+pages := site.RenderPages() // implements html.PagesProvider: home + one page per item
+```
+
+`Split`, `MapEmbed`, `Footer` and `Hours` are horizontal bands with no state, so
+they live here; everything with behaviour is consumed from `tinywasm/components`
+(`infobar`, `sitenav`, `herobanner`, `statgrid`, `contentcard`), never
+reimplemented. Detail pages keep the site chrome and must not repeat another
+page's `Title` or `Description` — `RenderPages()` panics on a duplicate, because
+that is how per-page ranking is lost.

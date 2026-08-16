@@ -3,6 +3,7 @@ package landing
 import (
 	"github.com/tinywasm/dom"
 	"github.com/tinywasm/html"
+	"github.com/tinywasm/image"
 	"github.com/tinywasm/widget"
 
 	"github.com/tinywasm/components/contentcard"
@@ -14,38 +15,43 @@ import (
 
 const NameLanding = widget.Name("landing")
 
+// The band (<header>/<section>/<footer>) owns the outer rhythm — padding and
+// vertical stacking. The parts below it own only their internal arrangement, so
+// no element ever carries the band class twice.
 var (
 	clsLanding = NameLanding.Root()
 
 	partHeader   = widget.Part("header")
 	partSection  = widget.Part("section")
+	partFooter   = widget.Part("footer")
 	partSplit    = widget.Part("split")
 	partCards    = widget.Part("cards")
-	partStats    = widget.Part("stats")
 	partForm     = widget.Part("form")
 	partHours    = widget.Part("hours")
 	partMap      = widget.Part("map")
-	partFooter   = widget.Part("footer")
 	partTitle    = widget.Part("title")
 	partSubtitle = widget.Part("subtitle")
 	partBody     = widget.Part("body")
 	partMedia    = widget.Part("media")
 	partGrid     = widget.Part("grid")
+	partBadge    = widget.Part("badge")
+	partBrand    = widget.Part("brand")
 
 	clsHeader   = NameLanding.Class(partHeader)
 	clsSection  = NameLanding.Class(partSection)
+	clsFooter   = NameLanding.Class(partFooter)
 	clsSplit    = NameLanding.Class(partSplit)
 	clsCards    = NameLanding.Class(partCards)
-	clsStats    = NameLanding.Class(partStats)
 	clsForm     = NameLanding.Class(partForm)
 	clsHours    = NameLanding.Class(partHours)
 	clsMap      = NameLanding.Class(partMap)
-	clsFooter   = NameLanding.Class(partFooter)
 	clsTitle    = NameLanding.Class(partTitle)
 	clsSubtitle = NameLanding.Class(partSubtitle)
 	clsBody     = NameLanding.Class(partBody)
 	clsMedia    = NameLanding.Class(partMedia)
 	clsGrid     = NameLanding.Class(partGrid)
+	clsBadge    = NameLanding.Class(partBadge)
+	clsBrand    = NameLanding.Class(partBrand)
 )
 
 // Brand defines the site identity parameters for headers and footers.
@@ -93,11 +99,11 @@ type Stat struct {
 	Label string
 }
 
-// Slide represents a hero gallery slide.
+// Slide represents a hero gallery slide. It carries only the image because
+// that is all herobanner renders today: a caption field here would be accepted
+// and silently dropped. Captions are added when herobanner grows them upstream.
 type Slide struct {
-	Image    string
-	Title    string
-	Subtitle string
+	Image string
 }
 
 // SubPage represents a detail page in a multi-page site.
@@ -108,54 +114,32 @@ type SubPage struct {
 	Component dom.Component
 }
 
-// SectionKind identifies the category of a landing page section.
-type SectionKind string
+// sectionKind selects the band element and class a section renders into.
+type sectionKind string
 
 const (
-	KindInfoBar  SectionKind = "infobar"
-	KindHeader   SectionKind = "header"
-	KindHero     SectionKind = "hero"
-	KindSplit    SectionKind = "split"
-	KindCards    SectionKind = "cards"
-	KindStats    SectionKind = "stats"
-	KindForm     SectionKind = "form"
-	KindHours    SectionKind = "hours"
-	KindMapEmbed SectionKind = "map"
-	KindFooter   SectionKind = "footer"
+	kindChrome  sectionKind = "chrome" // infobar and header: top strips, no band padding
+	kindContent sectionKind = "content"
+	kindFooter  sectionKind = "footer"
 )
 
 // Section is an explicit page section with optional navigation anchor ID.
+// It is built by the section functions (Hero, Split, Cards, …); the only thing
+// a consumer does with one is chain .At(id).
+//
+// A section holds a builder, not an element: header and footer sections are
+// rendered once per page of a multi-page site, and a dom element has exactly
+// one parent — sharing it across pages panics.
 type Section struct {
-	id        string
-	kind      SectionKind
-	title     string
-	component dom.Component
+	id    string
+	kind  sectionKind
+	build func(brand Brand) dom.Component
 }
 
 // At sets the navigation anchor ID explicitly for this section.
 func (s *Section) At(id string) *Section {
 	s.id = id
 	return s
-}
-
-// ID returns the navigation anchor ID of the section.
-func (s *Section) ID() string {
-	return s.id
-}
-
-// Kind returns the SectionKind.
-func (s *Section) Kind() SectionKind {
-	return s.kind
-}
-
-// Title returns the section title.
-func (s *Section) Title() string {
-	return s.title
-}
-
-// Component returns the underlying dom.Component for custom or wrapped sections.
-func (s *Section) Component() dom.Component {
-	return s.component
 }
 
 // InfoBar wraps infobar.InfoBar component into a page section.
@@ -188,13 +172,13 @@ func InfoBar(contact Contact) *Section {
 		})
 	}
 
-	ib := &infobar.InfoBar{
-		Items: items,
-	}
-
+	// Components are embedded through Render(): a component handed to Child()
+	// as itself serializes from its zero embedded Element — an empty <></>.
 	return &Section{
-		kind:      KindInfoBar,
-		component: ib,
+		kind: kindChrome,
+		build: func(Brand) dom.Component {
+			return (&infobar.InfoBar{Items: items}).Render()
+		},
 	}
 }
 
@@ -209,13 +193,16 @@ func Header(menu ...Link) *Section {
 		})
 	}
 
-	sn := &sitenav.SiteNav{
-		Links: navItems,
-	}
-
 	return &Section{
-		kind:      KindHeader,
-		component: sn,
+		kind: kindChrome,
+		build: func(brand Brand) dom.Component {
+			return (&sitenav.SiteNav{
+				Links:          navItems,
+				WideLogoSrc:    brand.WideLogoSrc,
+				CompactLogoSrc: brand.CompactLogoSrc,
+				LogoAlt:        brand.LogoAlt,
+			}).Render()
+		},
 	}
 }
 
@@ -228,93 +215,93 @@ func Hero(title, subtitle string, cta Link, slides ...Slide) *Section {
 		}
 	}
 
-	var actions []dom.Component
-	if cta.Label != "" || cta.Href != "" {
-		actions = append(actions, html.A(cta.Label).Attr("href", cta.Href))
-	}
-
-	hb := &herobanner.HeroBanner{
-		Title:    title,
-		Subtitle: subtitle,
-		Images:   images,
-		Actions:  actions,
-	}
-
 	return &Section{
-		kind:      KindHero,
-		title:     title,
-		component: hb,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			var actions []dom.Component
+			if cta.Label != "" || cta.Href != "" {
+				actions = append(actions, html.A(cta.Href).Text(cta.Label))
+			}
+			return (&herobanner.HeroBanner{
+				Title:    title,
+				Subtitle: subtitle,
+				Images:   images,
+				Actions:  actions,
+			}).Render()
+		},
 	}
 }
 
 // Split creates a two-column story/content section with title, image, and paragraphs.
-func Split(title string, image string, paragraphs ...string) *Section {
-	container := html.Div().Set(clsSplit.AsAttr())
-
-	content := html.Div().Set(clsBody.AsAttr())
-	if title != "" {
-		content.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
-	}
-	for _, p := range paragraphs {
-		if p != "" {
-			content.Child(html.P().Text(p))
-		}
-	}
-	container.Child(content)
-
-	if image != "" {
-		media := html.Div().Set(clsMedia.AsAttr())
-		media.Child(dom.NewElement("img").Attr("src", image).Attr("alt", title))
-		container.Child(media)
-	}
-
+func Split(title string, imageSrc string, paragraphs ...string) *Section {
 	return &Section{
-		kind:      KindSplit,
-		title:     title,
-		component: container,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			container := html.Div().Set(clsSplit.AsAttr())
+
+			content := html.Div().Set(clsBody.AsAttr())
+			if title != "" {
+				content.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
+			}
+			for _, p := range paragraphs {
+				if p != "" {
+					content.Child(html.P().Text(p))
+				}
+			}
+			container.Child(content)
+
+			if imageSrc != "" {
+				media := html.Div().Set(clsMedia.AsAttr())
+				media.Child(image.Img(imageSrc, title).Lazy().AsElement())
+				container.Child(media)
+			}
+			return container
+		},
 	}
 }
 
 // Cards wraps contentcard.ContentCard instances in a responsive card grid section.
 func Cards(title string, cards ...Card) *Section {
-	container := html.Div().Set(clsCards.AsAttr())
-	if title != "" {
-		container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
-	}
-
-	grid := html.Div().Set(clsGrid.AsAttr())
-	for _, c := range cards {
-		var head dom.Component
-		if c.Image != "" {
-			head = dom.NewElement("img").Attr("src", c.Image).Attr("alt", c.Title)
-		}
-
-		body := html.Div()
-		if c.Title != "" {
-			body.Child(html.H3().Text(c.Title))
-		}
-		if c.Description != "" {
-			body.Child(html.P().Text(c.Description))
-		}
-
-		var foot dom.Component
-		if c.Href != "" {
-			foot = html.A(c.Title).Attr("href", c.Href)
-		}
-
-		cc := &contentcard.ContentCard{
-			Header: head,
-			Body:   body,
-			Footer: foot,
-		}
-		grid.Child(cc)
-	}
-	container.Child(grid)
-
 	return &Section{
-		kind:      KindCards,
-		title:     title,
-		component: container,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			container := html.Div().Set(clsCards.AsAttr())
+			if title != "" {
+				container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
+			}
+
+			grid := html.Div().Set(clsGrid.AsAttr())
+			for _, c := range cards {
+				var head dom.Component
+				if c.Image != "" {
+					head = image.Img(c.Image, c.Title).Lazy().AsElement()
+				}
+
+				body := html.Div()
+				if c.Badge != "" {
+					body.Child(html.Span().Set(clsBadge.AsAttr()).Text(c.Badge))
+				}
+				if c.Title != "" {
+					body.Child(html.H3().Text(c.Title))
+				}
+				if c.Description != "" {
+					body.Child(html.P().Text(c.Description))
+				}
+
+				var foot dom.Component
+				if c.Href != "" {
+					foot = html.A(c.Href).Text(c.Title)
+				}
+
+				grid.Child((&contentcard.ContentCard{
+					Header: head,
+					Body:   body,
+					Footer: foot,
+				}).Render())
+			}
+			container.Child(grid)
+			return container
+		},
 	}
 }
 
@@ -328,112 +315,111 @@ func Stats(stats ...Stat) *Section {
 		})
 	}
 
-	sg := &statgrid.StatGrid{
-		Items: items,
-	}
-
 	return &Section{
-		kind:      KindStats,
-		component: sg,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			return (&statgrid.StatGrid{Items: items}).Render()
+		},
 	}
 }
 
-// Form creates a form section embedding intro text and form component.
+// Form creates a form section embedding intro text and form component. The form
+// itself is a single element the consumer built, so this section belongs to one
+// page — a form placed on two pages is the same element with two parents.
 func Form(title string, intro string, formComp dom.Component) *Section {
-	container := html.Div().Set(clsForm.AsAttr())
-	if title != "" {
-		container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
-	}
-	if intro != "" {
-		container.Child(html.P().Set(clsSubtitle.AsAttr()).Text(intro))
-	}
-	if formComp != nil {
-		container.Child(formComp)
-	}
-
 	return &Section{
-		kind:      KindForm,
-		title:     title,
-		component: container,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			container := html.Div().Set(clsForm.AsAttr())
+			if title != "" {
+				container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
+			}
+			if intro != "" {
+				container.Child(html.P().Set(clsSubtitle.AsAttr()).Text(intro))
+			}
+			if formComp != nil {
+				container.Child(formComp)
+			}
+			return container
+		},
 	}
 }
 
 // MapEmbed creates a map iframe embed section.
 func MapEmbed(title string, mapURL string) *Section {
-	container := html.Div().Set(clsMap.AsAttr())
-	if title != "" {
-		container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
-	}
-	if mapURL != "" {
-		iframe := dom.NewElement("iframe").
-			Attr("src", mapURL).
-			Attr("loading", "lazy")
-		container.Child(iframe)
-	}
 	return &Section{
-		kind:      KindMapEmbed,
-		title:     title,
-		component: container,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			container := html.Div().Set(clsMap.AsAttr())
+			if title != "" {
+				container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
+			}
+			if mapURL != "" {
+				container.Child(dom.NewElement("iframe").
+					Attr("src", mapURL).
+					Attr("loading", "lazy"))
+			}
+			return container
+		},
 	}
 }
 
 // Hours creates an operational hours and contact section.
 func Hours(title string, contact Contact, schedules ...Schedule) *Section {
-	container := html.Div().Set(clsHours.AsAttr())
-	if title != "" {
-		container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
-	}
-
-	grid := html.Div().Set(clsGrid.AsAttr())
-
-	contactCol := html.Div().Set(clsBody.AsAttr())
-	if contact.Address != "" {
-		contactCol.Child(html.P().Text(contact.Address))
-	}
-	if contact.Phone != "" {
-		contactCol.Child(html.P().Child(html.A(contact.Phone).Attr("href", "tel:"+contact.Phone)))
-	}
-	if contact.Email != "" {
-		contactCol.Child(html.P().Child(html.A(contact.Email).Attr("href", "mailto:"+contact.Email)))
-	}
-	grid.Child(contactCol)
-
-	if len(schedules) > 0 {
-		schedCol := html.Div().Set(clsHours.AsAttr())
-		ul := html.Ul()
-		for _, s := range schedules {
-			li := html.Li().Text(s.Days + ": " + s.Hours)
-			ul.Child(li)
-		}
-		schedCol.Child(ul)
-		grid.Child(schedCol)
-	}
-
-	container.Child(grid)
 	return &Section{
-		kind:      KindHours,
-		title:     title,
-		component: container,
+		kind: kindContent,
+		build: func(Brand) dom.Component {
+			container := html.Div().Set(clsHours.AsAttr())
+			if title != "" {
+				container.Child(html.H2().Set(clsTitle.AsAttr()).Text(title))
+			}
+
+			grid := html.Div().Set(clsGrid.AsAttr())
+
+			contactCol := html.Div().Set(clsBody.AsAttr())
+			if contact.Address != "" {
+				contactCol.Child(html.P().Text(contact.Address))
+			}
+			if contact.Phone != "" {
+				contactCol.Child(html.P().Child(html.A("tel:" + contact.Phone).Text(contact.Phone)))
+			}
+			if contact.Email != "" {
+				contactCol.Child(html.P().Child(html.A("mailto:" + contact.Email).Text(contact.Email)))
+			}
+			grid.Child(contactCol)
+
+			if len(schedules) > 0 {
+				schedCol := html.Div().Set(clsBody.AsAttr())
+				ul := html.Ul()
+				for _, s := range schedules {
+					ul.Child(html.Li().Text(s.Days + ": " + s.Hours))
+				}
+				schedCol.Child(ul)
+				grid.Child(schedCol)
+			}
+
+			container.Child(grid)
+			return container
+		},
 	}
 }
 
-// Footer creates a site footer section with navigation menu links.
+// Footer creates a site footer section with navigation menu links. The brand
+// line is added by the page, which is the only place that knows the Brand.
 func Footer(menu ...Link) *Section {
-	container := html.Div().Set(clsFooter.AsAttr())
-	if len(menu) > 0 {
-		nav := html.Nav()
-		for _, item := range menu {
-			a := html.A(item.Label).Attr("href", item.Href)
-			if item.Active {
-				a.Attr("aria-current", "page")
-			}
-			nav.Child(a)
-		}
-		container.Child(nav)
-	}
 	return &Section{
-		kind:      KindFooter,
-		component: container,
+		kind: kindFooter,
+		build: func(Brand) dom.Component {
+			nav := html.Nav()
+			for _, item := range menu {
+				a := html.A(item.Href).Text(item.Label)
+				if item.Active {
+					a.Attr("aria-current", "page")
+				}
+				nav.Child(a)
+			}
+			return nav
+		},
 	}
 }
 
@@ -481,6 +467,19 @@ func (p *Page) AddSubPage(subpage SubPage) *Page {
 	return p
 }
 
+// brandMark renders the site identity shown in the footer: the name, linked to
+// Brand.Href when the site declares a home URL. Returns nil when unnamed.
+func (p *Page) brandMark() *dom.Element {
+	if p.Brand.Name == "" {
+		return nil
+	}
+	mark := html.Div().Set(clsBrand.AsAttr())
+	if p.Brand.Href != "" {
+		return mark.Child(html.A(p.Brand.Href).Text(p.Brand.Name))
+	}
+	return mark.Child(html.Span().Text(p.Brand.Name))
+}
+
 // Render compiles the Page DOM structure.
 func (p *Page) Render() *dom.Element {
 	root := html.Div().Set(clsLanding.AsAttr())
@@ -490,49 +489,20 @@ func (p *Page) Render() *dom.Element {
 			continue
 		}
 
-		if sn, ok := s.component.(*sitenav.SiteNav); ok {
-			if sn.WideLogoSrc == "" {
-				sn.WideLogoSrc = p.Brand.WideLogoSrc
-			}
-			if sn.CompactLogoSrc == "" {
-				sn.CompactLogoSrc = p.Brand.CompactLogoSrc
-			}
-			if sn.LogoAlt == "" {
-				sn.LogoAlt = p.Brand.LogoAlt
-			}
+		var content dom.Component
+		if s.build != nil {
+			content = s.build(p.Brand)
 		}
 
-		var cls = clsSection
+		// The band owns the rhythm; the section content owns its own class, so
+		// the same class never lands twice on nested elements. Chrome bands
+		// stay a div because infobar and sitenav bring their own <header>.
+		cls, tag := clsSection, "section"
 		switch s.kind {
-		case KindInfoBar:
-			cls = clsHeader
-		case KindHeader:
-			cls = clsHeader
-		case KindHero:
-			cls = clsSection
-		case KindSplit:
-			cls = clsSplit
-		case KindCards:
-			cls = clsCards
-		case KindStats:
-			cls = clsStats
-		case KindForm:
-			cls = clsForm
-		case KindHours:
-			cls = clsHours
-		case KindMapEmbed:
-			cls = clsMap
-		case KindFooter:
-			cls = clsFooter
-		default:
-			cls = clsSection
-		}
-
-		tag := "section"
-		if s.kind == KindHeader {
-			tag = "header"
-		} else if s.kind == KindFooter {
-			tag = "footer"
+		case kindChrome:
+			cls, tag = clsHeader, "div"
+		case kindFooter:
+			cls, tag = clsFooter, "footer"
 		}
 
 		secEl := dom.NewElement(tag).Set(cls.AsAttr())
@@ -540,8 +510,14 @@ func (p *Page) Render() *dom.Element {
 			secEl.Attr("id", s.id)
 		}
 
-		if s.component != nil {
-			secEl.Child(s.component)
+		if s.kind == kindFooter {
+			if brand := p.brandMark(); brand != nil {
+				secEl.Child(brand)
+			}
+		}
+
+		if content != nil {
+			secEl.Child(content)
 		}
 		root.Child(secEl)
 	}
@@ -583,50 +559,51 @@ func (p *Page) RenderPages() []html.Page {
 		})
 	}
 
-	seenTitles := make(map[string]string)
-	seenDescs := make(map[string]string)
-
-	for _, page := range pages {
-		t := page.Doc.Title
-		if t != "" {
-			if prevPath, exists := seenTitles[t]; exists {
-				panic("landing: duplicate page Title '" + t + "' found on paths '" + prevPath + "' and '" + page.Path + "'")
+	// Two pages sharing a Title or a Description is the most common way to lose
+	// per-page ranking, so it fails loudly at emission time. Compared pairwise
+	// on the slice: a map would ship map machinery into the wasm binary for a
+	// handful of pages.
+	for i, page := range pages {
+		for _, prev := range pages[:i] {
+			if page.Doc.Title != "" && page.Doc.Title == prev.Doc.Title {
+				panic("landing: duplicate page Title '" + page.Doc.Title + "' found on paths '" + prev.Path + "' and '" + page.Path + "'")
 			}
-			seenTitles[t] = page.Path
-		}
-
-		d := page.Doc.Description
-		if d != "" {
-			if prevPath, exists := seenDescs[d]; exists {
-				panic("landing: duplicate page Description '" + d + "' found on paths '" + prevPath + "' and '" + page.Path + "'")
+			if page.Doc.Description != "" && page.Doc.Description == prev.Doc.Description {
+				panic("landing: duplicate page Description '" + page.Doc.Description + "' found on paths '" + prev.Path + "' and '" + page.Path + "'")
 			}
-			seenDescs[d] = page.Path
 		}
 	}
 
 	return pages
 }
 
+// renderSubPage wraps the detail page content in the same chrome as the home
+// page — a detail page that loses the header and footer is a different site.
 func (p *Page) renderSubPage(sp SubPage) string {
+	var body []*Section
+	body = append(body, sp.Sections...)
 	if sp.Component != nil {
-		return sp.Component.String()
+		body = append(body, &Section{
+			kind:  kindContent,
+			build: func(Brand) dom.Component { return sp.Component },
+		})
 	}
-	if len(sp.Sections) > 0 {
-		var subSections []*Section
-		for _, s := range p.Sections {
-			if s != nil && (s.kind == KindInfoBar || s.kind == KindHeader) {
-				subSections = append(subSections, s)
-			}
-		}
-		subSections = append(subSections, sp.Sections...)
-		for _, s := range p.Sections {
-			if s != nil && s.kind == KindFooter {
-				subSections = append(subSections, s)
-			}
-		}
+	if len(body) == 0 {
+		return ""
+	}
 
-		subPage := New(p.Brand, subSections...)
-		return subPage.String()
+	var subSections []*Section
+	for _, s := range p.Sections {
+		if s != nil && s.kind == kindChrome {
+			subSections = append(subSections, s)
+		}
 	}
-	return ""
+	subSections = append(subSections, body...)
+	for _, s := range p.Sections {
+		if s != nil && s.kind == kindFooter {
+			subSections = append(subSections, s)
+		}
+	}
+
+	return New(p.Brand, subSections...).String()
 }

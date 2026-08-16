@@ -19,31 +19,9 @@ func (p *Page) RenderSheet() *style.Sheet {
 			style.Stack(style.SpaceNone),
 			style.KeepSize(),
 		).
+		// The band: one padded, stacked strip per section. Everything below it
+		// arranges content inside that strip and never re-pads it.
 		Part(partSection,
-			style.Stack(style.Space4),
-			style.Pad(style.Space6),
-		).
-		Part(partSplit,
-			style.Grid(style.ColumnMedium, style.Space4),
-			style.Pad(style.Space6),
-		).
-		Part(partCards,
-			style.Stack(style.Space4),
-			style.Pad(style.Space6),
-		).
-		Part(partStats,
-			style.Stack(style.Space4),
-			style.Pad(style.Space6),
-		).
-		Part(partForm,
-			style.Stack(style.Space4),
-			style.Pad(style.Space6),
-		).
-		Part(partHours,
-			style.Stack(style.Space4),
-			style.Pad(style.Space6),
-		).
-		Part(partMap,
 			style.Stack(style.Space4),
 			style.Pad(style.Space6),
 		).
@@ -51,6 +29,21 @@ func (p *Page) RenderSheet() *style.Sheet {
 			style.Stack(style.Space2),
 			style.Pad(style.Space6),
 			style.As(style.Primary),
+		).
+		Part(partSplit,
+			style.Grid(style.ColumnMedium, style.Space4),
+		).
+		Part(partCards,
+			style.Stack(style.Space4),
+		).
+		Part(partForm,
+			style.Stack(style.Space4),
+		).
+		Part(partHours,
+			style.Stack(style.Space4),
+		).
+		Part(partMap,
+			style.Stack(style.Space4),
 		).
 		Part(partTitle,
 			style.FontSize(style.Text2xl),
@@ -68,6 +61,13 @@ func (p *Page) RenderSheet() *style.Sheet {
 		).
 		Part(partGrid,
 			style.Grid(style.ColumnMedium, style.Space4),
+		).
+		Part(partBadge,
+			style.FontSize(style.TextSm),
+			style.Glyph(style.Subtle),
+		).
+		Part(partBrand,
+			style.FontWeight(style.WeightBold),
 		)
 }
 

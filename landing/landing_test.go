@@ -23,6 +23,7 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 		Name:        "Clínica San José",
 		WideLogoSrc: "/logo-wide.svg",
 		LogoAlt:     "Logo San José",
+		Href:        "/",
 	}
 
 	contacto := landing.Contact{
@@ -43,7 +44,7 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 	}
 
 	tarjetas := []landing.Card{
-		{Title: "Oftalmología", Description: "Cuidado visual integral", Href: "/especialidades/oftalmologia/"},
+		{Title: "Oftalmología", Description: "Cuidado visual integral", Href: "/especialidades/oftalmologia/", Image: "/oftalmo.jpg", Badge: "Nuevo"},
 		{Title: "Pediatría", Description: "Atención infantil", Href: "/especialidades/pediatria/"},
 	}
 
@@ -58,7 +59,7 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 	}
 
 	galeria := []landing.Slide{
-		{Image: "/slide1.jpg", Title: "Bienvenidos", Subtitle: "Atención médica humana"},
+		{Image: "/slide1.jpg"},
 	}
 
 	cta := landing.Link{Label: "Reservar hora", Href: "#contacto"}
@@ -101,11 +102,59 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 		lastIdx = idx
 	}
 
-	// Verify menu links match anchors
+	// Every menu entry must land on an anchor that actually exists: a link to a
+	// missing id is a menu that silently scrolls nowhere.
 	for _, m := range menu {
 		if !strings.Contains(out, "href='"+m.Href+"'") && !strings.Contains(out, "href=\""+m.Href+"\"") {
 			t.Errorf("expected menu link %s to be present in markup", m.Href)
 		}
+		if strings.HasPrefix(m.Href, "#") {
+			if !strings.Contains(out, "id='"+strings.TrimPrefix(m.Href, "#")+"'") {
+				t.Errorf("menu links to %s but no section carries that anchor id", m.Href)
+			}
+		}
+	}
+
+	// The band carries the section class; the content inside carries its own.
+	// The same class twice on nested elements means padding applied twice.
+	for _, cls := range []string{"landing__section", "landing__split", "landing__cards", "landing__form", "landing__hours", "landing__map", "landing__footer"} {
+		if strings.Contains(out, "class='"+cls+"'><div class='"+cls+"'") {
+			t.Errorf("class %s is nested inside itself: the band and its content must not share a class", cls)
+		}
+	}
+
+	// <img> is a void element; a closing tag is invalid markup. Scoped to the
+	// images this layout emits (all lazy) — herobanner's own eager images are
+	// an upstream concern.
+	if strings.Contains(out, "loading='lazy'></img>") {
+		t.Errorf("images must render as void elements (image.Img), got a closing </img> tag:\n%s", out)
+	}
+
+	// Every wrapped component must reach the markup. A component handed to
+	// Child() as itself serializes as an empty <></>, which no id/href
+	// assertion above would notice.
+	for _, marker := range []string{"infobar", "sitenav", "herobanner", "contentcard", "statgrid"} {
+		if !strings.Contains(out, "class='"+marker) {
+			t.Errorf("component %q does not appear in the rendered markup: it was embedded but never rendered:\n%s", marker, out)
+		}
+	}
+	if strings.Contains(out, "<></>") {
+		t.Errorf("markup contains an empty <></> node — a component was embedded without Render():\n%s", out)
+	}
+
+	// A link renders its label, not just its href.
+	for _, label := range []string{"Reservar hora", "Oftalmología", "contacto@sanjose.cl"} {
+		if !strings.Contains(out, ">"+label+"<") {
+			t.Errorf("link label %q is missing from the markup: html.A takes the href, the label is the text", label)
+		}
+	}
+
+	// Fields that are accepted but never rendered are silent failures.
+	if !strings.Contains(out, "Nuevo") {
+		t.Errorf("Card.Badge is accepted but not rendered")
+	}
+	if !strings.Contains(out, "class='landing__brand'") || !strings.Contains(out, marca.Name) {
+		t.Errorf("Brand.Name/Href are accepted but the footer renders no brand mark")
 	}
 }
 
@@ -138,7 +187,9 @@ func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 	}
 
 	page := landing.New(marca,
+		landing.Header(landing.Link{Label: "Inicio", Href: "/"}),
 		landing.Hero("Portada", "Bajada", landing.Link{}),
+		landing.Footer(landing.Link{Label: "Inicio", Href: "/"}),
 	).WithSEO(html.DocumentOptions{
 		Title:       "Portada — Clínica San José",
 		Description: "Centro médico de salud de referencia.",
@@ -156,6 +207,17 @@ func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 	for i, expected := range expectedPaths {
 		if pages[i].Path != expected {
 			t.Errorf("page[%d] Path = %q, expected %q", i, pages[i].Path, expected)
+		}
+	}
+
+	// A detail page keeps the site chrome: without header and footer it is a
+	// different site, not another page of this one.
+	for _, sub := range pages[1:] {
+		if !strings.Contains(sub.Body, "class='sitenav") {
+			t.Errorf("page %s renders no header: detail pages keep the site chrome", sub.Path)
+		}
+		if !strings.Contains(sub.Body, "class='landing__footer'") {
+			t.Errorf("page %s renders no footer: detail pages keep the site chrome", sub.Path)
 		}
 	}
 
