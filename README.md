@@ -64,7 +64,7 @@ never assumes a shape for what it centers — only that it renders.
 
 ```go
 (&login.Login{
-    Title:    "MJosefa CMS",
+    Title:    "Demo CMS",
     Subtitle: "Ingrese sus credenciales para continuar", // optional
     Form:     myLoginForm.Render(),
     LogoMark: crestDataURI, // optional — a URL/data-URI, not an svg.Icon

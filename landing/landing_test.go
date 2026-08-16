@@ -20,16 +20,16 @@ func (d *dummyComponent) Children() []dom.Component { return nil }
 
 func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 	marca := landing.Brand{
-		Name:        "Clínica San José",
+		Name:        "Clínica Demo",
 		WideLogoSrc: "/logo-wide.svg",
-		LogoAlt:     "Logo San José",
+		LogoAlt:     "Logo Demo",
 		Href:        "/",
 	}
 
 	contacto := landing.Contact{
-		Phone:   "+56912345678",
-		Email:   "contacto@sanjose.cl",
-		Address: "Av. Libertad 123",
+		Phone:   "+56 9 0000 0000",
+		Email:   "contacto@example.com",
+		Address: "Av. Siempre Viva 123",
 		Hours:   "Lunes a Viernes 8:00 - 18:00",
 	}
 
@@ -143,7 +143,7 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 	}
 
 	// A link renders its label, not just its href.
-	for _, label := range []string{"Reservar hora", "Oftalmología", "contacto@sanjose.cl"} {
+	for _, label := range []string{"Reservar hora", "Oftalmología", "contacto@example.com"} {
 		if !strings.Contains(out, ">"+label+"<") {
 			t.Errorf("link label %q is missing from the markup: html.A takes the href, the label is the text", label)
 		}
@@ -159,15 +159,15 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 }
 
 func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
-	marca := landing.Brand{Name: "Clínica San José"}
+	marca := landing.Brand{Name: "Clínica Demo"}
 
 	subPages := []landing.SubPage{
 		{
 			Path: "/especialidades/oftalmologia/",
 			Doc: html.DocumentOptions{
-				Title:       "Oftalmología — Clínica San José",
+				Title:       "Oftalmología — Clínica Demo",
 				Description: "Servicio especializado en cuidado visual y cirugías oculares.",
-				Canonical:   "https://sanjose.cl/especialidades/oftalmologia/",
+				Canonical:   "https://example.com/especialidades/oftalmologia/",
 			},
 			Sections: []*landing.Section{
 				landing.Split("Oftalmología", "/oftalmo.jpg", "Diagnóstico y tratamiento..."),
@@ -176,9 +176,9 @@ func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 		{
 			Path: "/especialidades/pediatria/",
 			Doc: html.DocumentOptions{
-				Title:       "Pediatría — Clínica San José",
+				Title:       "Pediatría — Clínica Demo",
 				Description: "Atención pediátrica integral para bebés, niños y adolescentes.",
-				Canonical:   "https://sanjose.cl/especialidades/pediatria/",
+				Canonical:   "https://example.com/especialidades/pediatria/",
 			},
 			Sections: []*landing.Section{
 				landing.Split("Pediatría", "/pediatria.jpg", "Cuidado especializado infantil..."),
@@ -191,9 +191,9 @@ func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 		landing.Hero("Portada", "Bajada", landing.Link{}),
 		landing.Footer(landing.Link{Label: "Inicio", Href: "/"}),
 	).WithSEO(html.DocumentOptions{
-		Title:       "Portada — Clínica San José",
+		Title:       "Portada — Clínica Demo",
 		Description: "Centro médico de salud de referencia.",
-		Canonical:   "https://sanjose.cl/",
+		Canonical:   "https://example.com/",
 	}).WithSubPages(subPages...)
 
 	pages := page.RenderPages()

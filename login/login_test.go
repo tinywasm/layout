@@ -9,9 +9,9 @@ import (
 
 func TestLogin_RendersTitleAndForm(t *testing.T) {
 	form := Div().Attr("id", "the-form")
-	html := (&Login{Title: "MJosefa CMS", Form: form}).Render().String()
+	html := (&Login{Title: "Demo CMS", Form: form}).Render().String()
 
-	for _, want := range []string{"login", "login__card", "login__title", "MJosefa CMS", "the-form"} {
+	for _, want := range []string{"login", "login__card", "login__title", "Demo CMS", "the-form"} {
 		if !strings.Contains(html, want) {
 			t.Errorf("markup missing %q\n%s", want, html)
 		}
