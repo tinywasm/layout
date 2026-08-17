@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/tinywasm/components v0.5.12
-	github.com/tinywasm/css v0.4.14
+	github.com/tinywasm/css v0.4.15
 	github.com/tinywasm/dom v0.13.5
 	github.com/tinywasm/fmt v0.25.5
 	github.com/tinywasm/form v0.3.29
@@ -34,3 +34,7 @@ require (
 	github.com/tinywasm/json v0.5.19 // indirect
 	github.com/tinywasm/router v0.1.21 // indirect
 )
+
+replace github.com/tinywasm/widget => /home/cesar/Dev/Project/tinywasm/widget
+
+replace github.com/tinywasm/components => /home/cesar/Dev/Project/tinywasm/components
