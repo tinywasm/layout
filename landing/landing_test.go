@@ -158,6 +158,17 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 	}
 }
 
+func TestRenderPagesZeroValueProbeReturnsNoPages(t *testing.T) {
+	// sitec's extraction discovers RenderPages by calling it on a bare
+	// &landing.Page{} to check the method exists — that probe must not itself
+	// register a homepage at "/", or it collides with the real one.
+	probe := &landing.Page{}
+
+	if pages := probe.RenderPages(); pages != nil {
+		t.Fatalf("expected nil pages for the zero-value probe, got %d", len(pages))
+	}
+}
+
 func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 	marca := landing.Brand{Name: "Clínica Demo"}
 

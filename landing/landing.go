@@ -531,7 +531,15 @@ func (p *Page) String() string {
 }
 
 // RenderPages implements html.PagesProvider for multi-page static site emission.
+//
+// sitec's extraction probes a producer by instantiating a zero-value &Page{}
+// to discover the method; without this guard that probe would itself emit a
+// homepage at "/", colliding with the real page's route.
 func (p *Page) RenderPages() []html.Page {
+	if p.Brand.Name == "" && len(p.SubPages) == 0 {
+		return nil
+	}
+
 	var pages []html.Page
 
 	homeDoc := p.Doc
