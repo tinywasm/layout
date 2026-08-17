@@ -91,6 +91,13 @@ type Card struct {
 	Image       string
 	Href        string
 	Badge       string
+
+	// LinkLabel is what the footer link reads. It defaults to Title, which
+	// is the shape a card catalogue usually wants — but a card whose heading
+	// is already the first thing in the box then repeats itself two lines
+	// later ("Medicina General … Medicina General"), which reads as a
+	// templating slip rather than as a call to action.
+	LinkLabel string
 }
 
 // Stat represents a numerical metric and its descriptive label.
@@ -297,7 +304,11 @@ func Cards(title string, cards ...Card) *Section {
 
 				var foot dom.Component
 				if c.Href != "" {
-					foot = html.A(c.Href).Text(c.Title)
+					label := c.LinkLabel
+					if label == "" {
+						label = c.Title
+					}
+					foot = html.A(c.Href).Text(label)
 				}
 
 				grid.Child((&contentcard.ContentCard{
