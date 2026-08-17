@@ -1,11 +1,15 @@
 github.com/tinywasm/color v0.1.1 h1:S00T0XR42Q3sDpfJELNnF0HFxMh9gApH4SnA0Ml6Q7A=
 github.com/tinywasm/color v0.1.1/go.mod h1:0wqAVE1k2GxXIX/v1G+w97J8YRpispYcDa7M75H+umI=
-github.com/tinywasm/components v0.5.11 h1:bCBr1bFzZcv7vD0wssC2SIiK4s+y8M0Q7vevKVohlKQ=
-github.com/tinywasm/components v0.5.11/go.mod h1:8SOUvVENbWkjUxLV2TBq4Wew3VZgnKMR2Xo5LZXu8RY=
+github.com/tinywasm/components v0.5.12 h1:chbt6OZvXMytbX1g8hxeR7TF+QHWNvb36EcJDH5OxZM=
+github.com/tinywasm/components v0.5.12/go.mod h1:6Dbz7dDlgA6Let8JNs/ytaGNq1MHMAjLBpCaQmO5dD0=
+github.com/tinywasm/context v0.0.18 h1:uKeiAFo6L/PikGSbUu+xcyELGoa4kXomDNwJOlhxrUE=
+github.com/tinywasm/context v0.0.18/go.mod h1:3AHZHMiiVZljEGNuYMaLM2OXdZ3bXjoMCmqx3sEGXsA=
 github.com/tinywasm/css v0.4.14 h1:SSKjshjJ2H7M/V1GCDJr+Pz/1P2B1Qbe0UzncdUCS7I=
 github.com/tinywasm/css v0.4.14/go.mod h1:EyCY2mFW664qIyqTQKW1mgkg7cqAK3oF6igiwYdGV5k=
 github.com/tinywasm/dom v0.13.5 h1:CklQl/U/pJn5Pka3n5xf8xEObFLxuKxrrpXPLGiprWY=
 github.com/tinywasm/dom v0.13.5/go.mod h1:foT4zhFHK4T8ZNPjgT539dAfdslSdY/hD7V0g9CUNgY=
+github.com/tinywasm/fetch v0.1.24 h1:UynB2NPPgYrwcRx6ZujkRUTlfUUkNs60J0O63/1FmAs=
+github.com/tinywasm/fetch v0.1.24/go.mod h1:Hx9bkdjC5fcf++EWjHKUzEn2OZpUbfoXNQV8tbdC5SI=
 github.com/tinywasm/fmt v0.25.5 h1:2nBU5H1lszhkGIusm7m4S+rGM2rPiIJkhvQqwqN17qo=
 github.com/tinywasm/fmt v0.25.5/go.mod h1:2Y4hlsQxqVsZ5z9vQL5XQbEzLQtQOr1Bhp44nPGfydA=
 github.com/tinywasm/font v0.0.4 h1:dugQHev1xk2YzA01xpqV4WLCHxEmk6JEu2GkDbPxlfE=
@@ -18,6 +22,8 @@ github.com/tinywasm/image v0.0.18 h1:NFBCnynthkViD6xsb629j+rx6Z2a61MRIRyMNcLdO/Y
 github.com/tinywasm/image v0.0.18/go.mod h1:OH9RBJUxsl4MxAxF6JrFZScJ7KZvk6DUjOWr1tk4fyw=
 github.com/tinywasm/input v0.0.3 h1:zsdweZc7z7fXFDgy8cXeU3zFXvuQSvouq7qgZY4Tedg=
 github.com/tinywasm/input v0.0.3/go.mod h1:eybzBuIXC0lArbS9LBZV1VBDr7vBRyrTn60jgKdS4ow=
+github.com/tinywasm/js v0.0.6 h1:JUpC4EjL7x7nOpKf9sK82y1o7RewrGFtnnZkwb+7hYg=
+github.com/tinywasm/js v0.0.6/go.mod h1:IQJBLwX9qtpYeTrJkuW5fZ+6ItJGCYfabeOJns8qSvI=
 github.com/tinywasm/json v0.5.19 h1:cip0XJ1jCxU5MgcCEVhdwRFXMSGN7/goDuiIaVMqtQs=
 github.com/tinywasm/json v0.5.19/go.mod h1:JhZVGd211/PO/i9kggDoUu1xrn78xwJrJcpz9VoKc6E=
 github.com/tinywasm/model v0.1.4 h1:ZXz/LB9bUVzfiPO3R8iMDbZ6j2DCdR+rOV67zDaE7VE=
