@@ -151,7 +151,9 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 	if b := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(b, css.ColorAccent.LightValue()) || !Contains(b, css.ColorOnPrimary.LightValue()) {
 		t.Errorf("current nav item must use Accent bg + white (ColorOnPrimary) icon, block:\n%s", b)
 	}
-	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, "color-mix(") || !Contains(b, css.ColorAccentHover.LightValue()) {
+	// The adaptive half is now a var() reference; the color-mix() that
+	// defines it lives at :root, where an app's Theme(Set(...)) can reach it.
+	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, css.ColorAccentHover.EnhancedVar()) || !Contains(b, css.ColorAccentHover.LightValue()) {
 		t.Errorf("nav hover must be the weaker AccentHover tint, block:\n%s", b)
 	}
 	if b := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(b, css.ColorOnPrimary.LightValue()) {

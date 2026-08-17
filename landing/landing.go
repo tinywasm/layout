@@ -206,8 +206,12 @@ func Header(menu ...Link) *Section {
 	}
 }
 
-// Hero wraps herobanner.HeroBanner into a hero section.
-func Hero(title, subtitle string, cta Link, slides ...Slide) *Section {
+// Hero wraps herobanner.HeroBanner into a hero section. ctas is a slice, not a
+// variadic tail, because slides already occupies that position — and a hero
+// carries more than one call to action often enough to be the normal case, not
+// an exception: "see what we offer" next to "join us" is the shape of nearly
+// every landing page. Pass nil for a hero with no buttons.
+func Hero(title, subtitle string, ctas []Link, slides ...Slide) *Section {
 	var images []string
 	for _, slide := range slides {
 		if slide.Image != "" {
@@ -219,7 +223,10 @@ func Hero(title, subtitle string, cta Link, slides ...Slide) *Section {
 		kind: kindContent,
 		build: func(Brand) dom.Component {
 			var actions []dom.Component
-			if cta.Label != "" || cta.Href != "" {
+			for _, cta := range ctas {
+				if cta.Label == "" && cta.Href == "" {
+					continue
+				}
 				actions = append(actions, html.A(cta.Href).Text(cta.Label))
 			}
 			return (&herobanner.HeroBanner{

@@ -68,7 +68,7 @@ func TestLandingFullCompositionAndSectionOrdering(t *testing.T) {
 	page := landing.New(marca,
 		landing.InfoBar(contacto),
 		landing.Header(menu...),
-		landing.Hero("Atención Médica Integral", "Cuidamos tu salud y la de tu familia", cta, galeria...).At("inicio"),
+		landing.Hero("Atención Médica Integral", "Cuidamos tu salud y la de tu familia", []landing.Link{cta}, galeria...).At("inicio"),
 		landing.Split("Nuestra Historia", "/historia.jpg", "Fundada en 2010...", "Comprometidos con la comunidad...").At("nosotros"),
 		landing.Cards("Especialidades", tarjetas...).At("especialidades"),
 		landing.Stats(cifras...).At("compromiso"),
@@ -199,7 +199,7 @@ func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 
 	page := landing.New(marca,
 		landing.Header(landing.Link{Label: "Inicio", Href: "/"}),
-		landing.Hero("Portada", "Bajada", landing.Link{}),
+		landing.Hero("Portada", "Bajada", nil),
 		landing.Footer(landing.Link{Label: "Inicio", Href: "/"}),
 	).WithSEO(html.DocumentOptions{
 		Title:       "Portada — Clínica Demo",
@@ -250,7 +250,7 @@ func TestRenderPagesMultiPageAndUniqueMetadata(t *testing.T) {
 
 func TestRenderPagesDuplicateTitlePanic(t *testing.T) {
 	page := landing.New(landing.Brand{Name: "Test"},
-		landing.Hero("H", "S", landing.Link{}),
+		landing.Hero("H", "S", nil),
 	).WithSEO(html.DocumentOptions{
 		Title:       "Duplicate Title",
 		Description: "Desc 1",
@@ -276,7 +276,7 @@ func TestRenderPagesDuplicateTitlePanic(t *testing.T) {
 
 func TestRenderPagesDuplicateDescriptionPanic(t *testing.T) {
 	page := landing.New(landing.Brand{Name: "Test"},
-		landing.Hero("H", "S", landing.Link{}),
+		landing.Hero("H", "S", nil),
 	).WithSEO(html.DocumentOptions{
 		Title:       "Title 1",
 		Description: "Shared Description",

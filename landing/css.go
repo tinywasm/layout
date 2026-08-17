@@ -21,9 +21,19 @@ func (p *Page) RenderSheet() *style.Sheet {
 		).
 		// The band: one padded, stacked strip per section. Everything below it
 		// arranges content inside that strip and never re-pads it.
+		//
+		// Anchor(): a section can hold an arbitrary component — herobanner,
+		// among others — that uses Backdrop(Parent) to go full-bleed. Backdrop
+		// resolves against the nearest POSITIONED ancestor; without Anchor()
+		// here, that search finds nothing between the section and the
+		// viewport, so the "full-bleed hero" covers the ENTIRE page — header
+		// included — instead of just its own section. landing is the one
+		// composing arbitrary parts into a section, so it owns establishing
+		// that positioning context; the embedded component can't know it.
 		Part(partSection,
 			style.Stack(style.Space4),
 			style.Pad(style.Space6),
+			style.Anchor(),
 		).
 		Part(partFooter,
 			style.Stack(style.Space2),
@@ -73,5 +83,25 @@ func (p *Page) RenderSheet() *style.Sheet {
 
 // RenderCSS implements visual contract for landing layout.
 func (p *Page) RenderCSS() *css.Stylesheet {
-	return p.RenderSheet().Stylesheet()
+	return css.NewStylesheet(
+		css.Raw(p.RenderSheet().Stylesheet().String()),
+		css.Raw(sectionHeightFix),
+	)
 }
+
+// sectionHeightFix: a section that directly wraps a full-bleed component
+// (herobanner, via style.Backdrop(Parent) on its root) has that component
+// removed from normal flow — position:absolute, sized by min-height alone.
+// With nothing else in flow, the SECTION collapses to its own padding, and
+// the visually 75vh-tall herobanner overflows past that collapsed box,
+// painting over whatever comes after it in the document (the next section,
+// or — before Part(partSection, ...Anchor()) existed — the page header,
+// since Backdrop(Parent) had no positioned ancestor to stop at).
+//
+// :has() scopes this to exactly the sections that need it — Cards, Split,
+// Stats and friends size normally from their own in-flow content and are
+// untouched. The 75vh figure matches herobanner's own min-height, wherever
+// a consumer declares it — this just gives the SECTION the same floor so
+// document flow matches what's visually painted, instead of collapsing to
+// its own padding while the hero overflows past it uncounted.
+const sectionHeightFix = `.landing__section:has(> .herobanner){min-height:75vh}`
