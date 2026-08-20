@@ -103,6 +103,9 @@ pages := site.RenderPages() // implements html.PagesProvider: home + one page pe
 `Split`, `MapEmbed`, `Footer` and `Hours` are horizontal bands with no state, so
 they live here; everything with behaviour is consumed from `tinywasm/components`
 (`infobar`, `sitenav`, `herobanner`, `statgrid`, `contentcard`), never
-reimplemented. Detail pages keep the site chrome and must not repeat another
+reimplemented. Images in `Split` and `Cards` accept base image paths without variant
+suffixes (e.g., `/img/foto.jpg`, not `/img/foto.M.jpg`) and emit responsive `srcset`
+variants (`.S`, `.M`, `.L`) with responsive `sizes` matching layout grid breakpoints.
+Detail pages keep the site chrome and must not repeat another
 page's `Title` or `Description` — `RenderPages()` panics on a duplicate, because
 that is how per-page ranking is lost.

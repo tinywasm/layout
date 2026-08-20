@@ -15,6 +15,18 @@ import (
 
 const NameLanding = widget.Name("landing")
 
+const (
+	// SizesSplit: el media de Split ocupa el ancho completo en telefono y
+	// la mitad cuando la banda se parte en dos columnas.
+	// Nota: este valor debe coincidir con los puntos de quiebre definidos en css.go.
+	SizesSplit = "(max-width: 768px) 100vw, 50vw"
+
+	// SizesCard: las tarjetas van en grilla — una columna en telefono,
+	// dos en tablet, tres en escritorio.
+	// Nota: este valor debe coincidir con los puntos de quiebre definidos en css.go.
+	SizesCard = "(max-width: 600px) 100vw, (max-width: 1024px) 50vw, 33vw"
+)
+
 // The band (<header>/<section>/<footer>) owns the outer rhythm — padding and
 // vertical stacking. The parts below it own only their internal arrangement, so
 // no element ever carries the band class twice.
@@ -266,7 +278,7 @@ func Split(title string, imageSrc string, paragraphs ...string) *Section {
 
 			if imageSrc != "" {
 				media := html.Div().Set(clsMedia.AsAttr())
-				media.Child(image.Img(imageSrc, title).Lazy().AsElement())
+				media.Child(image.Responsive(imageSrc, title).Sizes(SizesSplit).Lazy().AsElement())
 				container.Child(media)
 			}
 			return container
@@ -288,7 +300,7 @@ func Cards(title string, cards ...Card) *Section {
 			for _, c := range cards {
 				var head dom.Component
 				if c.Image != "" {
-					head = image.Img(c.Image, c.Title).Lazy().AsElement()
+					head = image.Responsive(c.Image, c.Title).Sizes(SizesCard).Lazy().AsElement()
 				}
 
 				body := html.Div()
