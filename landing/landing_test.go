@@ -1,11 +1,13 @@
 package landing_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/tinywasm/dom"
 	"github.com/tinywasm/html"
+	"github.com/tinywasm/image"
 	"github.com/tinywasm/layout/landing"
 )
 
@@ -283,7 +285,10 @@ func TestLandingResponsiveImages(t *testing.T) {
 	out := pageWithImages.String()
 
 	// 1. Split con imagen: el <img> trae srcset con las tres variantes y src predeterminado
-	expectedSplitSrcSet := "srcset='/img/historia.S.jpg 640w, /img/historia.M.jpg 1024w, /img/historia.L.jpg 1920w'"
+	expectedSplitSrcSet := fmt.Sprintf(
+		"srcset='/img/historia.S.jpg %dw, /img/historia.M.jpg %dw, /img/historia.L.jpg %dw'",
+		image.VariantS.Width(), image.VariantM.Width(), image.VariantL.Width(),
+	)
 	if !strings.Contains(out, expectedSplitSrcSet) && !strings.Contains(out, strings.ReplaceAll(expectedSplitSrcSet, "'", "\"")) {
 		t.Errorf("expected Split image to contain srcset %q, got output:\n%s", expectedSplitSrcSet, out)
 	}
@@ -295,7 +300,10 @@ func TestLandingResponsiveImages(t *testing.T) {
 	}
 
 	// 3. Cards con imagen: srcset con las tres variantes
-	expectedCardSrcSet := "srcset='/img/card1.S.jpg 640w, /img/card1.M.jpg 1024w, /img/card1.L.jpg 1920w'"
+	expectedCardSrcSet := fmt.Sprintf(
+		"srcset='/img/card1.S.jpg %dw, /img/card1.M.jpg %dw, /img/card1.L.jpg %dw'",
+		image.VariantS.Width(), image.VariantM.Width(), image.VariantL.Width(),
+	)
 	if !strings.Contains(out, expectedCardSrcSet) && !strings.Contains(out, strings.ReplaceAll(expectedCardSrcSet, "'", "\"")) {
 		t.Errorf("expected Card image to contain srcset %q, got output:\n%s", expectedCardSrcSet, out)
 	}

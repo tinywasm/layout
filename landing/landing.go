@@ -16,15 +16,20 @@ import (
 const NameLanding = widget.Name("landing")
 
 const (
-	// SizesSplit: el media de Split ocupa el ancho completo en telefono y
-	// la mitad cuando la banda se parte en dos columnas.
-	// Nota: este valor debe coincidir con los puntos de quiebre definidos en css.go.
-	SizesSplit = "(max-width: 768px) 100vw, 50vw"
+	// SizesSplit: Split tiene dos hijos y auto-fit colapsa las pistas
+	// vacias, asi que nunca pasa de dos columnas. El quiebre sale de
+	// --column-medium (20rem = 320px) + gap (1rem = 16px) + el padding de
+	// la seccion (1.5rem = 24px por lado): dos pistas entran a partir de 704px.
+	// Nota: este valor se deriva de los tokens de tinywasm/css (--column-medium,
+	// --space-4, --space-6). Si esos tokens cambian en css.go, este valor debe actualizarse.
+	SizesSplit = "(max-width: 703px) 100vw, 50vw"
 
-	// SizesCard: las tarjetas van en grilla — una columna en telefono,
-	// dos en tablet, tres en escritorio.
-	// Nota: este valor debe coincidir con los puntos de quiebre definidos en css.go.
-	SizesCard = "(max-width: 600px) 100vw, (max-width: 1024px) 50vw, 33vw"
+	// SizesCard: la grilla es intrinseca (auto-fit + minmax), no tiene
+	// media queries. Suma una columna cada vez que entra otra pista de
+	// 320px mas su gap de 16px (y 48px de padding de seccion): 704, 1040 y 1376px.
+	// Nota: este valor se deriva de los tokens de tinywasm/css (--column-medium,
+	// --space-4, --space-6). Si esos tokens cambian en css.go, este valor debe actualizarse.
+	SizesCard = "(max-width: 703px) 100vw, (max-width: 1039px) 50vw, (max-width: 1375px) 33vw, 25vw"
 )
 
 // The band (<header>/<section>/<footer>) owns the outer rhythm — padding and

@@ -2,9 +2,8 @@
 PLAN: "feat(landing): srcset en las imagenes de Split y Cards"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: review
+STATUS: running
 SESSION: 980339425852960845
-PR: https://github.com/tinywasm/layout/pull/27
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
