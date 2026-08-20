@@ -2,6 +2,8 @@
 PLAN: "feat(landing): srcset en las imagenes de Split y Cards"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 980339425852960845
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
