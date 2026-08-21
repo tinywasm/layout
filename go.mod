@@ -31,6 +31,6 @@ require (
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/js v0.0.6 // indirect
-	github.com/tinywasm/json v0.5.19 // indirect
+	github.com/tinywasm/json v0.5.21 // indirect
 	github.com/tinywasm/router v0.1.22 // indirect
 )
