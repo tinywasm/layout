@@ -3,13 +3,13 @@ module github.com/tinywasm/layout
 go 1.25.2
 
 require (
-	github.com/tinywasm/components v0.5.15
+	github.com/tinywasm/components v0.5.23
 	github.com/tinywasm/css v0.4.15
 	github.com/tinywasm/dom v0.13.5
 	github.com/tinywasm/fmt v0.25.6
 	github.com/tinywasm/form v0.3.29
 	github.com/tinywasm/html v0.0.17
-	github.com/tinywasm/image v0.0.25
+	github.com/tinywasm/image v0.0.26
 	github.com/tinywasm/input v0.0.3
 	github.com/tinywasm/model v0.1.4
 	github.com/tinywasm/orm v0.11.6
