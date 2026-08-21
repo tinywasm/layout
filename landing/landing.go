@@ -15,6 +15,23 @@ import (
 
 const NameLanding = widget.Name("landing")
 
+const (
+	// SizesSplit: Split tiene dos hijos y auto-fit colapsa las pistas
+	// vacias, asi que nunca pasa de dos columnas. El quiebre sale de
+	// --column-medium (20rem = 320px) + gap (1rem = 16px) + el padding de
+	// la seccion (1.5rem = 24px por lado): dos pistas entran a partir de 704px.
+	// Nota: este valor se deriva de los tokens de tinywasm/css (--column-medium,
+	// --space-4, --space-6). Si esos tokens cambian en css.go, este valor debe actualizarse.
+	SizesSplit = "(max-width: 703px) 100vw, 50vw"
+
+	// SizesCard: la grilla es intrinseca (auto-fit + minmax), no tiene
+	// media queries. Suma una columna cada vez que entra otra pista de
+	// 320px mas su gap de 16px (y 48px de padding de seccion): 704, 1040 y 1376px.
+	// Nota: este valor se deriva de los tokens de tinywasm/css (--column-medium,
+	// --space-4, --space-6). Si esos tokens cambian en css.go, este valor debe actualizarse.
+	SizesCard = "(max-width: 703px) 100vw, (max-width: 1039px) 50vw, (max-width: 1375px) 33vw, 25vw"
+)
+
 // The band (<header>/<section>/<footer>) owns the outer rhythm — padding and
 // vertical stacking. The parts below it own only their internal arrangement, so
 // no element ever carries the band class twice.
@@ -266,7 +283,7 @@ func Split(title string, imageSrc string, paragraphs ...string) *Section {
 
 			if imageSrc != "" {
 				media := html.Div().Set(clsMedia.AsAttr())
-				media.Child(image.Img(imageSrc, title).Lazy().AsElement())
+				media.Child(image.Responsive(imageSrc, title).Sizes(SizesSplit).Lazy().AsElement())
 				container.Child(media)
 			}
 			return container
@@ -288,7 +305,7 @@ func Cards(title string, cards ...Card) *Section {
 			for _, c := range cards {
 				var head dom.Component
 				if c.Image != "" {
-					head = image.Img(c.Image, c.Title).Lazy().AsElement()
+					head = image.Responsive(c.Image, c.Title).Sizes(SizesCard).Lazy().AsElement()
 				}
 
 				body := html.Div()

@@ -1,11 +1,13 @@
 package landing_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/tinywasm/dom"
 	"github.com/tinywasm/html"
+	"github.com/tinywasm/image"
 	"github.com/tinywasm/layout/landing"
 )
 
@@ -272,6 +274,67 @@ func TestRenderPagesDuplicateTitlePanic(t *testing.T) {
 	}()
 
 	_ = page.RenderPages()
+}
+
+func TestLandingResponsiveImages(t *testing.T) {
+	pageWithImages := landing.New(
+		landing.Brand{Name: "Test"},
+		landing.Split("Historia", "/img/historia.jpg", "Parrafo 1"),
+		landing.Cards("Servicios", landing.Card{Title: "Card 1", Image: "/img/card1.jpg"}),
+	)
+	out := pageWithImages.String()
+
+	// 1. Split con imagen: el <img> trae srcset con las tres variantes y src predeterminado
+	expectedSplitSrcSet := fmt.Sprintf(
+		"srcset='/img/historia.S.jpg %dw, /img/historia.M.jpg %dw, /img/historia.L.jpg %dw'",
+		image.VariantS.Width(), image.VariantM.Width(), image.VariantL.Width(),
+	)
+	if !strings.Contains(out, expectedSplitSrcSet) && !strings.Contains(out, strings.ReplaceAll(expectedSplitSrcSet, "'", "\"")) {
+		t.Errorf("expected Split image to contain srcset %q, got output:\n%s", expectedSplitSrcSet, out)
+	}
+
+	// 2. Split: sizes igual a SizesSplit
+	expectedSplitSizes := "sizes='" + landing.SizesSplit + "'"
+	if !strings.Contains(out, expectedSplitSizes) && !strings.Contains(out, strings.ReplaceAll(expectedSplitSizes, "'", "\"")) {
+		t.Errorf("expected Split image sizes %q, got output:\n%s", expectedSplitSizes, out)
+	}
+
+	// 3. Cards con imagen: srcset con las tres variantes
+	expectedCardSrcSet := fmt.Sprintf(
+		"srcset='/img/card1.S.jpg %dw, /img/card1.M.jpg %dw, /img/card1.L.jpg %dw'",
+		image.VariantS.Width(), image.VariantM.Width(), image.VariantL.Width(),
+	)
+	if !strings.Contains(out, expectedCardSrcSet) && !strings.Contains(out, strings.ReplaceAll(expectedCardSrcSet, "'", "\"")) {
+		t.Errorf("expected Card image to contain srcset %q, got output:\n%s", expectedCardSrcSet, out)
+	}
+
+	// 4. Cards: sizes igual a SizesCard
+	expectedCardSizes := "sizes='" + landing.SizesCard + "'"
+	if !strings.Contains(out, expectedCardSizes) && !strings.Contains(out, strings.ReplaceAll(expectedCardSizes, "'", "\"")) {
+		t.Errorf("expected Card image sizes %q, got output:\n%s", expectedCardSizes, out)
+	}
+
+	// 5. Split y Cards: siguen con loading="lazy"
+	if strings.Count(out, "loading='lazy'") < 2 && strings.Count(out, "loading=\"lazy\"") < 2 {
+		t.Errorf("expected both Split and Card images to have loading='lazy', got output:\n%s", out)
+	}
+
+	// 6. Split sin imagen: no emite el media, sin pánico
+	pageNoImages := landing.New(
+		landing.Brand{Name: "Test"},
+		landing.Split("Historia Sin Imagen", "", "Parrafo"),
+		landing.Cards("Servicios Sin Imagen", landing.Card{Title: "Card sin foto"}),
+	)
+	outNoImages := pageNoImages.String()
+
+	if strings.Contains(outNoImages, "landing__media") {
+		t.Errorf("Split without image should not render media container, got:\n%s", outNoImages)
+	}
+
+	// 7. Card sin imagen: no emite la cabecera, sin pánico
+	if strings.Contains(outNoImages, "<img") {
+		t.Errorf("Cards without image should not render any <img tag, got:\n%s", outNoImages)
+	}
 }
 
 func TestRenderPagesDuplicateDescriptionPanic(t *testing.T) {
