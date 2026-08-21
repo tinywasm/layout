@@ -2,7 +2,7 @@
 PLAN: "feat(landing): srcset en las imagenes de Split y Cards"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 980339425852960845
 ---
 
