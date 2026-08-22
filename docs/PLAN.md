@@ -2,8 +2,9 @@
 PLAN: "fix: el login usa Page como fondo, no Primary"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 17724461717170660930
+PR: https://github.com/tinywasm/layout/pull/28
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
