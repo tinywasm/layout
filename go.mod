@@ -12,7 +12,7 @@ require (
 	github.com/tinywasm/image v0.1.0
 	github.com/tinywasm/input v0.0.3
 	github.com/tinywasm/model v0.1.4
-	github.com/tinywasm/orm v0.11.6
+	github.com/tinywasm/orm v0.11.10
 	github.com/tinywasm/storage v0.0.2
 	github.com/tinywasm/svg v0.3.0
 	github.com/tinywasm/time v0.5.2
@@ -31,6 +31,6 @@ require (
 	github.com/tinywasm/fetch v0.1.24 // indirect
 	github.com/tinywasm/font v0.0.4 // indirect
 	github.com/tinywasm/js v0.0.6 // indirect
-	github.com/tinywasm/json v0.5.21 // indirect
-	github.com/tinywasm/router v0.1.22 // indirect
+	github.com/tinywasm/json v0.5.23 // indirect
+	github.com/tinywasm/router v0.1.27 // indirect
 )
