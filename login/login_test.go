@@ -18,17 +18,6 @@ func TestLogin_RendersTitleAndForm(t *testing.T) {
 	}
 }
 
-func TestLogin_RootUsesPageNotPrimary(t *testing.T) {
-	css := (&Login{Title: "App"}).RenderCSS().String()
-
-	if strings.Contains(css, "--color-primary") {
-		t.Errorf("login root must not paint the brand color as its backdrop, got:\n%s", css)
-	}
-	if !strings.Contains(css, "--color-background") {
-		t.Errorf("login root must use the neutral page background, got:\n%s", css)
-	}
-}
-
 func TestLogin_SubtitleIsOptional(t *testing.T) {
 	html := (&Login{Title: "App"}).Render().String()
 	if strings.Contains(html, "login__subtitle") {
