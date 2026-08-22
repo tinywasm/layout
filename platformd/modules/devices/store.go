@@ -53,9 +53,9 @@ func (c *memCaller) Call(op string, args model.Encodable, into model.Decodable, 
 	case "device_list":
 		if dl, ok := into.(*deviceList); ok {
 			var rows []*Device
-			err = orm.ReadAll(c.db.Query(&Device{}),
-				func() *Device { return &Device{} },
-				func(m *Device) { rows = append(rows, m) },
+			err = c.db.Query(&Device{}).ReadAll(
+				func() model.Model { return &Device{} },
+				func(m model.Model) { rows = append(rows, m.(*Device)) },
 			)
 			// Newest first: mem has no timestamp/sequence column, so this just
 			// reverses creation order — the same order Create() appended in.

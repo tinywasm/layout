@@ -57,9 +57,9 @@ func (c *memCaller) Call(op string, args model.Encodable, into model.Decodable, 
 	case "visit_list":
 		if vl, ok := into.(*visitList); ok {
 			var rows []*Visit
-			err = orm.ReadAll(c.db.Query(&Visit{}),
-				func() *Visit { return &Visit{} },
-				func(m *Visit) { rows = append(rows, m) },
+			err = c.db.Query(&Visit{}).ReadAll(
+				func() model.Model { return &Visit{} },
+				func(m model.Model) { rows = append(rows, m.(*Visit)) },
 			)
 			for i := len(rows) - 1; i >= 0 && err == nil; i-- {
 				dst := vl.Append().(*Visit)
