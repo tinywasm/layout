@@ -23,15 +23,19 @@ func (l *Login) RenderCSS() *css.Stylesheet {
 		// docks against, so the mark stays pinned to THIS screen's corner
 		// even if a host renders Login somewhere other than the document root.
 		//
-		// Primary is the whole point of the screen: see the type's own doc.
-		// It also does the work no shadow can — a card only reads as elevated
-		// against something it is clearly ON, and Page-on-Page left the form
-		// looking like loose markup rather than a front door.
+		// Page, not Primary: a full-bleed wash of the brand color only reads
+		// well when that color happens to be muted enough to cover a whole
+		// viewport — which is not guaranteed, and the rest of this token
+		// system already treats Primary as the paint for a bounded control (a
+		// button), never a surface (see widget/style's own Surface.resolve()).
+		// A card only reads as elevated against something it is clearly ON;
+		// Page's own neutral tone against Panel/Inset already does that job
+		// without betting the whole screen on one brand color's saturation.
 		Root(
 			style.Cover(),
 			style.CenterContent(),
 			style.Anchor(),
-			style.As(style.Primary),
+			style.As(style.Page),
 			style.Pad(style.Space4),
 		).
 		// Inset, not Panel or Page: fieldset paints its input As(Page) — the
