@@ -2,6 +2,8 @@
 PLAN: "fix: el login usa Page como fondo, no Primary"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 17724461717170660930
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
