@@ -29,17 +29,18 @@ var (
 )
 
 // Login is the pre-authentication screen: an elevated card (title, subtitle,
-// form) centered on a full-bleed brand backdrop, with an optional corner mark
-// pinned independently of that card — the reference this productionizes
+// form) centered on the app's own page background, with an optional corner
+// mark pinned independently of that card — the reference this productionizes
 // (a legacy pa100t deployment) keeps its own crest bottom-left regardless of
 // how tall the form above it grows, which a mark living inside the card would
 // not survive.
 //
-// The backdrop is the app's Primary, not its page background: this is the one
-// screen an app gets that is nothing but itself, before any module owns the
-// frame, and a card floating on the brand colour is what separates a product's
-// front door from a form someone left on a grey page. Primary resolves from
-// --color-primary at run time, so each app brings its own.
+// The backdrop is Page — the same neutral surface every other screen sits
+// on — not Primary: a brand color saturated enough to read well on a button
+// rarely survives being stretched across an entire viewport, and the token
+// system already reserves Primary for bounded controls (see widget/style's
+// own Surface.resolve()). The card itself, plus an optional LogoMark, carry
+// the brand instead of the backdrop.
 //
 // It owns none of the form's fields or validation — Form is built by the
 // composition root exactly like Platform.Modules are, so this package never
