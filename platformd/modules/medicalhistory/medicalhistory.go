@@ -14,6 +14,7 @@ import (
 	"github.com/tinywasm/layout/crudview"
 	"github.com/tinywasm/layout/platformd"
 	"github.com/tinywasm/model"
+	"github.com/tinywasm/orm"
 	"github.com/tinywasm/svg"
 	"github.com/tinywasm/unixid"
 	"github.com/tinywasm/view"
@@ -39,9 +40,9 @@ func (p requirePatient) Filter(term string) []view.Item {
 		return nil
 	}
 	var rows []*Visit
-	_ = visitDB.Query(&Visit{}).Where("patient").Eq(term).ReadAll(
-		func() model.Model { return &Visit{} },
-		func(m model.Model) { rows = append(rows, m.(*Visit)) },
+	_ = orm.ReadAll(visitDB.Query(&Visit{}).Where("patient").Eq(term),
+		func() *Visit { return &Visit{} },
+		func(m *Visit) { rows = append(rows, m) },
 	)
 	items := make([]view.Item, len(rows))
 	for i, v := range rows {
