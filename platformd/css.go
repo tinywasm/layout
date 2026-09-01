@@ -128,17 +128,26 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// EdgeToEdge: the rail is welded to the window frame on its right and
 		// bottom, where a radius leaves two background slivers.
 		//
-		// Secondary, not Panel: same background as Panel but no border. Panel's
-		// border drew on that same welded edge — a 1px outline-grey line the
-		// selected item's Primary fill sat behind, visible as a mismatched seam
-		// rather than the flush edge EdgeToEdge already promises. The mobile
-		// drawer below keeps its own explicit Panel: it floats over the
-		// backdrop rather than sitting flush against the window, so its border
-		// is a real divider, not a seam against nothing.
+		// Primary, not Secondary: the rail IS the primary surface. An available
+		// route paints nothing of its own and reads white (ColorOnPrimary,
+		// inherited) directly on this fill; only the current route commits to a
+		// distinct block (AccentInverse). Under css.SetGradient the whole rail
+		// carries the gradient as ONE surface — no per-item box, no seams
+		// between tiles. EdgeToEdge keeps it welded and square to the window
+		// frame; the mobile drawer below and the hover float both restate
+		// As(Primary) so the chrome reads as one colour everywhere.
+		//
+		// GradientAngle: the rail sits at the inline-end, where a panel frame's
+		// own gradient has run toward its light end. Re-angling the rail's copy
+		// to 315° (the mirror of the common 135° theme) puts the light stop at
+		// its leading edge too, so the two independently-painted gradients meet
+		// light-on-light and the join reads softer. Inert until an app sets a
+		// gradient — see style.GradientAngle.
 		Part(widget.Part("menu"),
 			style.Anchor(),
 			style.Stack(style.Space1),
-			style.As(style.Secondary),
+			style.As(style.Primary),
+			style.GradientAngle("315deg"),
 			style.Fill(),
 			style.Grow(),
 			style.EdgeToEdge(),
@@ -175,14 +184,24 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Pad(style.Space2),
 			style.Width(style.Full),
 		).
+		// Pad(Space1): the inset that, with navbar's own Space1 stack gap, gives
+		// every nav item the SAME clearance on all four sides instead of items
+		// welded to the rail edge. Mobile drops it back to flush (below) so the
+		// drawer rows keep their edge-to-edge DividerBelow hairline.
 		Part(widget.Part("drawer-panel"),
+			style.Stack(style.Space1),
+			style.Pad(style.Space1),
+			style.Fill(),
+		).
+		// Space1 gap between items (was SpaceNone): on desktop the items read as
+		// a spaced list of rounded chips. Mobile restores SpaceNone (below) so
+		// rows sit flush and the DividerBelow line is their separator.
+		Part(widget.Part("navbar"),
 			style.Stack(style.Space1),
 			style.Fill(),
 		).
-		Part(widget.Part("navbar"),
-			style.Stack(style.SpaceNone),
-			style.Fill(),
-		).
+		On(css.Mobile, widget.Part("navbar"), style.Stack(style.SpaceNone)).
+		On(css.Mobile, widget.Part("drawer-panel"), style.Pad(style.SpaceNone)).
 		// No Fill: spreading the items down the rail makes every row resize the
 		// moment the panel floats out and stops being full height. A rail packed
 		// from the top measures the same collapsed and expanded.
@@ -190,14 +209,26 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Row(style.SpaceNone),
 			style.KeepSize(),
 		).
-		// Glyph, not As: an item that is merely available is a coloured icon on
-		// the rail's own surface. Only the current one is filled.
+		// An available route paints NOTHING of its own: transparent box, white
+		// icon and label inherited (ColorOnPrimary) from the Primary rail it
+		// sits on. So the rail reads as one continuous Primary surface — under
+		// css.SetGradient, one gradient — instead of a column of per-item
+		// boxes with seams between them. The current route (When(widget.Current)
+		// → AccentInverse, below) is the only filled block; hover/focus
+		// (AccentHover) is the only other fill. Both are derived surfaces that
+		// emit `background-image: none` (widget/style emit_decls), so the rail's
+		// gradient cannot bleed through and overpaint their amber.
+		// Round(RadiusSm): every item — available, current, hovered — carries the
+		// SAME rounded shape always. Hover/focus/current change only the fill
+		// COLOUR, never the geometry; the items are inset (drawer-panel Pad) so
+		// a rounded corner never butts the rail's welded edge. Mobile drops the
+		// radius (below): there the rows are flush with a DividerBelow seam.
 		Part(widget.Part("nav-link"),
 			style.Row(style.Space1),
 			style.Pad(style.Space2),
 			style.Width(style.Full),
 			style.CenterContent(),
-			style.Glyph(style.Primary),
+			style.Round(style.RadiusSm),
 			style.Animate(style.MotionFast),
 		).
 		// A bare <svg> with no box falls back to 300x150 and wrecks the rail.
@@ -213,10 +244,15 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// Left-aligned on a phone too: the drawer shows icon and label together,
 		// which is the same row the expanded rail draws, so it aligns the same
 		// way. Centring is only right for a lone icon.
+		// DividerBelow: on a phone the drawer rows are flush (navbar is
+		// Stack(SpaceNone)), so a hairline under each item is what separates
+		// them — a cleaner, more finished read than a plain colour block.
 		On(css.Mobile, widget.Part("nav-link"),
 			style.Row(style.Space2),
 			style.Pad(style.Space2),
 			style.StartContent(),
+			style.Round(style.RadiusNone),
+			style.DividerBelow(),
 		).
 		OnlyOn(css.Mobile, widget.Part("link-text"),
 			style.Row(style.SpaceNone),
@@ -230,19 +266,12 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// "current" language as the mobile hamburger button and crudview's
 		// open action.
 		//
-		// Round(RadiusNone): AccentInverse's own default is radius-sm, which
-		// rounds all four corners of the fill including the two welded to the
-		// rail's own edge — menu is EdgeToEdge specifically so IT has none
-		// there (see "menu" Part above), so a rounded badge butting against
-		// that square corner reads as a disconnected blob instead of a block
-		// that belongs to the rail. Square on every side is what the DSL can
-		// express today; Round() has no per-corner variant, so the "grows out
-		// of the edge like a tab" look (rounded only on the side facing the
-		// stage) is not reachable from here without a new primitive in
-		// tinywasm/widget.
+		// No Round() here: AccentInverse's own default radius-sm is exactly what
+		// the base nav-link now carries, so "current" is the SAME rounded chip
+		// as every other item, only amber. The items are inset (drawer-panel
+		// Pad), so a rounded corner never butts the rail's welded edge.
 		When(widget.Current, widget.Part("nav-link"),
 			style.As(style.AccentInverse),
-			style.Round(style.RadiusNone),
 		).
 		// El control entero se ilumina, no solo el glifo: el hover habla del
 		// mismo ámbar al que apunta. AccentHover, no AccentWash: AccentWash
@@ -280,10 +309,13 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		CueWithinHover(widget.Hover, widget.Part("menu"), widget.Part("drawer-panel"),
 			style.Docked(style.Parent, style.EdgeTop, style.SideEnd, style.SpaceNone),
 			style.Width(style.Content),
-			style.As(style.Panel),
+			style.As(style.Primary),
 			style.Raise(style.Floating),
 			style.Pad(style.Space1),
-			style.Round(style.RadiusMd),
+			// RadiusSm, matching the nav items inside it — the float and its
+			// chips share one corner radius instead of a RadiusMd shell around
+			// RadiusSm children.
+			style.Round(style.RadiusSm),
 			style.Stack(style.Space1),
 		).
 		// The labels only exist while the rail is expanded — or on a phone,
@@ -401,11 +433,18 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.Pad(style.Space2),
 		).
 		// On a phone the rail stops being a column and becomes a panel that
-		// slides in from the edge, gated by the same Open state as the overlay.
+		// slides in from the inline-end edge, gated by the same Open state as
+		// the overlay. Drawer(..., MotionSlow): it parks off-screen on a
+		// transform and RevealedBy transitions it in AND back out, so closing
+		// is the same slide as opening — not a hard cut.
+		// As(Primary), like the desktop rail: the drawer is the same chrome
+		// surface. The nav rows are already flush (navbar is Stack(SpaceNone)),
+		// so the per-item DividerBelow hairline is their separator; this Stack
+		// only spaces brand → navbar → identity.
 		On(css.Mobile, widget.Part("menu"),
-			style.Drawer(style.SideEnd, style.TwoThirds),
+			style.Drawer(style.SideEnd, style.TwoThirds, style.MotionSlow),
 			style.Stack(style.Space1),
-			style.As(style.Panel),
+			style.As(style.Primary),
 			style.RevealedBy(widget.Open),
 		)
 }

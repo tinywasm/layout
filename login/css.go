@@ -10,33 +10,13 @@ import (
 // RenderCSS defines the login screen's visual contract using the style DSL.
 func (l *Login) RenderCSS() *css.Stylesheet {
 	return style.For(l).
-		// Cover, not Fill+FillCentered: Fill's height:100% only resolves
-		// against an ancestor with an explicit height, and nothing between
-		// this root and <body> declares one (a host's own SPA root included)
-		// — the card rendered shrink-wrapped in the top-left corner instead
-		// of centered, height:100% resolving to 0. Cover is "the outermost
-		// frame of an application shell" for exactly this reason: 100dvh is
-		// definite regardless of ancestor chain. CenterContent is a separate
-		// field, not another flowType, so it layers on top of Cover's own
-		// flex-column without the conflict Stack+MediaBox or Fill+FillCentered
-		// would have. Anchor makes this the positioned ancestor PartMark
-		// docks against, so the mark stays pinned to THIS screen's corner
-		// even if a host renders Login somewhere other than the document root.
-		//
-		// Page, not Primary: a full-bleed wash of the brand color only reads
-		// well when that color happens to be muted enough to cover a whole
-		// viewport — which is not guaranteed, and the rest of this token
-		// system already treats Primary as the paint for a bounded control (a
-		// button), never a surface (see widget/style's own Surface.resolve()).
-		// A card only reads as elevated against something it is clearly ON;
-		// Page's own neutral tone against Panel/Inset already does that job
-		// without betting the whole screen on one brand color's saturation.
 		Root(
 			style.Cover(),
 			style.CenterContent(),
-			style.Anchor(),
 			style.As(style.Page),
 			style.Pad(style.Space4),
+			style.Backdrop(style.Viewport),
+			style.Veil(),
 		).
 		// Inset, not Panel or Page: fieldset paints its input As(Page) — the
 		// whitest surface the theme has — on the stated assumption that the
@@ -58,38 +38,30 @@ func (l *Login) RenderCSS() *css.Stylesheet {
 			style.Round(style.RadiusLg),
 			style.Raise(style.Floating),
 			style.Pad(style.Space6),
+			style.Backdrop(style.Parent),
+			style.Veil(),
 		).
 		// Space1, against the card's Space6: title and subtitle are one block
 		// that happens to be set in two sizes, and spacing them like siblings
 		// of the form would read as three unrelated things stacked up.
 		Part(PartHeader,
-			style.Stack(style.Space1),
+			style.Stack(style.Space3),
 			style.CenterContent(),
 		).
-		// TextXl, not Text2xl: 2rem is a page banner, and set inside a card
-		// this narrow it wrapped the app's own name. The title leads the card;
-		// it does not have to dominate the viewport to do that.
-		Part(PartTitle,
-			style.FontSize(style.TextXl),
-			style.FontWeight(style.WeightBold),
-		).
-		// Glyph(Subtle), not a second surface: the subtitle is muted TEXT on
-		// the card it already sits on — painting it a fill would make it a
-		// banner competing with the title it is supposed to serve.
-		Part(PartSubtitle,
-			style.FontSize(style.TextSm),
-			style.Glyph(style.Subtle),
-		).
-		// MediaBox, not IconBox: IconBox sizes an inline <svg> glyph off the
-		// font metrics it recolors with currentColor, wrong for an <img> —
-		// an arbitrary crest or seal keeps its own colors and needs its own
-		// box. Docked pins it to the viewport corner independent of the
-		// card's own height, matching the legacy reference this screen
-		// productionizes: the crest sits bottom-left regardless of how
-		// tall the form above grows.
+		// Logo sits inside the header, above the title, centered and constrained.
+		// Width Third (~33% of the Compact card) keeps the falcon crest readable
+		// without covering the form. Stack Space3 separates logo → title → subtitle.
 		Part(PartMark,
 			style.MediaBox(style.AspectSquare),
-			style.Docked(style.Viewport, style.EdgeBottom, style.SideStart, style.Space4),
+			style.Width(style.Third),
+		).
+		Part(PartTitle,
+			style.FontSize(style.Text2xl),
+			style.FontWeight(style.WeightBold),
+		).
+		Part(PartSubtitle,
+			style.FontSize(style.TextBase),
+			style.Glyph(style.Primary),
 		).
 		Stylesheet()
 }

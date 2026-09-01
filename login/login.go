@@ -78,9 +78,11 @@ func (l *Login) WidgetName() widget.Name { return NameLogin }
 func (l *Login) WidgetKind() widget.Kind { return widget.Region }
 
 func (l *Login) Render() *Element {
-	header := Div().Set(clsHeader.AsAttr()).Child(
-		H1().Set(clsTitle.AsAttr()).Text(l.Title),
-	)
+	header := Div().Set(clsHeader.AsAttr())
+	if l.LogoMark != "" {
+		header.Child(NewElement("img").NoCloseTag().Set(clsMark.AsAttr()).Attr("src", l.LogoMark).Attr("alt", ""))
+	}
+	header.Child(H1().Set(clsTitle.AsAttr()).Text(l.Title))
 	if l.Subtitle != "" {
 		header.Child(P().Set(clsSubtitle.AsAttr()).Text(l.Subtitle))
 	}
@@ -89,10 +91,6 @@ func (l *Login) Render() *Element {
 	root.Child(
 		Div().Set(clsCard.AsAttr()).Child(header, l.Form),
 	)
-
-	if l.LogoMark != "" {
-		root.Child(NewElement("img").NoCloseTag().Set(clsMark.AsAttr()).Attr("src", l.LogoMark).Attr("alt", ""))
-	}
 
 	return root
 }

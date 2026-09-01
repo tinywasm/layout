@@ -37,7 +37,7 @@ const (
 )
 
 // ListView is the row-rendering half of a CrudView. targetlist.TargetList
-// (plain label rows) and targethour.TargetHour (a leading date/time badge
+// (plain label rows) and targetdate.TargetDate (a leading date/time badge
 // instead of a plain label — see view.Item's LeadTop/Main/Bottom) both
 // satisfy it, so Config.List can swap one for the other without CrudView
 // ever knowing which it got.

@@ -38,10 +38,13 @@ func ruleBlock(cssStr, want string) string {
 	return body[:end]
 }
 
-// TestRightPanel_EdgeAsserts guards PLAN v0.2.0 item 5: the panel is welded to
-// the application frame and must be square, while interior parts keep their
-// radius. The aside-header is the deliberate exception: it sheds every
-// treatment (the consumer's control brings its own), so it carries no radius.
+// TestRightPanel_EdgeAsserts guards two things: the panel is welded to the
+// application frame and must be square, and the title is inherited ink on that
+// Primary panel — NOT a surface of its own. It carries no background and no
+// radius: the panel behind it is the colour, and a fill here would re-origin a
+// gradient Primary theme across the heading's own box (a detached rectangle).
+// This supersedes the earlier "PLAN v0.2.0 item 5" contract that had the title
+// keep an interior radius.
 func TestRightPanel_EdgeAsserts(t *testing.T) {
 	r := &RightPanel{
 		Module:        &mockModule{id: "test-module"},
@@ -55,10 +58,10 @@ func TestRightPanel_EdgeAsserts(t *testing.T) {
 
 	cssStr := r.RenderCSS().String()
 
-	// The mobile strip re-declares the root and the title inside a media query
-	// that comes after the desktop rules, so LastIndex would land there. The
-	// frame's square corners and the title's radius are desktop contracts;
-	// assert them on everything before the first @media block.
+	// The mobile strip re-declares the root inside a media query that comes
+	// after the desktop rules, so LastIndex would land there. The frame's
+	// square corners are a desktop contract; assert on everything before the
+	// first @media block.
 	desktop := cssStr
 	if i := strings.Index(cssStr, "@media"); i != -1 {
 		desktop = cssStr[:i]
@@ -69,8 +72,11 @@ func TestRightPanel_EdgeAsserts(t *testing.T) {
 			t.Errorf("%s must be squared at the frame, block:\n%s", sel, b)
 		}
 	}
-	if b := ruleBlock(desktop, ".rp__title {"); !fmt.Contains(b, "border-radius") {
-		t.Errorf("interior title must keep its radius, block:\n%s", b)
+	if b := ruleBlock(desktop, ".rp__title {"); fmt.Contains(b, "border-radius") {
+		t.Errorf(".rp__title must NOT carry a surface radius — it is inherited ink on Root's Primary panel, block:\n%s", b)
+	}
+	if b := ruleBlock(desktop, ".rp__title {"); fmt.Contains(b, "background") {
+		t.Errorf(".rp__title must NOT carry a background — the panel behind it is the colour, block:\n%s", b)
 	}
 }
 

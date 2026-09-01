@@ -6,11 +6,13 @@ import "github.com/tinywasm/svg/sprite"
 
 // IconSvg registers the default platform chrome glyphs: the identity fallback,
 // the brand fallback and the menu button. The full page sprite is the MERGE of
-// every module's IconSvg() (platformd + crudview + components + the demo
-// modules), assembled by tinywasm/ssr and injected inline in <body>.
+// every module's IconSvg() (platformd + crudview + components + the demo app,
+// github.com/tinywasm/app-demo), assembled by tinywasm/ssr and injected inline
+// in <body>.
 //
-// Content icons (what a module calls itself) live with their module, in
-// platformd/modules/*: the chassis has no business drawing "home" or "devices".
+// Content icons (what a module calls itself) live with their module, in the
+// consuming application's repository: the chassis has no business drawing "home"
+// or "devices".
 func (p *Platform) IconSvg() *sprite.Sprite {
 	return sprite.NewSprite(
 		// The default identity glyph. A consumer may return its own from

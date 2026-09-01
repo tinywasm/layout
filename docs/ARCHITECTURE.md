@@ -34,10 +34,13 @@ panic on the second page. Components (`infobar`, `sitenav`, `herobanner`,
 handed to `Child()` as itself serializes from its zero embedded `Element` and
 disappears as an empty `<></>`.
 
-Demo modules live one per package under `platformd/modules/`, each owning its
-view, its data and its icon (declared shared in the untagged file, drawn in a
-`//go:build !wasm` `svg.go` via `sprite.Define`). The chassis only ships its own
-chrome glyphs (`IconUser`, `IconBrand`, the menu button): content icons are a
+The reference demo (the `about`, `devices` and `medicalhistory` modules) lives
+in its own repo — [github.com/tinywasm/app-demo](https://github.com/tinywasm/app-demo) —
+so the demo's ORM/storage/input dependencies never enter layout's `go.mod`.
+Each module owns its view, its data and its icon (declared shared in the
+untagged file, drawn in a `//go:build !wasm` `svg.go` via `sprite.Define`). The
+chassis only ships its own chrome glyphs
+(`IconUser`, `IconBrand`, the menu button): content icons are a
 module decision, and the rail renders whatever `Module.Icon()` returns.
 
 Three tests in `conformance_test.go` make the split un-reintroducible:

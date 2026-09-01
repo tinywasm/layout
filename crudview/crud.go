@@ -30,7 +30,7 @@ type Config struct {
 
 	// List builds the row-rendering widget. Optional: nil installs a
 	// targetlist.TargetList factory — the ergonomic default, not a decision
-	// imposed: pass a targethour.TargetHour (or anything satisfying
+	// imposed: pass a targetdate.TargetDate (or anything satisfying
 	// ListView) factory instead when the data wants a leading date/time
 	// badge (view.Item's LeadTop/Main/Bottom) rather than a plain label.
 	List func(selected *dom.SignalString, onSelect func(view.Item), onDelete func(string)) ListView

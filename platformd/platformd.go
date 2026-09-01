@@ -427,10 +427,11 @@ func (p *Platform) Render() *Element {
 
 	hamburger := Button().Set(clsHamburger.AsAttr()).
 		Attr("aria-label", "Menu").
-		// Open aquí significa "el cromo está desplegado", que es lo mismo que
-		// significa en el cajón: un control guardado no está desplegado. La señal
-		// dice lo contrario de lo que se pinta, de ahí la negación.
-		BindStateFunc(widget.Open, func() bool { return !p.navStowed.Get() }).
+		// Open aquí significa "el cromo está desplegado": el botón se pinta
+		// mientras NO está guardado por scroll Y el cajón NO está abierto. Con
+		// el cajón abierto el botón sería redundante (el cajón ya ocupa dos
+		// tercios de la pantalla) y se cerraría tocando el velo, no el botón.
+		BindStateFunc(widget.Open, func() bool { return !p.navStowed.Get() && !p.menuOpen.Get() }).
 		BindChildren(p.navIcon).
 		ID("pd-hamburger-btn")
 	hamburger.On("click", func(Event) {

@@ -53,8 +53,12 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.ControlBox(),
 			style.CenterContent(),
 		).
+		// No As(): action-new is the icon INSIDE the Primary "action" button, not
+		// a surface of its own. As(Primary) gave it a second Primary box —
+		// background + border-radius + (under css.SetGradient) its own gradient
+		// slice — a visible square over the button. It inherits the button's
+		// white currentColor, exactly like action-cancel below.
 		Part(widget.Part("action-new"),
-			style.As(style.Primary),
 			style.IconBox(style.IconMd),
 		).
 		Part(widget.Part("action-cancel"),

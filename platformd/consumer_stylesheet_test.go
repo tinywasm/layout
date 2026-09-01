@@ -70,6 +70,101 @@ func TestHoverOnANavLinkDoesNotResizeIt(t *testing.T) {
 	}
 }
 
+// blocksFor returns every declaration block whose selector line is exactly
+// `sel {` (standalone — not part of a grouped or state selector), across all
+// @layers.
+func blocksFor(cssStr, sel string) []string {
+	want := "\n" + sel + " {"
+	var out []string
+	for i := 0; ; {
+		j := strings.Index(cssStr[i:], want)
+		if j == -1 {
+			return out
+		}
+		out = append(out, ruleBlock(cssStr[i+j:], sel+" {"))
+		i += j + len(want)
+	}
+}
+
+// TestRailIsOnePrimarySurface pins the rail's colour model: the menu IS the
+// Primary surface; an available item paints nothing of its own (transparent,
+// white ink inherited); only the current item and the hover cue commit to a
+// distinct Accent fill — and those, being derived surfaces, emit
+// `background-image: none` so a css.SetGradient rail cannot bleed its gradient
+// over their amber.
+func TestRailIsOnePrimarySurface(t *testing.T) {
+	cssStr := (&Platform{}).RenderCSS().String()
+
+	// The menu fills with Primary.
+	menu := strings.Join(blocksFor(cssStr, ".pd__menu"), "\n---\n")
+	if !Contains(menu, "background-color: "+css.ColorPrimary.LightValue()) {
+		t.Errorf(".pd__menu must fill with ColorPrimary (%s), blocks:\n%s", css.ColorPrimary.LightValue(), menu)
+	}
+	// The rail re-angles the theme gradient to 315° so its light stop lands at
+	// the edge that meets a panel frame — the join reads softer.
+	if !Contains(menu, "background-image: linear-gradient(315deg, var(--color-primary-image-stops));") {
+		t.Errorf(".pd__menu must re-angle the family gradient via GradientAngle(\"315deg\"), blocks:\n%s", menu)
+	}
+	if !Contains(menu, css.ColorOnPrimary.LightValue()) {
+		t.Errorf(".pd__menu must carry ColorOnPrimary (%s) so items inherit white ink, blocks:\n%s", css.ColorOnPrimary.LightValue(), menu)
+	}
+
+	// The available item paints no fill and no border stroke — only a shared
+	// rounded shape (RadiusSm), so hover/current change colour, never geometry.
+	for _, b := range blocksFor(cssStr, ".pd__nav-link") {
+		if Contains(b, "background-color:") || Contains(b, "background-image:") {
+			t.Errorf("an available nav item must paint no background (the rail behind it is the colour), block:\n%s", b)
+		}
+		if Contains(b, "border:") || Contains(b, "outline:") {
+			t.Errorf("an available nav item must carry no border/outline stroke, block:\n%s", b)
+		}
+	}
+	// Desktop base rule (before the first @media) carries the shared radius.
+	desktop := cssStr
+	if i := strings.Index(cssStr, "@media"); i != -1 {
+		desktop = cssStr[:i]
+	}
+	if b := strings.Join(blocksFor(desktop, ".pd__nav-link"), "\n"); !Contains(b, "border-radius: var(--radius-sm") {
+		t.Errorf("the base nav item must carry the shared RadiusSm so every state is the same rounded chip, block:\n%s", b)
+	}
+
+	// The gate: current + hover fills must not let a rail gradient through.
+	if cur := ruleBlock(cssStr, `.pd__nav-link[data-current="true"] {`); !Contains(cur, css.ColorAccent.LightValue()) || !Contains(cur, "background-image: none") {
+		t.Errorf("current nav item must be ColorAccent bg + `background-image: none`, block:\n%s", cur)
+	}
+	if hov := ruleBlock(cssStr, ".pd__nav-link:hover {"); !Contains(hov, "background-image: none") {
+		t.Errorf("hovered nav item must emit `background-image: none` so a rail gradient cannot overpaint its amber, block:\n%s", hov)
+	}
+
+	// Mobile: each drawer row carries a block-end hairline (DividerBelow). The
+	// device rule is split across several `.pd__nav-link {` blocks inside the
+	// max-width media query, so check their union.
+	mobStart := strings.Index(cssStr, "@media (max-width")
+	if mobStart == -1 {
+		t.Fatalf("expected a mobile @media block")
+	}
+	mobileNav := strings.Join(blocksFor(cssStr[mobStart:], ".pd__nav-link"), "\n---\n")
+	if !Contains(mobileNav, "border-block-end: 1px solid") {
+		t.Errorf("mobile drawer nav rows must carry a DividerBelow hairline, blocks:\n%s", mobileNav)
+	}
+
+	// The mobile drawer slides in AND out: it parks on a transform (never
+	// display:none) and the RevealedBy state is the arrived slide, so closing
+	// is choreographed, not a hard cut.
+	mob := cssStr[mobStart:]
+	menuBase := strings.Join(blocksFor(mob, ".pd__menu"), "\n---\n")
+	if !Contains(menuBase, "transform: translateX(100%)") || !Contains(menuBase, "transition: transform var(--duration-slow") {
+		t.Errorf("parked mobile .pd__menu must slide from translateX(100%%) with the slow transition, blocks:\n%s", menuBase)
+	}
+	if Contains(menuBase, "display: none") {
+		t.Errorf("the mobile drawer must not use display:none — it slides, blocks:\n%s", menuBase)
+	}
+	menuOpen := ruleBlock(mob, `.pd__menu[data-open="true"] {`)
+	if !Contains(menuOpen, "transform: translateX(0)") || !Contains(menuOpen, "transition: transform var(--duration-slow") {
+		t.Errorf("revealed .pd__menu must animate to translateX(0), not flip display, block:\n%s", menuOpen)
+	}
+}
+
 // TestDrawerPanelFloatIsFinePointerScoped is the net that keeps the double menu
 // off a phone: the floating drawer-panel must live inside
 // `@media (hover: hover)` and never in the plain states layer. A touch tap

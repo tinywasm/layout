@@ -61,9 +61,15 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 			style.Row(style.Space2),
 			style.Center(),
 		).
-		// Explicit now that the reset stops <h1> from carrying 2em of its own.
+		// The heading is TEXT on Root's Primary surface — it takes only the
+		// inherited on-primary ink (Root is style.As(style.Primary), and color
+		// inherits through the reset, which sets no color on h1..h6). It must
+		// NOT carry style.As() of its own: As() is background + border + radius
+		// as well as text, and under a gradient Primary theme (css.SetGradient)
+		// that fill re-origins the gradient across the heading's own box and
+		// paints a detached rectangle over the panel. FontSize is explicit
+		// because the reset forces h1 font-size: inherit.
 		Part(partTitle,
-			style.As(style.Primary),
 			style.FontSize(style.Text2xl),
 			style.FontWeight(style.WeightBold),
 		).
