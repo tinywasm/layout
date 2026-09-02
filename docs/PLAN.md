@@ -3,8 +3,6 @@ PLAN: "feat!: crudview bulk actions — one options button, selection mode, batc
 TAG: v0.2.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
-SESSION: 17968058974777704938
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
