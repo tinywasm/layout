@@ -117,7 +117,13 @@ type CrudView struct {
 	deleteLabel   *SignalString // its label, for the confirmation message
 	composing     *SignalBool   // "+" was pressed and nothing saved/cancelled yet (see active())
 	mode          *SignalString // single source of truth for mode (crudMode)
-	checkedCount  *SignalString // count of checked items in selection mode
+	checkedCount  *SignalString // count of checked items, for display only (BindText needs a string)
+	// hasChecked and hasEdits are what the commit buttons READ. checkedCount is
+	// a string because BindText needs one; comparing it back against "0" made a
+	// number's meaning depend on its rendering, and carried a dead `== ""`
+	// branch guarding an initial state that never occurs.
+	hasChecked *SignalBool
+	hasEdits   *SignalBool
 }
 
 // active reports whether the toggle button should show "↺" (cancel/undo):
@@ -138,6 +144,8 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.composing = NewBool(false)
 	v.mode = NewString(string(modeNormal))
 	v.checkedCount = NewString("0")
+	v.hasChecked = NewBool(false)
+	v.hasEdits = NewBool(false)
 
 	// The list owns row rendering + the ⋮ menu and shares the selected signal
 	// so its highlight follows the form. New resolves Config.List's default
@@ -154,6 +162,7 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.list = buildList(v.selected, v.selectAction)
 	v.list.OnCheckedChange(func(n int) {
 		v.checkedCount.Set(fmt.Sprintf("%d", n))
+		v.hasChecked.Set(n > 0)
 	})
 
 	// The filter control reports terms; crudview owns what a term means.
@@ -380,11 +389,13 @@ func (v *CrudView) setMode(m crudMode) {
 		if m == modeEditing && v.form != nil {
 			v.form.Reset()
 			v.form.MarkPristine()
+			v.hasEdits.Set(false) // a blank form has nothing to apply yet
 		}
 	} else {
 		if v.list != nil {
 			v.list.SetSelectMode(false)
 		}
+		v.hasEdits.Set(false)
 	}
 }
 
@@ -464,7 +475,14 @@ func (v *CrudView) saveAction(saver view.Saver) {
 // presenter cannot save (standalone/read-only views) or when in bulk editing mode.
 func (v *CrudView) autoSaveAction() {
 	if v.mode != nil && v.mode.Get() == string(modeEditing) {
-		return // Bulk edit mode: changes are queued until explicit bulk apply
+		// Bulk edit: nothing is persisted per field. What a commit DOES change
+		// is whether there is anything to apply, so the apply button can be
+		// dead until the user actually edits something. Tracked here because
+		// this is the one hook the form already fires on every commit.
+		if v.form != nil && v.hasEdits != nil {
+			v.hasEdits.Set(len(v.form.DirtyFields()) > 0)
+		}
+		return
 	}
 	if saver, ok := v.Presenter.(view.Saver); ok && v.form != nil {
 		v.saveAction(saver)
@@ -515,7 +533,9 @@ func (v *CrudView) bulkDeleteAction() {
 			}
 		}
 	} else {
-		label = fmt.Sprintf("%d", len(ids))
+		// "3 records" / "3 registros", never a bare "3": the modal reads
+		// "Delete %s?", and a lone number there names nothing.
+		label = fmt.Sprintf("%d %s", len(ids), lang.Translate("records").String())
 	}
 	v.deleteID.Set("")
 	v.deleteLabel.Set(label)
@@ -536,6 +556,10 @@ func (v *CrudView) bulkEditAction() {
 	}
 	fields := v.form.DirtyFields()
 	if len(fields) == 0 {
+		// Unreachable through the UI — the apply button is disabled until
+		// hasEdits is true — so this is a belt, not a mode. Loud rather than
+		// silent: an empty change set here means a caller bypassed the button.
+		Log("crudview: bulk edit with no changed fields")
 		return
 	}
 	updater, ok := v.Presenter.(view.Updater)
@@ -635,7 +659,7 @@ func (v *CrudView) Render() *Element {
 					if v.mode.Get() == string(modeNormal) {
 						return v.active()
 					}
-					return v.checkedCount.Get() == "0" || v.checkedCount.Get() == ""
+					return !v.hasChecked.Get()
 				})).
 				Child(
 					iconCrudDelete.Render(""),
@@ -665,7 +689,11 @@ func (v *CrudView) Render() *Element {
 					if v.mode.Get() == string(modeNormal) {
 						return v.active()
 					}
-					return v.checkedCount.Get() == "0" || v.checkedCount.Get() == ""
+					// Marked rows AND something to write. Without the second
+					// half, pressing apply with an untouched form called
+					// nothing and reported nothing — a dead button that looked
+					// alive. An unpressable button needs no error message.
+					return !v.hasChecked.Get() || !v.hasEdits.Get()
 				})).
 				Child(
 					iconCrudEdit.Render(""),

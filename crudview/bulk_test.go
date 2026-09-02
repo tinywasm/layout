@@ -138,39 +138,6 @@ func TestCommitDisabledWithNothingChecked(t *testing.T) {
 	}
 }
 
-func TestBulkDeleteShipsOneCall(t *testing.T) {
-	v, caller := setupBulkTest(t, false)
-
-	v.setMode(modeDeleting)
-	v.checkedCount.Set("3")
-
-	// Set fake checked IDs on list if needed, or trigger confirm delete
-	deleter, ok := v.Presenter.(view.Deleter)
-	if !ok {
-		t.Fatal("expected presenter to implement view.Deleter")
-	}
-
-	// 3 marked -> deleter receives one call
-	err := deleter.Delete("id-1", "id-2", "id-3")
-	if err != nil {
-		t.Fatalf("unexpected delete error: %v", err)
-	}
-
-	deleteCalls := 0
-	for _, c := range caller.Calls {
-		if c.Op == "device_delete" {
-			deleteCalls++
-			sent := conformance.Payload(c.Args)
-			if !conformance.Has(sent, "ids", "id-1") || !conformance.Has(sent, "ids", "id-2") || !conformance.Has(sent, "ids", "id-3") {
-				t.Errorf("expected all 3 IDs in single Delete call, got %v", sent)
-			}
-		}
-	}
-	if deleteCalls != 1 {
-		t.Errorf("expected exactly 1 Delete call on caller, got %d", deleteCalls)
-	}
-}
-
 func TestCancelClearsSelection(t *testing.T) {
 	v, _ := setupBulkTest(t, true)
 
@@ -196,41 +163,6 @@ func TestBulkEditSuspendsAutoSave(t *testing.T) {
 		if c.Op == "device_save" {
 			t.Error("autoSaveAction called Save during modeEditing")
 		}
-	}
-}
-
-func TestBulkEditShipsOnlyDirtyFields(t *testing.T) {
-	v, caller := setupBulkTest(t, true)
-
-	v.setMode(modeEditing)
-	f := v.form
-	f.SetValues("name", "Updated Name") // touched 1 field out of name, ip
-
-	dirty := f.DirtyFields()
-	if len(dirty) != 1 || dirty[0] != "name" {
-		t.Fatalf("expected 1 dirty field 'name', got %v", dirty)
-	}
-
-	updater, ok := v.Presenter.(view.Updater)
-	if !ok {
-		t.Fatal("expected presenter to implement view.Updater")
-	}
-
-	rec := v.Presenter.Record()
-	_ = f.SyncValues(rec)
-	err := updater.Update([]string{"id-1", "id-2"}, rec, dirty)
-	if err != nil {
-		t.Fatalf("unexpected update error: %v", err)
-	}
-
-	updateCalls := 0
-	for _, c := range caller.Calls {
-		if c.Op == "device_update" {
-			updateCalls++
-		}
-	}
-	if updateCalls != 1 {
-		t.Errorf("expected exactly 1 Update call, got %d", updateCalls)
 	}
 }
 
@@ -274,3 +206,13 @@ func TestRowTapStillLoadsRecordInNormalMode(t *testing.T) {
 
 // Ensure form.New import is referenced
 var _ = form.New
+
+// TestBulkDeleteShipsOneCall and TestBulkEditShipsOnlyDirtyFields used to live
+// here and asserted nothing: with no way to check a row under SSR — a row is
+// marked by a DOM click — they called deleter.Delete(...) and
+// updater.Update(...) directly, which tests view, not crudview, and would pass
+// with bulkDeleteAction and bulkEditAction entirely broken.
+//
+// Both assertions now run for real in bulk_wasm_test.go, where the click is a
+// click: TestBulkDelete_ShipsEveryCheckedIDInOneCall and
+// TestBulkEdit_WritesOnlyTheFieldsTheUserTouched.
