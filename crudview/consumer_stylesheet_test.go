@@ -178,9 +178,11 @@ func TestListCardMatchesFormIndentOnMobile(t *testing.T) {
 		t.Errorf(".crudview__list must carry cardInset (padding: var(--space-1...)) on mobile, block:\n%s", b)
 	}
 	// The base rules (every breakpoint) must also still carry the pad, so the
-	// mobile list override cannot have silenced it.
-	if b := ruleBlock(cssStr, ".crudview__fields {"); !fmt.Contains(b, "padding: var(--space-1") {
-		t.Errorf(".crudview__fields base rule must carry cardInset, block:\n%s", b)
+	// mobile list override cannot have silenced it. fields keeps cardInset on
+	// its INLINE axis (the indent budget this test guards); its block inset is
+	// the larger formGap, for the legend chips the list column does not have.
+	if b := ruleBlock(cssStr, ".crudview__fields {"); !fmt.Contains(b, "padding-inline: var(--space-1") {
+		t.Errorf(".crudview__fields base rule must carry cardInset on its inline axis, block:\n%s", b)
 	}
 	if b := ruleBlock(cssStr, ".crudview__list {"); !fmt.Contains(b, "padding: var(--space-1") {
 		t.Errorf(".crudview__list base rule must carry cardInset, block:\n%s", b)

@@ -1,0 +1,101 @@
+//go:build !wasm
+
+package crudview
+
+import (
+	"testing"
+
+	"github.com/tinywasm/model"
+	"github.com/tinywasm/view"
+	"github.com/tinywasm/view/conformance"
+)
+
+// newTestCrudView builds a fully wired controller over the standard Device
+// fixture: a presenter fed by FakeCaller, Init'd and Reloaded so the list is
+// populated. The filter scope below is whatever the fixture's Filter returns
+// for a term, so a term with no matches empties the list entirely.
+func newTestCrudView(t *testing.T) *CrudView {
+	t.Helper()
+	caller := &conformance.FakeCaller{
+		Reply: func(op string, into model.Decodable) {
+			dl := into.(*DeviceList)
+			d1 := dl.Append().(*Device)
+			d1.Id = "12"
+			d1.Name = "Device One"
+			d1.Ip = "192.168.1.1"
+
+			d2 := dl.Append().(*Device)
+			d2.Id = "23"
+			d2.Name = "Device Two"
+			d2.Ip = "192.168.1.2"
+		},
+	}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+
+	v, err := New(Config{ParentID: "my-id", Presenter: p, IDs: testIDs})
+	if err != nil {
+		t.Fatalf("newTestCrudView: New: %v", err)
+	}
+	v.Init(&fakeCtx{})
+	return v
+}
+
+func TestFilterDropsASelectionItNoLongerShows(t *testing.T) {
+	// The reported bug: pick patient A, open one of A's records, switch to
+	// patient B. The list repopulates; the form must not keep A's record
+	// loaded, editable and saveable against a list that no longer shows it.
+	v := newTestCrudView(t)
+
+	// Select something the current list contains.
+	items := v.list.Items()
+	if len(items) == 0 {
+		t.Fatal("fixture must provide at least one item")
+	}
+	v.selectAction(items[0])
+	if v.selected.Get() == "" {
+		t.Fatal("precondition: a record must be selected")
+	}
+
+	// Move the scope so the filtered list can no longer contain it.
+	v.search.Set("no-such-scope-xyz")
+	v.filter()
+
+	if got := v.selected.Get(); got != "" {
+		t.Errorf("selection must be dropped when it leaves the filtered list, still holds %q", got)
+	}
+	if v.composing.Get() {
+		t.Error("a composing draft must be dropped with the scope it belonged to")
+	}
+	if v.canDelete.Get() {
+		t.Error("delete must be disarmed once nothing is selected")
+	}
+}
+
+func TestFilterKeepsASelectionStillInScope(t *testing.T) {
+	// The invariant must not overreach: narrowing a search that still matches
+	// the open record has to leave it alone, or typing in a search box would
+	// wipe the form mid-edit.
+	v := newTestCrudView(t)
+	items := v.list.Items()
+	v.selectAction(items[0])
+	want := v.selected.Get()
+
+	v.search.Set("") // widest possible scope: everything matches
+	v.filter()
+
+	if got := v.selected.Get(); got != want {
+		t.Errorf("a selection still in the list must survive the filter: want %q, got %q", want, got)
+	}
+}
+
+func TestFilterOnAnEmptyControllerIsANoop(t *testing.T) {
+	// Nothing selected, nothing composing: filtering must not touch the form
+	// or bounce a phone back to the list for no reason.
+	v := newTestCrudView(t)
+	v.search.Set("anything")
+	v.filter() // must not panic and must leave the resting state alone
+	if v.selected.Get() != "" || v.composing.Get() {
+		t.Error("filtering an empty controller must change nothing")
+	}
+}

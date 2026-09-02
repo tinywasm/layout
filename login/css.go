@@ -18,13 +18,12 @@ func (l *Login) RenderCSS() *css.Stylesheet {
 			style.Backdrop(style.Viewport),
 			style.Veil(),
 		).
-		// Inset, not Panel or Page: fieldset paints its input As(Page) — the
-		// whitest surface the theme has — on the stated assumption that the
-		// form sits in a SUNKEN card, which is what makes that white read as
-		// "write here" without a border announcing it. A Panel card is three
-		// percent off the input's own white and the fields dissolve into it;
-		// Inset is the surface crudview already puts its own field stack on,
-		// so a login form and a module form come out of the same box.
+		// Inset, not Panel or Page: fieldset's input is a framed Panel now, so
+		// its own hairline is what separates it from whatever it sits on —
+		// contrast against the card behind it no longer has to do that work.
+		// Inset stays because it is the surface crudview already puts its own
+		// field stack on, so a login form and a module form come out of the
+		// same box.
 		//
 		// Space6 twice over: the gap between header and form is the same air
 		// as the card's own inset, which is what keeps a card this small from

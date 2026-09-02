@@ -19,6 +19,29 @@ func (p *Platform) RenderSheet() *style.Sheet {
 			style.HideOverflow(),
 			style.As(style.Page),
 		).
+		// On a phone the header is gone and the hamburger (inside msg-stack,
+		// Docked top-end) FLOATS over the module content — it does not reserve
+		// space. What stows it is SCROLL and nothing else: down stows it, up
+		// brings it back, and the top of a scroller always has it (see
+		// onScroll in platformd.go). That is the gesture every mobile app
+		// trains its users on, so it needs no explaining.
+		//
+		// It deliberately does NOT yield to what the user is doing inside the
+		// panel. Two :has()-from-root rules used to hide it — one on
+		// :focus-within, one on any [data-open="true"] control in the panel —
+		// and both were wrong for the same reason: navigation is not a
+		// distraction from the task, it is part of it. A user halfway through
+		// an edit still needs to look something up in another module, and a
+		// rule that keeps the menu gone "through the whole select→edit flow"
+		// makes the app a dead end until they cancel. The focus rule was worse
+		// still: a pointer click leaves focus parked inside the panel, so on a
+		// desktop browser (and in a device emulator) the button vanished on
+		// arrival and only came back by clicking outside the page entirely —
+		// a real phone never reproduced it, because iOS does not focus on tap.
+		//
+		// The cost accepted here is that the floating button can overlap
+		// whatever a module puts in its top-end corner. That is the normal
+		// bargain for floating chrome, and scrolling clears it.
 		// A slim bar, not a banner: Space1 padding and the IconMd avatar keep
 		// it near 40px — the header frames the stage, it does not compete
 		// with it.

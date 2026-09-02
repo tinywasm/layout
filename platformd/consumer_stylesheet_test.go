@@ -191,6 +191,56 @@ func TestDrawerPanelFloatIsFinePointerScoped(t *testing.T) {
 	}
 }
 
+// TestHamburgerIsDrivenByScrollAlone pins the one rule that decides whether
+// the mobile menu button is on screen: the scroll gesture, through
+// navStowed/RevealedBy. Nothing about what the user is doing INSIDE the panel
+// may hide it.
+//
+// Two :has()-from-root rules used to, and both stranded the user. The
+// [data-open] one kept the menu gone for the whole select-to-edit flow, so a
+// user mid-edit could not go look something up in another module. The
+// :focus-within one fired on any pointer click that parked focus in the panel
+// — invisible on a real phone (iOS does not focus on tap), but on a desktop
+// browser or a device emulator the button vanished on arrival and came back
+// only by clicking outside the page.
+func TestHamburgerIsDrivenByScrollAlone(t *testing.T) {
+	cssStr := (&Platform{}).RenderCSS().String()
+
+	for _, banned := range []string{
+		".pd:has(.pd__panel:focus-within) .pd__hamburger",
+		`.pd:has(.pd__panel [data-open="true"]) .pd__hamburger`,
+	} {
+		if strings.Contains(cssStr, banned) {
+			t.Errorf("the hamburger must not yield to panel state: found %q", banned)
+		}
+	}
+	// Belt and braces: no :has() rule of any shape may reach the button.
+	for i := 0; ; {
+		j := strings.Index(cssStr[i:], ".pd__hamburger")
+		if j == -1 {
+			break
+		}
+		i += j
+		line := cssStr[:i]
+		if nl := strings.LastIndexByte(line, '\n'); nl >= 0 {
+			line = line[nl+1:]
+		}
+		if strings.Contains(line, ":has(") {
+			t.Errorf("a :has() rule still hides/reveals the hamburger: %q", line)
+		}
+		i += len(".pd__hamburger")
+	}
+
+	// The scroll driver itself: RevealedBy(Open) is what navStowed writes to.
+	if !strings.Contains(cssStr, `.pd__hamburger[data-open="true"]`) {
+		t.Errorf("expected the hamburger to be revealed by its Open state (the scroll driver), got:\n%s", cssStr)
+	}
+	// It is a state, not a reservation: nothing pads for a floating strip.
+	if Contains(cssStr, "--floating-top: calc(") {
+		t.Errorf("the hamburger must not reserve a floating strip — it floats, got:\n%s", cssStr)
+	}
+}
+
 func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// Identity, brand and the actions slot are all supplied: the class-parity
 	// assertion below is two-directional, so anything left nil would read as a

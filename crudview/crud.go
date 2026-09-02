@@ -33,7 +33,7 @@ type Config struct {
 	// imposed: pass a targetdate.TargetDate (or anything satisfying
 	// ListView) factory instead when the data wants a leading date/time
 	// badge (view.Item's LeadTop/Main/Bottom) rather than a plain label.
-	List func(selected *dom.SignalString, onSelect func(view.Item), onDelete func(string)) ListView
+	List func(selected *dom.SignalString, onSelect func(view.Item)) ListView
 }
 
 // New builds the renderer around an already-constructed Presenter. It generates the form from

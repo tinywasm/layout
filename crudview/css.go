@@ -9,12 +9,19 @@ import (
 	"github.com/tinywasm/widget/style"
 )
 
-// cardInset is the gap between a card's own border and its content. fields
-// and list are the two panels crudview paints into rightpanel's article and
-// aside — one named constant instead of two independently-chosen literals is
-// what keeps them from drifting apart the way they already had (fields
-// padded, list flush against its own border).
+// cardInset is the gap between a card's own border and its content, on the
+// axis where both panels agree: the inline sides of fields and list. The
+// fields card takes a larger BLOCK inset (formGap) because the form inside it
+// carries legend chips that seat half a chip-height above each input — the
+// list has no such overhang, so its block inset stays cardInset too.
 const cardInset = style.Space1
+
+// formGap is the one spacing value inside the fields card: the block inset from
+// the card border, AND the gap between consecutive fields (fieldset puts it on
+// the <form> container). Every visible gap in the form — card edge to first
+// chip, card edge to the sides and bottom of the inputs, one field to the next
+// — lands on this value.
+const formGap = style.Space3
 
 // RenderSheet returns the style Sheet containing the rules for crudview.
 func (v *CrudView) RenderSheet() *style.Sheet {
@@ -28,7 +35,8 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// leave the column floating at the top of the card.
 		Part(widget.Part("fields"),
 			style.As(style.Inset),
-			style.Pad(cardInset),
+			style.Pad(formGap),
+			style.PadInline(cardInset),
 			style.Scroll(),
 			style.Round(style.RadiusMd),
 			style.Fill(),
@@ -97,8 +105,8 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// background and border without touching the text color — Subtle
 		// would also fix the grey but would silently mute inherited text,
 		// which is a different statement than "this is not a card".
-		// The rows (targetlist, white Page) and the inputs (fieldset, white
-		// Page) each declare their own surfaces, so nothing loses contrast.
+		// The rows (targetlist, white Page) and the inputs (fieldset, framed
+		// Panel) each declare their own surfaces, so nothing loses contrast.
 		On(css.Mobile, widget.Part("fields"),
 			style.As(style.Bare),
 		).

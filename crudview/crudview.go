@@ -46,7 +46,11 @@ type ListView interface {
 	SetItems(items []view.Item)
 	Items() []view.Item
 	Count() int
-	CloseMenus()
+	// Selection mode — targetlist and targetdate both implement it by
+	// assembling the components/listselect lego piece.
+	SetSelectMode(on bool)
+	CheckedIDs() []string
+	OnCheckedChange(fn func(n int))
 }
 
 func (v *CrudView) WidgetName() widget.Name { return NameCrudView }
@@ -73,7 +77,7 @@ type CrudView struct {
 	// OnSelect/OnDelete callbacks CrudView owns — Init calls it once. Set by
 	// New from Config.List; nil there resolves to a targetlist.TargetList
 	// factory, same "ergonomic default, not a decision imposed" as Filter.
-	List func(selected *SignalString, onSelect func(view.Item), onDelete func(string)) ListView
+	List func(selected *SignalString, onSelect func(view.Item)) ListView
 
 	// Additive user hooks — called AFTER the built-in behavior. Assigning them
 	// can never disable list→form fill, save or delete wiring.
@@ -121,11 +125,11 @@ func (v *CrudView) Init(ctx Ctx) {
 	// left nil is fine. Default here mirrors New's own default exactly.
 	buildList := v.List
 	if buildList == nil {
-		buildList = func(selected *SignalString, onSelect func(view.Item), onDelete func(string)) ListView {
-			return &targetlist.TargetList{Selected: selected, OnSelect: onSelect, OnDelete: onDelete}
+		buildList = func(selected *SignalString, onSelect func(view.Item)) ListView {
+			return &targetlist.TargetList{Selected: selected, OnSelect: onSelect}
 		}
 	}
-	v.list = buildList(v.selected, v.selectAction, v.deleteRequest)
+	v.list = buildList(v.selected, v.selectAction)
 
 	// The filter control reports terms; crudview owns what a term means.
 	// Assigned here, not in Render, so it survives a re-render and so a host
@@ -254,7 +258,6 @@ func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
 	if v.list != nil {
-		v.list.CloseMenus()
 	}
 	if it.ID != "" {
 		v.composing.Set(false) // picking an existing row abandons any new-record draft
@@ -283,7 +286,6 @@ func (v *CrudView) newAction() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
 	if v.list != nil {
-		v.list.CloseMenus()
 	}
 	v.Presenter.Deselect()
 	if v.form != nil {
@@ -314,32 +316,43 @@ func (v *CrudView) newAction() {
 // selected/focused (standard behavior, see the view/conformance
 // "cancel_clears_focus" clause) — unlike newAction/editAction, which enter an
 // editable state and focus the first field on purpose.
+func (v *CrudView) undoAction() {
+	v.clearSelection()
+	if v.OnCancel != nil {
+		v.OnCancel()
+	}
+}
+
+// clearSelection puts the controller back in its resting state: nothing
+// selected, no draft, no delete armed, an empty form, and — on a phone, where
+// the two columns are a scroll-snap strip — the list back on screen instead of
+// a form with nothing left in it.
+//
+// Two callers, deliberately: undoAction (the user pressed "↺") and
+// dropSelectionOutOfScope (the filter moved and took the record with it). They
+// are the same state change; only undoAction is a user-initiated cancel, so
+// only undoAction fires OnCancel.
 //
 // CloseMenus alongside selected.Set(""): a row's ⋮ tap sets Selected directly
-// (see targetlist's buildRow) so the mobile-docked Eliminar icon reads
-// as belonging to that row, but native <details open> is a separate piece of
-// state Selected does not touch. Without this, cancelling clears the amber
-// highlight while the floating icon for whichever row's menu was last
-// opened stays on screen with nothing left for it to act on.
-func (v *CrudView) undoAction() {
+// (see targetlist's buildRow) so the mobile-docked Eliminar icon reads as
+// belonging to that row, but native <details open> is separate state Selected
+// does not touch. Without this, clearing drops the amber highlight while the
+// floating icon for whichever row's menu was last opened stays on screen with
+// nothing left for it to act on.
+func (v *CrudView) clearSelection() {
 	v.selected.Set("")
 	v.canDelete.Set(false)
 	v.composing.Set(false)
 	if v.list != nil {
-		v.list.CloseMenus()
 	}
-	v.Presenter.Deselect()
+	if v.Presenter != nil {
+		v.Presenter.Deselect()
+	}
 	if v.form != nil {
 		v.form.Reset() // also clears the tracked FocusedFieldID()
 	}
-	// The list is the resting view: cancelling has to put the user back on it,
-	// or on a phone the strip stays parked on an empty form with nothing left
-	// to cancel.
 	if v.panel != nil {
 		v.panel.ShowAside()
-	}
-	if v.OnCancel != nil {
-		v.OnCancel()
 	}
 }
 
@@ -407,7 +420,7 @@ func (v *CrudView) autoSaveAction() {
 
 // deleteAction: delete button / driver Delete. Only reachable when deleter != nil.
 func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
-	err := deleter.Delete(id)
+	err := deleter.Delete(id)  // plural contract; the bulk path arrives with this repo's own plan
 	if err == nil {
 		v.selected.Set("")
 		v.canDelete.Set(false)
@@ -420,8 +433,36 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 	}
 }
 
+// filter repopulates the list for the current term and then enforces the one
+// invariant a list-detail controller cannot let slip: what the form holds must
+// be something the list still shows.
 func (v *CrudView) filter() {
 	v.list.SetItems(v.Presenter.Filter(v.search.Get()))
+	v.dropSelectionOutOfScope()
+}
+
+// dropSelectionOutOfScope clears the selection when the freshly filtered list
+// no longer contains it. A picker that changes the SCOPE (a patient selector
+// narrowing to that patient's records) leaves the previously loaded record
+// orphaned: still in the form, still editable, still saveable — against a list
+// that no longer shows it. That is a data-corruption path, not a cosmetic one.
+//
+// Unconditional, with no config flag to turn it off: a form holding a record
+// outside the visible list is an illegal state, not a preference. A composing
+// draft goes too — it belongs to the scope that just left.
+func (v *CrudView) dropSelectionOutOfScope() {
+	id := v.selected.Get()
+	if id == "" && !v.composing.Get() {
+		return // nothing loaded; nothing to orphan
+	}
+	if id != "" && v.list != nil {
+		for _, it := range v.list.Items() {
+			if it.ID == id {
+				return // still in scope
+			}
+		}
+	}
+	v.clearSelection()
 }
 
 func (v *CrudView) Render() *Element {

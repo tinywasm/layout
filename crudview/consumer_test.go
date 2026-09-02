@@ -269,7 +269,6 @@ IDs:        testIDs,
 
 // Case 5: Save calls Save with form data, not original Record
 func TestConsumer_SaveWithFormData(t *testing.T) {
-	var savedDevice *Device
 	caller := &conformance.FakeCaller{
 		Reply: func(op string, into model.Decodable) {
 			if op == "device_save" {
@@ -334,12 +333,14 @@ IDs:        testIDs,
 	if saveCall == nil {
 		t.Fatal("expected device_save call to be recorded")
 	}
-	savedDevice = saveCall.Args.(*Device)
-	if savedDevice.Name != "New Name" {
-		t.Errorf("expected sent device name to be 'New Name', got '%s'", savedDevice.Name)
+	// Assert the WIRE shape, not the Go type: view ships batches inside its own
+	// envelope now, so the payload is no longer the record itself.
+	sent := conformance.Payload(saveCall.Args)
+	if !conformance.Has(sent, "name", "New Name") {
+		t.Errorf("expected the shipped device name to be 'New Name', got %v", sent)
 	}
-	if savedDevice.Ip != "10.0.0.1" {
-		t.Errorf("expected sent device ip to be '10.0.0.1', got '%s'", savedDevice.Ip)
+	if !conformance.Has(sent, "ip", "10.0.0.1") {
+		t.Errorf("expected the shipped device ip to be '10.0.0.1', got %v", sent)
 	}
 }
 
@@ -462,10 +463,10 @@ IDs:        testIDs,
 	if deleteCall == nil {
 		t.Fatal("expected device_delete call to be recorded")
 	}
-	// Check identity field of the passed model
-	argsDev := deleteCall.Args.(*Device)
-	if argsDev.Id != "123" {
-		t.Errorf("expected deleted id on presenter to be '123', got '%s'", argsDev.Id)
+	// Delete ships {ids: [...]}, so the id arrives keyed by the array name.
+	sent := conformance.Payload(deleteCall.Args)
+	if !conformance.Has(sent, "ids", "123") {
+		t.Errorf("expected the shipped delete id to be '123', got %v", sent)
 	}
 }
 
