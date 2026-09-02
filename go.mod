@@ -15,7 +15,7 @@ require (
 	github.com/tinywasm/svg v0.3.0
 	github.com/tinywasm/time v0.5.2
 	github.com/tinywasm/view v0.1.17
-	github.com/tinywasm/widget v0.6.16
+	github.com/tinywasm/widget v0.6.17
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
@@ -33,3 +33,9 @@ require (
 )
 
 // TEMP: local until FloatingChrome consume + Filled cue + CueSibling ship in tinywasm/widget.
+
+replace github.com/tinywasm/css => ../css
+
+replace github.com/tinywasm/components => ../components
+
+replace github.com/tinywasm/form => ../form
