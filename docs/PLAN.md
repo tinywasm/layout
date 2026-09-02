@@ -3,8 +3,9 @@ PLAN: "feat!: crudview bulk actions — one options button, selection mode, batc
 TAG: v0.2.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 3635758060311448738
+PR: https://github.com/tinywasm/layout/pull/29
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
