@@ -40,6 +40,7 @@ func init() {
 		{EN: "cannot", ES: "no"},
 		{EN: "be", ES: "se"},
 		{EN: "undone.", ES: "puede deshacer."},
+		{EN: "records", ES: "registros"},
 	})
 }
 

@@ -57,9 +57,37 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
 			style.Pad(style.Space3),
-			style.Width(style.Full),
+			style.Grow(),
 			style.ControlBox(),
 			style.CenterContent(),
+		).
+		Part(widget.Part("action-delete"),
+			style.As(style.Danger),
+			style.Round(style.RadiusMd),
+			style.Pad(style.Space3),
+			style.ControlBox(),
+			style.MediaBox(style.AspectSquare),
+			style.CenterContent(),
+			style.RevealedBy(widget.Open),
+		).
+		Part(widget.Part("action-edit"),
+			style.As(style.Primary),
+			style.Round(style.RadiusMd),
+			style.Pad(style.Space3),
+			style.ControlBox(),
+			style.MediaBox(style.AspectSquare),
+			style.CenterContent(),
+			style.RevealedBy(widget.Open),
+		).
+		Part(widget.Part("action-count"),
+			style.FontSize(style.TextXs),
+			style.FontWeight(style.WeightBold),
+			style.RevealedBy(widget.Open),
+		).
+		Part(widget.Part("footer"),
+			style.Row(style.Space1),
+			style.Fill(),
+			style.Width(style.Full),
 		).
 		// No As(): action-new is the icon INSIDE the Primary "action" button, not
 		// a surface of its own. As(Primary) gave it a second Primary box —

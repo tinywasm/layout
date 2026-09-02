@@ -226,7 +226,12 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	// 3. Extract markup and match classes starting with "crudview"
 	html1 := v.Render().String()
 
-	vFull := &CrudView{Title: "Full", Form: html.Div()}
+	pFull := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} },
+		view.WithDeleteOp("device.delete"),
+		view.WithUpdateOp("device.update"),
+	)
+	vFull := &CrudView{Title: "Full", Form: html.Div(), Presenter: pFull}
 	vFull.Init(&fakeCtx{})
 	html2 := vFull.Render().String()
 

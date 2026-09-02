@@ -20,6 +20,10 @@ const NameCrudView widget.Name = "crudview"
 var (
 	clsBoxContent          = NameCrudView.Class("fields")
 	clsBtnCrud             = NameCrudView.Class("action")
+	clsBtnCrudDelete       = NameCrudView.Class("action-delete")
+	clsBtnCrudEdit         = NameCrudView.Class("action-edit")
+	clsBtnCrudCount        = NameCrudView.Class("action-count")
+	clsFooter              = NameCrudView.Class("footer")
 	clsBtnCrudIconHidden   = NameCrudView.Class("action-hidden")
 	clsListaBox            = NameCrudView.Class("list")
 	clsDelConfirmBody      = NameCrudView.Class("delconfirm-body")
@@ -34,6 +38,20 @@ const (
 	// the "toggle" block in Render().
 	iconCrudNew    = svg.Icon("icon-crud-new")    // "+"  — nothing selected
 	iconCrudCancel = svg.Icon("icon-crud-cancel") // "↺" — a row is selected (undo)
+	iconCrudDelete = svg.Icon("icon-crud-delete") // "🗑" — bulk delete
+	iconCrudEdit   = svg.Icon("icon-crud-edit")   // "✏" — bulk edit
+)
+
+// crudMode is the single source of truth for which chrome the footer shows and
+// what a tap on a row means. A closed set, in one signal: three booleans would
+// make "menu open AND selecting" representable, and it is not a state — it is
+// a bug waiting for a race between two clicks.
+type crudMode string
+
+const (
+	modeNormal   crudMode = ""       // "+" plus the two bulk entries, 🗑 and ✏
+	modeDeleting crudMode = "delete" // ↺ + 🗑 N, rows show checks
+	modeEditing  crudMode = "edit"   // ↺ + ✏ N, rows show checks
 )
 
 // ListView is the row-rendering half of a CrudView. targetlist.TargetList
@@ -98,6 +116,14 @@ type CrudView struct {
 	deleteID      *SignalString // record pending confirmation (⋮ → Eliminar)
 	deleteLabel   *SignalString // its label, for the confirmation message
 	composing     *SignalBool   // "+" was pressed and nothing saved/cancelled yet (see active())
+	mode          *SignalString // single source of truth for mode (crudMode)
+	checkedCount  *SignalString // count of checked items, for display only (BindText needs a string)
+	// hasChecked and hasEdits are what the commit buttons READ. checkedCount is
+	// a string because BindText needs one; comparing it back against "0" made a
+	// number's meaning depend on its rendering, and carried a dead `== ""`
+	// branch guarding an initial state that never occurs.
+	hasChecked *SignalBool
+	hasEdits   *SignalBool
 }
 
 // active reports whether the toggle button should show "↺" (cancel/undo):
@@ -116,6 +142,10 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.deleteID = NewString("")
 	v.deleteLabel = NewString("")
 	v.composing = NewBool(false)
+	v.mode = NewString(string(modeNormal))
+	v.checkedCount = NewString("0")
+	v.hasChecked = NewBool(false)
+	v.hasEdits = NewBool(false)
 
 	// The list owns row rendering + the ⋮ menu and shares the selected signal
 	// so its highlight follows the form. New resolves Config.List's default
@@ -130,6 +160,10 @@ func (v *CrudView) Init(ctx Ctx) {
 		}
 	}
 	v.list = buildList(v.selected, v.selectAction)
+	v.list.OnCheckedChange(func(n int) {
+		v.checkedCount.Set(fmt.Sprintf("%d", n))
+		v.hasChecked.Set(n > 0)
+	})
 
 	// The filter control reports terms; crudview owns what a term means.
 	// Assigned here, not in Render, so it survives a re-render and so a host
@@ -220,12 +254,30 @@ func (v *CrudView) deleteRequest(id string) {
 	v.confirmDelete.Open()
 }
 
-// confirmDeleteAction: the modal's "Eliminar" button. Deletes the record
-// pending confirmation (set by deleteRequest) and closes the modal.
+// confirmDeleteAction: the modal's "Eliminar" button. Deletes the record(s)
+// pending confirmation and closes the modal.
 func (v *CrudView) confirmDeleteAction() {
-	id := v.deleteID.Get()
-	if deleter, ok := v.Presenter.(view.Deleter); ok && id != "" {
-		v.deleteAction(deleter, id)
+	if v.mode.Get() == string(modeDeleting) {
+		if deleter, ok := v.Presenter.(view.Deleter); ok && v.list != nil {
+			ids := v.list.CheckedIDs()
+			if len(ids) > 0 {
+				err := deleter.Delete(ids...)
+				if err == nil {
+					v.setMode(modeNormal)
+					_ = v.Reload()
+				} else {
+					Log(err.Error())
+				}
+				if v.OnDeleted != nil {
+					v.OnDeleted("", err)
+				}
+			}
+		}
+	} else {
+		id := v.deleteID.Get()
+		if deleter, ok := v.Presenter.(view.Deleter); ok && id != "" {
+			v.deleteAction(deleter, id)
+		}
 	}
 	v.confirmDelete.Close()
 }
@@ -247,13 +299,6 @@ func (v *CrudView) Reload() error {
 // so nothing needs protecting from edits. On mobile (horizontal scroll-snap
 // strip) it also snaps the viewport to the form panel; a no-op on desktop,
 // where both columns are already visible.
-//
-// CloseMenus: this only ever runs from a row BODY tap (⋮ stops its click from
-// propagating here — see targetlist's buildRow), so it is reachable while a
-// DIFFERENT row's ⋮ menu is still open. Native <details name="..."> only
-// auto-closes a sibling when another one in the group is explicitly opened,
-// never from an unrelated click, so without this a stray row's floating
-// Eliminar icon would keep floating over the just-selected record.
 func (v *CrudView) selectAction(it view.Item) {
 	v.selected.Set(it.ID)
 	v.canDelete.Set(it.ID != "")
@@ -332,14 +377,30 @@ func (v *CrudView) undoAction() {
 // dropSelectionOutOfScope (the filter moved and took the record with it). They
 // are the same state change; only undoAction is a user-initiated cancel, so
 // only undoAction fires OnCancel.
-//
-// CloseMenus alongside selected.Set(""): a row's ⋮ tap sets Selected directly
-// (see targetlist's buildRow) so the mobile-docked Eliminar icon reads as
-// belonging to that row, but native <details open> is separate state Selected
-// does not touch. Without this, clearing drops the amber highlight while the
-// floating icon for whichever row's menu was last opened stays on screen with
-// nothing left for it to act on.
+func (v *CrudView) setMode(m crudMode) {
+	if crudMode(v.mode.Get()) == m {
+		return
+	}
+	v.mode.Set(string(m))
+	if m == modeDeleting || m == modeEditing {
+		if v.list != nil {
+			v.list.SetSelectMode(true)
+		}
+		if m == modeEditing && v.form != nil {
+			v.form.Reset()
+			v.form.MarkPristine()
+			v.hasEdits.Set(false) // a blank form has nothing to apply yet
+		}
+	} else {
+		if v.list != nil {
+			v.list.SetSelectMode(false)
+		}
+		v.hasEdits.Set(false)
+	}
+}
+
 func (v *CrudView) clearSelection() {
+	v.setMode(modeNormal)
 	v.selected.Set("")
 	v.canDelete.Set(false)
 	v.composing.Set(false)
@@ -411,8 +472,18 @@ func (v *CrudView) saveAction(saver view.Saver) {
 
 // autoSaveAction is the Form.OnFieldChange hook: every field commit (blur/change)
 // persists immediately — there is no explicit Save button. A no-op when the
-// presenter cannot save (standalone/read-only views).
+// presenter cannot save (standalone/read-only views) or when in bulk editing mode.
 func (v *CrudView) autoSaveAction() {
+	if v.mode != nil && v.mode.Get() == string(modeEditing) {
+		// Bulk edit: nothing is persisted per field. What a commit DOES change
+		// is whether there is anything to apply, so the apply button can be
+		// dead until the user actually edits something. Tracked here because
+		// this is the one hook the form already fires on every commit.
+		if v.form != nil && v.hasEdits != nil {
+			v.hasEdits.Set(len(v.form.DirtyFields()) > 0)
+		}
+		return
+	}
 	if saver, ok := v.Presenter.(view.Saver); ok && v.form != nil {
 		v.saveAction(saver)
 	}
@@ -439,6 +510,75 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 func (v *CrudView) filter() {
 	v.list.SetItems(v.Presenter.Filter(v.search.Get()))
 	v.dropSelectionOutOfScope()
+}
+
+// bulkDeleteAction commits the marked rows. One call, not a loop: view.Deleter
+// is variadic precisely so the whole batch is one statement, and a loop would
+// bring back the half-applied failure the plural contract exists to prevent.
+func (v *CrudView) bulkDeleteAction() {
+	if v.list == nil {
+		return
+	}
+	ids := v.list.CheckedIDs()
+	if len(ids) == 0 {
+		return
+	}
+	var label string
+	if len(ids) == 1 {
+		label = ids[0]
+		for _, it := range v.list.Items() {
+			if it.ID == ids[0] {
+				label = it.Label
+				break
+			}
+		}
+	} else {
+		// "3 records" / "3 registros", never a bare "3": the modal reads
+		// "Delete %s?", and a lone number there names nothing.
+		label = fmt.Sprintf("%d %s", len(ids), lang.Translate("records").String())
+	}
+	v.deleteID.Set("")
+	v.deleteLabel.Set(label)
+	v.confirmDelete.Open()
+}
+
+// bulkEditAction patches the marked rows with ONLY the fields the user
+// touched. Sending whole records instead would silently revert every column
+// someone else changed since this client last reloaded — see the master plan's
+// "por qué ids + delta".
+func (v *CrudView) bulkEditAction() {
+	if v.list == nil || v.form == nil {
+		return
+	}
+	ids := v.list.CheckedIDs()
+	if len(ids) == 0 {
+		return
+	}
+	fields := v.form.DirtyFields()
+	if len(fields) == 0 {
+		// Unreachable through the UI — the apply button is disabled until
+		// hasEdits is true — so this is a belt, not a mode. Loud rather than
+		// silent: an empty change set here means a caller bypassed the button.
+		Log("crudview: bulk edit with no changed fields")
+		return
+	}
+	updater, ok := v.Presenter.(view.Updater)
+	if !ok {
+		return
+	}
+	record := v.Presenter.Record()
+	if err := v.form.SyncValues(record); err != nil {
+		Log(err.Error())
+		return
+	}
+	err := updater.Update(ids, record, fields)
+	if err == nil {
+		v.setMode(modeNormal)
+		v.form.Reset()
+		_ = v.Reload()
+	} else {
+		Log(err.Error())
+	}
 }
 
 // dropSelectionOutOfScope clears the selection when the freshly filtered list
@@ -490,24 +630,90 @@ func (v *CrudView) Render() *Element {
 		// second frame around a control that has one reads as a box in a box.
 		v.panel.AsideControls = v.Filter
 
-		// Single toggle button — "+" when nothing is selected, "↺" when a row
-		// is; Eliminar lives in the targetlist row's ⋮ menu instead.
 		toggle := Button().Set(clsBtnCrud.AsAttr()).
-			// NOT "btn_..." — actionbutton's global `button[name*="btn"]` rule
-			// matches any button whose name contains that substring and, being
-			// a type+attribute selector, outranks this class; it was silently
-			// injecting a stray margin. This button is crudview-owned, so its
-			// name must not accidentally opt back in.
 			Attr("name", "cv-crudtoggle").
-			BindStateFunc(widget.Open, v.active).
+			BindStateFunc(widget.Open, func() bool { return v.mode.Get() != string(modeNormal) || v.active() }).
 			Child(
 				iconCrudNew.Render(string(NameCrudView.Class("action-new"))).
-					BindStateFunc(widget.Open, v.active),
+					BindStateFunc(widget.Open, func() bool { return v.mode.Get() != string(modeNormal) || v.active() }),
 				iconCrudCancel.Render(string(NameCrudView.Class("action-cancel"))).
-					BindStateFunc(widget.Open, v.active),
+					BindStateFunc(widget.Open, func() bool { return v.mode.Get() != string(modeNormal) || v.active() }),
 			)
-		toggle.On("click", func(Event) { v.toggleAction() })
-		v.panel.AsideFooter = toggle
+		toggle.On("click", func(Event) {
+			if v.mode.Get() != string(modeNormal) {
+				v.setMode(modeNormal)
+			} else {
+				v.toggleAction()
+			}
+		})
+
+		footer := Div().Set(clsFooter.AsAttr()).Child(toggle)
+
+		if _, ok := v.Presenter.(view.Deleter); ok {
+			btnDelete := Button().Set(clsBtnCrudDelete.AsAttr()).
+				Attr("name", "cv-cruddelete").
+				BindStateFunc(widget.Open, func() bool {
+					return v.mode.Get() == string(modeNormal) || v.mode.Get() == string(modeDeleting)
+				}).
+				BindAttrBool("disabled", DeriveBool(func() bool {
+					if v.mode.Get() == string(modeNormal) {
+						return v.active()
+					}
+					return !v.hasChecked.Get()
+				})).
+				Child(
+					iconCrudDelete.Render(""),
+					Span().Set(clsBtnCrudCount.AsAttr()).
+						BindText(v.checkedCount).
+						BindStateFunc(widget.Open, func() bool { return v.mode.Get() == string(modeDeleting) }),
+				)
+			btnDelete.On("click", func(Event) {
+				if v.mode.Get() == string(modeNormal) {
+					if !v.active() {
+						v.setMode(modeDeleting)
+					}
+				} else if v.mode.Get() == string(modeDeleting) {
+					v.bulkDeleteAction()
+				}
+			})
+			footer.Child(btnDelete)
+		}
+
+		if _, ok := v.Presenter.(view.Updater); ok {
+			btnEdit := Button().Set(clsBtnCrudEdit.AsAttr()).
+				Attr("name", "cv-crudedit").
+				BindStateFunc(widget.Open, func() bool {
+					return v.mode.Get() == string(modeNormal) || v.mode.Get() == string(modeEditing)
+				}).
+				BindAttrBool("disabled", DeriveBool(func() bool {
+					if v.mode.Get() == string(modeNormal) {
+						return v.active()
+					}
+					// Marked rows AND something to write. Without the second
+					// half, pressing apply with an untouched form called
+					// nothing and reported nothing — a dead button that looked
+					// alive. An unpressable button needs no error message.
+					return !v.hasChecked.Get() || !v.hasEdits.Get()
+				})).
+				Child(
+					iconCrudEdit.Render(""),
+					Span().Set(clsBtnCrudCount.AsAttr()).
+						BindText(v.checkedCount).
+						BindStateFunc(widget.Open, func() bool { return v.mode.Get() == string(modeEditing) }),
+				)
+			btnEdit.On("click", func(Event) {
+				if v.mode.Get() == string(modeNormal) {
+					if !v.active() {
+						v.setMode(modeEditing)
+					}
+				} else if v.mode.Get() == string(modeEditing) {
+					v.bulkEditAction()
+				}
+			})
+			footer.Child(btnEdit)
+		}
+
+		v.panel.AsideFooter = footer
 	}
 
 	root := v.panel.Render()
