@@ -13,7 +13,7 @@ require (
 	github.com/tinywasm/input v0.0.3
 	github.com/tinywasm/model v0.1.7
 	github.com/tinywasm/svg v0.3.0
-	github.com/tinywasm/time v0.5.2
+	github.com/tinywasm/time v0.5.4
 	github.com/tinywasm/view v0.1.17
 	github.com/tinywasm/widget v0.6.17
 )
