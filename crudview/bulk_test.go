@@ -315,3 +315,109 @@ func TestFooterToneHoldsOnlyWhileDeleting(t *testing.T) {
 		t.Errorf("leaving delete mode must drop the tone, tag: %s", tag)
 	}
 }
+
+// Gap fix: the "+" create action is gated on view.Saver, like 🗑 on Deleter
+// and ✏ on Updater. setupBulkTest builds a Deleter(+Updater)-only presenter
+// (no WithSaveOp), so the toggle's "+" must be a no-op and render disabled in
+// normal mode — but the SAME button still has to work as "↺" to leave
+// selection mode.
+func TestCreateActionGatedOnSaver(t *testing.T) {
+	v, _ := setupBulkTest(t, true) // no WithSaveOp → not a view.Saver
+	if _, ok := v.Presenter.(view.Saver); ok {
+		t.Fatal("precondition: this presenter must not be a view.Saver")
+	}
+
+	// "+" is inert: toggleAction in normal mode must not start a draft.
+	v.toggleAction()
+	if v.composing.Get() || v.selected.Get() != "" {
+		t.Errorf("the + must not create without a Saver (composing=%v selected=%q)",
+			v.composing.Get(), v.selected.Get())
+	}
+
+	// The toggle renders disabled in that state.
+	html := v.Render().String()
+	i := strings.Index(html, "name='cv-crudtoggle'")
+	if i == -1 {
+		t.Fatal("the toggle button must still render (it is also the ↺)")
+	}
+	tag := html[strings.LastIndex(html[:i], "<"):]
+	if e := strings.Index(tag, ">"); e != -1 {
+		tag = tag[:e+1]
+	}
+	if !strings.Contains(tag, "disabled") {
+		t.Errorf("the toggle must render disabled when its only meaning is a dead +, tag: %s", tag)
+	}
+
+	// But it still leaves selection mode: enter delete mode, the toggle is
+	// live again (it means ↺ now).
+	v.setMode(modeDeleting)
+	html = v.Render().String()
+	i = strings.Index(html, "name='cv-crudtoggle'")
+	tag = html[strings.LastIndex(html[:i], "<"):]
+	if e := strings.Index(tag, ">"); e != -1 {
+		tag = tag[:e+1]
+	}
+	if strings.Contains(tag, "disabled='true'") {
+		t.Errorf("the toggle must be live as ↺ while in a selection mode, tag: %s", tag)
+	}
+}
+
+// buttonOpenTag returns the opening <button ...> tag for the named control.
+func buttonOpenTag(html, name string) string {
+	i := strings.Index(html, "name='"+name+"'")
+	if i == -1 {
+		return ""
+	}
+	start := strings.LastIndex(html[:i], "<")
+	end := strings.Index(html[i:], ">")
+	if start == -1 || end == -1 {
+		return ""
+	}
+	return html[start : i+end+1]
+}
+
+// The footer collapses to what is actionable: 🗑/✏ show only when there is a
+// record to act on. Empty list → just "+". Composing a new record → just "↺".
+// A loaded existing row → 🗑 (delete it) but not ✏ (bulk would discard the
+// form). Same spirit as the two selection modes, which already hide the button
+// they are not.
+func TestFooterHidesBulkActionsWhenNothingToActOn(t *testing.T) {
+	v, _ := setupBulkTest(t, true) // 3 seeded devices, Deleter+Updater
+
+	shown := func(name string) bool {
+		return strings.Contains(buttonOpenTag(v.Render().String(), name), "data-open='true'")
+	}
+
+	// Rows exist, nothing loaded: both bulk actions offered.
+	if !shown("cv-cruddelete") || !shown("cv-crudedit") {
+		t.Fatalf("with rows and nothing loaded, 🗑 and ✏ must both show")
+	}
+
+	// Empty list: only "+".
+	v.search.Set("no-such-device-xyz")
+	v.filter()
+	if shown("cv-cruddelete") || shown("cv-crudedit") {
+		t.Errorf("an empty list must hide 🗑 and ✏ (only + / ↺ remain)")
+	}
+	if !strings.Contains(v.Render().String(), "name='cv-crudtoggle'") {
+		t.Errorf("the + toggle must always be present")
+	}
+
+	// Back to a populated list, then compose a new record.
+	v.search.Set("")
+	v.filter()
+	v.newAction()
+	if shown("cv-cruddelete") || shown("cv-crudedit") {
+		t.Errorf("composing a new record must hide 🗑 and ✏ (only ↺ remains)")
+	}
+
+	// Cancel the draft, load an existing row.
+	v.undoAction()
+	v.selectAction(view.Item{ID: "id-1"})
+	if !shown("cv-cruddelete") {
+		t.Errorf("a loaded existing row must still offer 🗑 to delete it")
+	}
+	if shown("cv-crudedit") {
+		t.Errorf("a loaded row must hide ✏ — bulk edit would discard the form")
+	}
+}

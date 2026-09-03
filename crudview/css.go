@@ -65,12 +65,23 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// to a growing bar can never measure equal. Anchor: the button is
 		// the positioning reference for its countbadge bubble, which rides
 		// the top-end corner out of the flow — relative costs nothing visual.
+		//
+		// Row(SpaceNone) is not cosmetic: this part carries RevealedBy(Open),
+		// so its base rule ends `display:none` and the @layer states reveal
+		// re-emits only `display: <displayFor(flowType)>`. Without a flow that
+		// is `block`, and CenterContent()'s flex centring goes inert on the
+		// shown button — the glyph strands at the leading edge. A flow makes
+		// the reveal restore `display:flex`, so CenterContent applies in every
+		// mode. Same fix, same reason as components/listselect/css.go:23-31.
+		// (action, above, needs no flow: it is never display:none, so its
+		// CenterContent flex always stands.)
 		Part(widget.Part("action-delete"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
 			style.Pad(style.Space3),
 			style.Grow(),
 			style.ControlBox(),
+			style.Row(style.SpaceNone),
 			style.CenterContent(),
 			style.Anchor(),
 			style.RevealedBy(widget.Open),
@@ -81,6 +92,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Pad(style.Space3),
 			style.Grow(),
 			style.ControlBox(),
+			style.Row(style.SpaceNone),
 			style.CenterContent(),
 			style.Anchor(),
 			style.RevealedBy(widget.Open),
@@ -173,9 +185,11 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// delete mode (see Render) — normal mode stays Primary blue. A When
 		// on the button itself cannot say this: the button's own Open means
 		// "visible", true in normal mode too, and Disclosure admits no
-		// other state.
+		// other state. Solid Danger (not DangerWash): the commit button is
+		// itself a destructive surface, so it carries the white glyph
+		// (--color-on-danger) instead of the wash's dark text.
 		WhenWithin(widget.Open, widget.Part("footer"), widget.Part("action-delete"),
-			style.As(style.DangerWash),
+			style.As(style.Danger),
 		).
 		// The delete-confirmation modal's holder must not cost the frame a flex
 		// share: as a plain in-flow child of rightpanel's Split it would take a

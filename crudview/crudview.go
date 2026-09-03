@@ -10,8 +10,11 @@ import (
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/fmt/lang"
 	"github.com/tinywasm/form"
+	"github.com/tinywasm/icons/pencil"
+	"github.com/tinywasm/icons/plus"
+	"github.com/tinywasm/icons/trash"
+	"github.com/tinywasm/icons/undo"
 	"github.com/tinywasm/layout/rightpanel"
-	"github.com/tinywasm/svg"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/widget"
 )
@@ -36,12 +39,13 @@ var (
 )
 
 const (
-	// The single toggle button swaps between these two icons reactively — see
-	// the "toggle" block in Render().
-	iconCrudNew    = svg.Icon("icon-crud-new")    // "+"  — nothing selected
-	iconCrudCancel = svg.Icon("icon-crud-cancel") // "↺" — a row is selected (undo)
-	iconCrudDelete = svg.Icon("icon-crud-delete") // "🗑" — bulk delete
-	iconCrudEdit   = svg.Icon("icon-crud-edit")   // "✏" — bulk edit
+	// The single toggle button swaps between these two glyphs reactively — see
+	// the "toggle" block in Render(). All four crud glyphs come from
+	// tinywasm/icons; trash/pencil are also drawn by the list marks
+	// (targetlist/targetdate) from the same package, so the buttons and the
+	// rows they act on can never draw a different shape.
+	iconCrudNew    = plus.Ref // "+"  — nothing selected
+	iconCrudCancel = undo.Ref // "↺" — a row is selected / draft in progress (undo)
 )
 
 // crudMode is the single source of truth for which chrome the footer shows and
@@ -115,6 +119,12 @@ type CrudView struct {
 	// bulk case would have been two events for what is, to a host, the same
 	// thing happening at a different N.
 	OnDeleted func(ids []string, err error)
+	// OnUpdated fires after a bulk field patch (selection mode → ✏ N). Same
+	// [ids]+err shape as OnDeleted, for the same reason. There is no
+	// single-record counterpart: editing one loaded record persists through
+	// OnSaved (autoSaveAction → Saver.Save), by design — see the master plan's
+	// "edición de un registro vs. edición masiva".
+	OnUpdated func(ids []string, err error)
 	OnCancel  func()
 
 	// internal
@@ -136,6 +146,10 @@ type CrudView struct {
 	// branch guarding an initial state that never occurs.
 	hasChecked *SignalBool
 	hasEdits   *SignalBool
+	// hasRows mirrors "the list currently shows at least one record", set in
+	// filter() on every reload/search. The footer's 🗑/✏ read it: on an empty
+	// list there is nothing to delete or bulk-edit, so only "+" shows.
+	hasRows *SignalBool
 }
 
 // active reports whether the toggle button should show "↺" (cancel/undo):
@@ -158,6 +172,7 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.checkedCount = NewString("0")
 	v.hasChecked = NewBool(false)
 	v.hasEdits = NewBool(false)
+	v.hasRows = NewBool(false)
 
 	// The list owns row rendering + the ⋮ menu and shares the selected signal
 	// so its highlight follows the form. New resolves Config.List's default
@@ -436,13 +451,19 @@ func (v *CrudView) clearSelection() {
 
 // toggleAction: the single crud button's click handler. "↺"→undo whenever
 // active() (a row is selected, or a new-record draft is in progress);
-// "+"→create otherwise.
+// "+"→create otherwise — but only when the presenter can actually save. A
+// view without view.Saver has nothing to create, so the "+" is a no-op there
+// (and the button renders disabled in that state — see Render); this guard is
+// the belt for a driver that calls the action directly.
 func (v *CrudView) toggleAction() {
 	if v.active() {
 		v.undoAction()
-	} else {
-		v.newAction()
+		return
 	}
+	if _, ok := v.Presenter.(view.Saver); !ok {
+		return
+	}
+	v.newAction()
 }
 
 // saveAction persists the current form values. Only reachable when saver != nil.
@@ -490,6 +511,12 @@ func (v *CrudView) saveAction(saver view.Saver) {
 // autoSaveAction is the Form.OnFieldChange hook: every field commit (blur/change)
 // persists immediately — there is no explicit Save button. A no-op when the
 // presenter cannot save (standalone/read-only views) or when in bulk editing mode.
+//
+// This is where editing ONE loaded record persists — through view.Saver, with
+// the whole record. It deliberately does NOT route through view.Updater even
+// when the presenter has it: Updater / the ✏ button is the BULK path (patch N
+// rows with a delta). The split is the master plan's, §4 — "editar un registro
+// vs. editar en lote".
 func (v *CrudView) autoSaveAction() {
 	if v.mode != nil && v.mode.Get() == string(modeEditing) {
 		// Bulk edit: nothing is persisted per field. What a commit DOES change
@@ -526,6 +553,9 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 // be something the list still shows.
 func (v *CrudView) filter() {
 	v.list.SetItems(v.Presenter.Filter(v.search.Get()))
+	if v.hasRows != nil {
+		v.hasRows.Set(v.list.Count() > 0)
+	}
 	v.dropSelectionOutOfScope()
 }
 
@@ -613,6 +643,9 @@ func (v *CrudView) bulkEditAction() {
 	} else {
 		Log(err.Error())
 	}
+	if v.OnUpdated != nil {
+		v.OnUpdated(ids, err)
+	}
 }
 
 // dropSelectionOutOfScope clears the selection when the freshly filtered list
@@ -664,9 +697,24 @@ func (v *CrudView) Render() *Element {
 		// second frame around a control that has one reads as a box in a box.
 		v.panel.AsideControls = v.Filter
 
+		// The create action ("+") needs view.Saver; 🗑 needs view.Deleter; ✏
+		// (bulk patch) needs view.Updater. 🗑/✏ already gate their own render
+		// below. The toggle button always renders — it is also the "↺" that
+		// leaves selection mode — but its "+" state goes disabled without a
+		// Saver (see its disabled bind). Editing ONE loaded record is not
+		// gated: it rides Saver via autoSaveAction.
+		_, hasSaver := v.Presenter.(view.Saver)
+
 		toggle := Button().Set(clsBtnCrud.AsAttr()).
 			Attr("name", "cv-crudtoggle").
 			BindStateFunc(widget.Open, func() bool { return v.mode.Get() != string(modeNormal) || v.active() }).
+			// Dead in normal mode when there is nothing to create: a Deleter-
+			// or Updater-only view still needs this button as the "↺" that
+			// leaves selection mode, so it stays — just disabled while it
+			// would only mean "+".
+			BindAttrBool("disabled", DeriveBool(func() bool {
+				return !hasSaver && v.mode.Get() == string(modeNormal) && !v.active()
+			})).
 			Child(
 				iconCrudNew.Render(string(NameCrudView.Class("action-new"))).
 					BindStateFunc(widget.Open, func() bool { return v.mode.Get() != string(modeNormal) || v.active() }),
@@ -691,8 +739,18 @@ func (v *CrudView) Render() *Element {
 		if _, ok := v.Presenter.(view.Deleter); ok {
 			btnDelete := Button().Set(clsBtnCrudDelete.AsAttr()).
 				Attr("name", "cv-cruddelete").
+				// Shown while deleting (the commit button) OR, in normal mode,
+				// only when there is a record to act on: rows exist and we are
+				// not mid-drafting a new one. Composing collapses the footer to
+				// just "↺" (nothing to delete yet, the only exits are finish or
+				// cancel), and an empty list shows only "+" — same spirit as
+				// the two selection modes, which already hide the button they
+				// are not.
 				BindStateFunc(widget.Open, func() bool {
-					return v.mode.Get() == string(modeNormal) || v.mode.Get() == string(modeDeleting)
+					if v.mode.Get() == string(modeDeleting) {
+						return true
+					}
+					return v.mode.Get() == string(modeNormal) && !v.composing.Get() && v.hasRows.Get()
 				}).
 				// In delete mode the button leans red with the rows it will
 				// act on (see css.go); everywhere else it stays Primary.
@@ -714,7 +772,7 @@ func (v *CrudView) Render() *Element {
 				// marked. Visible only above zero — at zero the disabled
 				// button already says there is nothing to commit.
 				Child(
-					iconCrudDelete.Render(string(clsBtnCrudDeleteIcon)),
+					trash.Ref.Render(string(clsBtnCrudDeleteIcon)),
 					(&countbadge.CountBadge{Count: v.checkedCount, Visible: v.hasChecked}).Render(),
 				)
 			btnDelete.On("click", func(Event) { v.deleteEntryAction() })
@@ -726,8 +784,17 @@ func (v *CrudView) Render() *Element {
 		if _, ok := v.Presenter.(view.Updater); ok {
 			btnEdit := Button().Set(clsBtnCrudEdit.AsAttr()).
 				Attr("name", "cv-crudedit").
+				// Shown while editing (the apply button) OR, in normal mode,
+				// only when a bulk edit could start: rows exist and nothing is
+				// loaded or being drafted (active()), since entering selection
+				// mode would discard the form. Empty list → hidden (nothing to
+				// patch); composing/loaded → hidden (was a dead disabled
+				// button).
 				BindStateFunc(widget.Open, func() bool {
-					return v.mode.Get() == string(modeNormal) || v.mode.Get() == string(modeEditing)
+					if v.mode.Get() == string(modeEditing) {
+						return true
+					}
+					return v.mode.Get() == string(modeNormal) && !v.active() && v.hasRows.Get()
 				}).
 				BindAttrBool("disabled", DeriveBool(func() bool {
 					if v.mode.Get() == string(modeNormal) {
@@ -740,7 +807,7 @@ func (v *CrudView) Render() *Element {
 					return !v.hasChecked.Get() || !v.hasEdits.Get()
 				})).
 				Child(
-					iconCrudEdit.Render(string(clsBtnCrudEditIcon)),
+					pencil.Ref.Render(string(clsBtnCrudEditIcon)),
 					(&countbadge.CountBadge{Count: v.checkedCount, Visible: v.hasChecked}).Render(),
 				)
 			btnEdit.On("click", func(Event) {

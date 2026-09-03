@@ -157,6 +157,44 @@ The isomorphic Go ecosystem means files compile to both backend and browser. We 
 
 Do NOT hand-build `<svg><use href="#id"/></svg>` blocks using `svg.Svg()` or `svg.Use()`.
 
+**A glyph shared with a component comes from `tinywasm/icons`.** `crudview`'s
+footer trash/pencil are the same marks `targetlist`/`targetdate` draw on their
+rows — so all of them import `github.com/tinywasm/icons/trash` and
+`.../pencil` and take `Ref` + `Def()`. Never re-define a shared glyph's
+geometry here, never import it sideways from `components`. `plus`/`undo` (the
+toggle button) come from `tinywasm/icons` too. A glyph private to `crudview`
+still lives in `crudview/svg.go`.
+
+**The mark's *skin* is `listselect.Apply` — assembled, not re-declared.** The
+check box / glyph reveal / colour rules live once in `components/listselect`;
+`crudview` styles only its own footer buttons to match (`As(Danger)` for the
+delete commit, so it wears the same white glyph as the checked rows).
+
+## crudview footer — capability-gated affordances
+
+The three footer actions are gated at **render time** by type assertion on the
+presenter, each on the capability it needs:
+
+| Affordance | Capability | Absent → |
+|---|---|---|
+| create (`+` state of the toggle) | `view.Saver` | toggle still renders (it is also `↺` for leaving selection mode) but its `+` state is `disabled` and `toggleAction` no-ops |
+| `🗑` (`cv-cruddelete`) | `view.Deleter` | button not rendered |
+| `✏` (`cv-crudedit`, bulk field patch) | `view.Updater` | button not rendered |
+
+Editing ONE loaded record is **not** a footer affordance and not gated on
+`Updater` — it rides `Saver.Save` via `autoSaveAction`. `✏` is the *bulk* entry
+point only. See `docs/BULK_ACTIONS_MASTER_PLAN.md` §4.
+
+## RevealedBy + an icon child → the part needs a flow
+
+A footer part that carries `style.RevealedBy(widget.Open)` **and** wraps an
+icon (it is a `<button>` that is a flex parent, not the icon itself) must also
+carry a flow — `style.Row(style.SpaceNone)`. Without it the `@layer states`
+reveal restores `display:block` (a flow-less part), `CenterContent()` goes
+inert, and the glyph strands at the leading edge. `action-delete` /
+`action-edit` learned this; `action` (never hidden) does not need it. Same fix
+and reason as `components/listselect/css.go`.
+
 ## SSR asset provider names are matched by regex — the name must be EXACT
 
 `tinywasm/ssr` collects a package's SSR output by scanning `css.go`/`js.go`/`svg.go`/`html.go`
