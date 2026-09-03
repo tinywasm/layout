@@ -3,7 +3,7 @@ module github.com/tinywasm/layout
 go 1.25.2
 
 require (
-	github.com/tinywasm/components v0.6.3
+	github.com/tinywasm/components v0.6.5
 	github.com/tinywasm/css v0.4.20
 	github.com/tinywasm/dom v0.13.8
 	github.com/tinywasm/fmt v0.25.7
@@ -33,5 +33,3 @@ require (
 )
 
 // TEMP: local until FloatingChrome consume + Filled cue + CueSibling ship in tinywasm/widget.
-
-replace github.com/tinywasm/components => ../components
