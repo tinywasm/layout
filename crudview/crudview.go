@@ -150,6 +150,12 @@ type CrudView struct {
 	// filter() on every reload/search. The footer's 🗑/✏ read it: on an empty
 	// list there is nothing to delete or bulk-edit, so only "+" shows.
 	hasRows *SignalBool
+	// hasMultiRows is hasRows' sibling for the ONE affordance that is
+	// meaningless below N=2: the bulk-edit ✏. Delete (🗑) reads hasRows —
+	// it is variadic and a single-row delete is a real case; ✏ patches a
+	// SET by one delta, so a lone row would just be a worse single edit
+	// (which the form already does — master plan §4).
+	hasMultiRows *SignalBool
 }
 
 // active reports whether the toggle button should show "↺" (cancel/undo):
@@ -173,6 +179,7 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.hasChecked = NewBool(false)
 	v.hasEdits = NewBool(false)
 	v.hasRows = NewBool(false)
+	v.hasMultiRows = NewBool(false)
 
 	// The list owns row rendering + the ⋮ menu and shares the selected signal
 	// so its highlight follows the form. New resolves Config.List's default
@@ -556,6 +563,9 @@ func (v *CrudView) filter() {
 	if v.hasRows != nil {
 		v.hasRows.Set(v.list.Count() > 0)
 	}
+	if v.hasMultiRows != nil {
+		v.hasMultiRows.Set(v.list.Count() > 1)
+	}
 	v.dropSelectionOutOfScope()
 }
 
@@ -794,7 +804,9 @@ func (v *CrudView) Render() *Element {
 					if v.mode.Get() == string(modeEditing) {
 						return true
 					}
-					return v.mode.Get() == string(modeNormal) && !v.active() && v.hasRows.Get()
+					// ✏ is always a bulk patch — hidden below 2 rows (a single
+					// row is edited by tapping it + the form, master plan §4).
+					return v.mode.Get() == string(modeNormal) && !v.active() && v.hasMultiRows.Get()
 				}).
 				BindAttrBool("disabled", DeriveBool(func() bool {
 					if v.mode.Get() == string(modeNormal) {
