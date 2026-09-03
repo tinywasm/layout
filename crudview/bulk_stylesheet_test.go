@@ -59,6 +59,21 @@ func TestFooterButtonsShareTheControlHeight(t *testing.T) {
 	}
 }
 
+// The list card is a positioning context so the row-count chip (countbadge)
+// resolves against it, not the page.
+func TestListCardAnchorsTheRowCountChip(t *testing.T) {
+	caller := &conformance.FakeCaller{}
+	p := view.New(caller, &Device{}, "device_list",
+		func() model.ModelSlice { return &DeviceList{} })
+	v := &CrudView{Title: "CRUD", Presenter: p, Form: html.Div()}
+	v.Init(&fakeCtx{})
+
+	b := ruleBlock(v.RenderCSS().String(), ".crudview__list {")
+	if !strings.Contains(b, "position: relative") {
+		t.Errorf(".crudview__list must be position: relative (Anchor), block:\n%s", b)
+	}
+}
+
 // The delete button leans red with the rows it will act on, and only there:
 // the rule selects Within the footer's Open state, which holds exactly while
 // deleting — normal mode stays Primary blue. Solid Danger, not a wash: it is
