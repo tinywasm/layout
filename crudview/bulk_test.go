@@ -403,6 +403,22 @@ func TestFooterHidesBulkActionsWhenNothingToActOn(t *testing.T) {
 		t.Errorf("the + toggle must always be present")
 	}
 
+	// Exactly ONE row: 🗑 stays (single delete is real), ✏ hides (bulk edit
+	// needs a set).
+	v.search.Set("Device One") // the seeded label — filters to a single row
+	v.filter()
+	if v.list.Count() != 1 {
+		t.Fatalf("precondition: expected exactly 1 row, got %d", v.list.Count())
+	}
+	if !shown("cv-cruddelete") {
+		t.Errorf("with one row 🗑 must still show (single delete is valid)")
+	}
+	if shown("cv-crudedit") {
+		t.Errorf("with one row ✏ must hide — bulk edit needs 2+ rows")
+	}
+	v.search.Set("")
+	v.filter()
+
 	// Back to a populated list, then compose a new record.
 	v.search.Set("")
 	v.filter()
