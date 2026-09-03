@@ -429,11 +429,11 @@ IDs:        testIDs,
 
 	var deleteDoneCalled bool
 	var deleteErr error
-	var deletedID string
-	v.OnDeleted = func(id string, err error) {
+	var deletedIDs []string
+	v.OnDeleted = func(ids []string, err error) {
 		deleteDoneCalled = true
 		deleteErr = err
-		deletedID = id
+		deletedIDs = ids
 	}
 
 	deleter, ok := p.(view.Deleter)
@@ -448,8 +448,8 @@ IDs:        testIDs,
 	if deleteErr != nil {
 		t.Errorf("expected no delete error, got: %v", deleteErr)
 	}
-	if deletedID != "123" {
-		t.Errorf("expected hook deleted id to be '123', got '%s'", deletedID)
+	if len(deletedIDs) != 1 || deletedIDs[0] != "123" {
+		t.Errorf("expected hook deleted ids to be ['123'], got %v", deletedIDs)
 	}
 
 	// Verify delete op was called on caller
@@ -508,7 +508,7 @@ IDs:        testIDs,
 
 	var deleteDoneCalled bool
 	var deleteErr error
-	v.OnDeleted = func(id string, err error) {
+	v.OnDeleted = func(ids []string, err error) {
 		deleteDoneCalled = true
 		deleteErr = err
 	}

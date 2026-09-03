@@ -102,7 +102,13 @@ type CrudView struct {
 	OnSelect  func(it view.Item)
 	OnNew     func()
 	OnSaved   func(err error)
-	OnDeleted func(id string, err error)
+	// OnDeleted fires after both the single-record delete (row → ⋮ → Eliminar)
+	// and the bulk delete (selection mode → 🗑 N). ids mirrors view.Deleter's
+	// own variadic shape rather than staying a lone string: one string could
+	// never have named 3 deleted records, and a second callback just for the
+	// bulk case would have been two events for what is, to a host, the same
+	// thing happening at a different N.
+	OnDeleted func(ids []string, err error)
 	OnCancel  func()
 
 	// internal
@@ -269,7 +275,7 @@ func (v *CrudView) confirmDeleteAction() {
 					Log(err.Error())
 				}
 				if v.OnDeleted != nil {
-					v.OnDeleted("", err)
+					v.OnDeleted(ids, err)
 				}
 			}
 		}
@@ -491,7 +497,7 @@ func (v *CrudView) autoSaveAction() {
 
 // deleteAction: delete button / driver Delete. Only reachable when deleter != nil.
 func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
-	err := deleter.Delete(id)  // plural contract; the bulk path arrives with this repo's own plan
+	err := deleter.Delete(id)
 	if err == nil {
 		v.selected.Set("")
 		v.canDelete.Set(false)
@@ -500,7 +506,7 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 		Log(err.Error())
 	}
 	if v.OnDeleted != nil {
-		v.OnDeleted(id, err)
+		v.OnDeleted([]string{id}, err)
 	}
 }
 

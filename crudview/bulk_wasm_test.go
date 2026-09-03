@@ -162,6 +162,35 @@ func TestBulkEdit_WritesOnlyTheFieldsTheUserTouched(t *testing.T) {
 	}
 }
 
+func TestBulkDelete_OnDeletedReceivesEveryID(t *testing.T) {
+	v, _, doc := mountBulk(t, false)
+
+	v.setMode(modeDeleting)
+	clickRow(t, doc, "tl-id-1")
+	clickRow(t, doc, "tl-id-2")
+
+	var gotIDs []string
+	var gotErr error
+	called := false
+	v.OnDeleted = func(ids []string, err error) {
+		called = true
+		gotIDs = ids
+		gotErr = err
+	}
+
+	v.confirmDeleteAction()
+
+	if !called {
+		t.Fatal("expected OnDeleted to fire for the bulk delete")
+	}
+	if gotErr != nil {
+		t.Fatalf("unexpected error: %v", gotErr)
+	}
+	if len(gotIDs) != 2 || gotIDs[0] != "id-1" || gotIDs[1] != "id-2" {
+		t.Errorf("expected OnDeleted ids [id-1 id-2], got %v", gotIDs)
+	}
+}
+
 func TestBulkEdit_ApplyIsDeadUntilSomethingIsEdited(t *testing.T) {
 	v, _, doc := mountBulk(t, true)
 
