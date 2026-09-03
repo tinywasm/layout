@@ -156,6 +156,10 @@ type CrudView struct {
 	// SET by one delta, so a lone row would just be a worse single edit
 	// (which the form already does — master plan §4).
 	hasMultiRows *SignalBool
+	// rowCount is the list's current visible-row count as text, for the
+	// count chip on the list card (see Render). Set in filter() on every
+	// reload/search — always current, shown in every mode.
+	rowCount *SignalString
 }
 
 // active reports whether the toggle button should show "↺" (cancel/undo):
@@ -180,6 +184,7 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.hasEdits = NewBool(false)
 	v.hasRows = NewBool(false)
 	v.hasMultiRows = NewBool(false)
+	v.rowCount = NewString("0")
 
 	// The list owns row rendering + the ⋮ menu and shares the selected signal
 	// so its highlight follows the form. New resolves Config.List's default
@@ -566,6 +571,9 @@ func (v *CrudView) filter() {
 	if v.hasMultiRows != nil {
 		v.hasMultiRows.Set(v.list.Count() > 1)
 	}
+	if v.rowCount != nil {
+		v.rowCount.Set(fmt.Sprintf("%d", v.list.Count()))
+	}
 	v.dropSelectionOutOfScope()
 }
 
@@ -700,7 +708,9 @@ func (v *CrudView) Render() *Element {
 
 	if hasSource {
 		// The list — its own inset card inside the aside's content band.
-		v.panel.Aside = Div().Set(clsListaBox.AsAttr()).Child(v.list)
+		v.panel.Aside = Div().Set(clsListaBox.AsAttr()).
+			Child((&countbadge.CountBadge{Count: v.rowCount, Visible: v.hasRows}).Render()).
+			Child(v.list)
 
 		// The filter is the consumer's control. crudview supplies no card
 		// around it: rightpanel's controls band already keeps its size, and a

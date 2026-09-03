@@ -435,3 +435,28 @@ func TestFooterHidesBulkActionsWhenNothingToActOn(t *testing.T) {
 		t.Errorf("a loaded row must hide ✏ — bulk edit would discard the form")
 	}
 }
+
+// The row-count chip reflects the visible count and updates on filter.
+func TestRowCountChipTracksTheList(t *testing.T) {
+	v, _ := setupBulkTest(t, true)
+
+	if v.rowCount.Get() != "3" {
+		t.Errorf("rowCount = %q, want \"3\" (3 seeded devices)", v.rowCount.Get())
+	}
+
+	v.search.Set("Device One")
+	v.filter()
+	if v.rowCount.Get() != "1" {
+		t.Errorf("after filtering to one row, rowCount = %q, want \"1\"", v.rowCount.Get())
+	}
+
+	v.search.Set("no-such-device-xyz")
+	v.filter()
+	if v.rowCount.Get() != "0" {
+		t.Errorf("empty list rowCount = %q, want \"0\"", v.rowCount.Get())
+	}
+	// the chip's Visible (v.hasRows) is false here, so "0" never renders
+	if v.hasRows.Get() {
+		t.Errorf("hasRows must be false for an empty list (chip hidden)")
+	}
+}
