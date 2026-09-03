@@ -1,6 +1,7 @@
 package crudview
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/tinywasm/components/targetlist"
@@ -216,3 +217,101 @@ var _ = form.New
 // Both assertions now run for real in bulk_wasm_test.go, where the click is a
 // click: TestBulkDelete_ShipsEveryCheckedIDInOneCall and
 // TestBulkEdit_WritesOnlyTheFieldsTheUserTouched.
+
+// A loaded record deletes directly: the same click that opens selection mode
+// with nothing loaded opens that record's own confirmation instead — no mode
+// change, one dialog naming the record.
+func TestSingleDeleteEntryConfirmsLoadedRecord(t *testing.T) {
+	v, caller := setupBulkTest(t, true)
+
+	v.selectAction(view.Item{ID: "id-1", Label: "Device One"})
+	v.deleteEntryAction()
+
+	if v.mode.Get() != string(modeNormal) {
+		t.Errorf("a single delete must not enter selection mode, got %q", v.mode.Get())
+	}
+	if v.deleteID.Get() != "id-1" {
+		t.Errorf("the confirmation must name the loaded record, got %q", v.deleteID.Get())
+	}
+
+	v.confirmDeleteAction()
+
+	count := 0
+	for _, c := range caller.Calls {
+		if c.Op != "device_delete" {
+			continue
+		}
+		sent := conformance.Payload(c.Args)
+		if !conformance.Has(sent, "ids", "id-1") {
+			t.Errorf("the single delete must ship id-1, got %v", sent)
+		}
+		for _, kv := range sent {
+			if kv.Key == "ids" {
+				count++
+			}
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected exactly one deleted id across all calls, got %d", count)
+	}
+}
+
+// An unsaved draft has no id to name in the dialog: the button is dead for
+// it (and disabled in the skin), so nothing happens and no mode opens.
+func TestSingleDeleteEntryWithDraftDoesNothing(t *testing.T) {
+	v, _ := setupBulkTest(t, true)
+
+	v.newAction()
+	v.deleteEntryAction()
+
+	if v.mode.Get() != string(modeNormal) {
+		t.Errorf("a draft delete must not enter selection mode, got %q", v.mode.Get())
+	}
+	if v.deleteID.Get() != "" {
+		t.Errorf("no record may pend confirmation for a draft, got %q", v.deleteID.Get())
+	}
+}
+
+// With nothing loaded the same button still opens selection mode.
+func TestDeleteEntryWithNothingEntersSelection(t *testing.T) {
+	v, _ := setupBulkTest(t, true)
+
+	v.deleteEntryAction()
+
+	if v.mode.Get() != string(modeDeleting) {
+		t.Errorf("expected modeDeleting, got %q", v.mode.Get())
+	}
+}
+
+// footerTag returns the footer's own opening tag: the tone lives on the
+// footer div itself, while the buttons inside carry their own visibility
+// states — grepping the whole subtree would mix the two.
+func footerTag(v *CrudView) string {
+	v.Render()
+	html := v.panel.AsideFooter.String()
+	if i := strings.Index(html, ">"); i != -1 {
+		return html[:i+1]
+	}
+	return html
+}
+
+// The footer's Open state is the delete-mode tone: it holds exactly while
+// deleting, so the stylesheet's Within rule paints the delete button red
+// only there.
+func TestFooterToneHoldsOnlyWhileDeleting(t *testing.T) {
+	v, _ := setupBulkTest(t, true)
+
+	if tag := footerTag(v); tag != "<div class='crudview__footer'>" {
+		t.Errorf("the footer must not carry the tone in normal mode, tag: %s", tag)
+	}
+
+	v.setMode(modeDeleting)
+	if tag := footerTag(v); !strings.Contains(tag, "data-open='true'") {
+		t.Errorf("the footer must carry data-open='true' while deleting, tag: %s", tag)
+	}
+
+	v.setMode(modeNormal)
+	if tag := footerTag(v); tag != "<div class='crudview__footer'>" {
+		t.Errorf("leaving delete mode must drop the tone, tag: %s", tag)
+	}
+}

@@ -2,7 +2,6 @@
 
 package crudview
 
-
 import (
 	"github.com/tinywasm/css"
 	"github.com/tinywasm/widget"
@@ -47,12 +46,12 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Scroll(),
 			style.Round(style.RadiusMd),
 			style.Fill(),
-		).		// The primary action spans the column, mirroring the search bar above
-		// the list rather than sitting as a stray square beside it.
-		// ControlBox: the action is a control, and every control answers to
-		// --control-height — the same token the search bar now measures by, so
-		// the two ends of the column agree by construction instead of by
-		// hand-tuned padding.
+		). // The footer is a Row of equal buttons: delete leads, add follows
+		// (see Render). Every button answers to --control-height — the same
+		// token the search bar measures by — so the two ends of the column
+		// agree by construction instead of by hand-tuned padding. Grow, not
+		// Full: each button takes its share of the free space and yields to
+		// its siblings.
 		Part(widget.Part("action"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
@@ -61,27 +60,29 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.ControlBox(),
 			style.CenterContent(),
 		).
+		// Same box as action, same surface: delete reads as the footer's
+		// leading button, not as an alarm. No MediaBox: a square chip next
+		// to a growing bar can never measure equal. Anchor: the button is
+		// the positioning reference for its countbadge bubble, which rides
+		// the top-end corner out of the flow — relative costs nothing visual.
 		Part(widget.Part("action-delete"),
-			style.As(style.Danger),
+			style.As(style.Primary),
 			style.Round(style.RadiusMd),
 			style.Pad(style.Space3),
+			style.Grow(),
 			style.ControlBox(),
-			style.MediaBox(style.AspectSquare),
 			style.CenterContent(),
+			style.Anchor(),
 			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("action-edit"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
 			style.Pad(style.Space3),
+			style.Grow(),
 			style.ControlBox(),
-			style.MediaBox(style.AspectSquare),
 			style.CenterContent(),
-			style.RevealedBy(widget.Open),
-		).
-		Part(widget.Part("action-count"),
-			style.FontSize(style.TextXs),
-			style.FontWeight(style.WeightBold),
+			style.Anchor(),
 			style.RevealedBy(widget.Open),
 		).
 		Part(widget.Part("footer"),
@@ -101,32 +102,26 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.RevealedBy(widget.Open),
 			style.IconBox(style.IconMd),
 		).
-		// On a phone the action is a floating square instead of a bar across the
-		// bottom: the list keeps the whole panel and the button matches the
-		// hamburger it shares the screen with. Viewport scope, not Parent — it
-		// has to stay reachable on the detail panel too, where its job is to
-		// cancel. It still disappears with the module: a fixed descendant of a
-		// display:none panel is not rendered, so no other route sees it.
-		// ControlBox's min-height stays on: the floating chip grows to the
-		// control token rather than hugging the IconLg glyph, which is a bigger
-		// target, not a fight.
-		//
-		// Docked gap and Pad are Space4/Space2, matching platformd's hamburger
-		// (OnlyOn(Mobile, "hamburger") in platformd/css.go) exactly, not
-		// cardInset: these two are the screen's floating chrome, a different
-		// pairing from fields/list's in-card content inset, and pinning both
-		// floating buttons to the same corner offset and padding is what makes
-		// them read as one design language instead of two unrelated badges.
-		On(css.Mobile, widget.Part("action"),
-			style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.Space4),
-			style.Width(style.Content),
-			style.Pad(style.Space2),
-			style.Round(style.RadiusMd),
-			style.Raise(style.Floating),
-			style.CenterContent(),
+		// Boxed like action-new/cancel above: a bare <svg> paints at its
+		// intrinsic size and dwarfs the button. Same token, so all three
+		// footer glyphs measure equal on every breakpoint.
+		Part(widget.Part("action-delete-icon"),
+			style.IconBox(style.IconMd),
 		).
+		Part(widget.Part("action-edit-icon"),
+			style.IconBox(style.IconMd),
+		).
+		// On a phone the footer travels as ONE row: rightpanel already docks
+		// the aside-footer slot (see rightpanel/css.go), so docking a single
+		// button here as well would rip it out of the row and strand its
+		// siblings at full width. No per-button Docked, on any breakpoint:
+		// every footer button keeps the same Grow box it has on desktop.
+		// ControlBox's min-height stays on everywhere, so the row keeps the
+		// control token as its measure instead of hugging the glyphs.
 		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
 		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
+		On(css.Mobile, widget.Part("action-delete-icon"), style.IconBox(style.IconLg)).
+		On(css.Mobile, widget.Part("action-edit-icon"), style.IconBox(style.IconLg)).
 		// Bare, not Inset, on a phone: the grey card + border of fields/list
 		// adds nothing over the panel's own page surface, and the list is
 		// where the user first wants whitespace to breathe. Bare strips
@@ -151,18 +146,17 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// deliberate mobile exception to cardInset's promise; it is retired
 		// with the premise that justified it.
 		//
-		// FloatingChrome(EdgeBottom, IconLg, Space4): the action button above
-		// is Docked to THIS panel's corner, floating over content this Part
-		// contains — the icon (IconLg, matching action-new/action-cancel's own
-		// mobile size two rules up) plus the same Space4 the button is offset
-		// from the edge by, doubled, is its measured 56px-tall + 16px-offset =
-		// 72px footprint. This Part is not itself what scrolls — targetlist's
+		// FloatingChrome(EdgeBottom, IconLg, Space4): the footer row floats over
+		// content this Part contains — rightpanel docks the aside-footer slot
+		// to THIS panel's corner. The icons (IconLg, matching every footer
+		// icon's own mobile size two rules up) plus the docked gap, doubled,
+		// is the footprint the scroller must clear. This Part is not itself what scrolls — targetlist's
 		// own Fill()+Scroll() two levels in is — but --floating-bottom is an
 		// inherited custom property, so it reaches that descendant without
 		// either package knowing the other's class name. Whoever changes the
-		// button's icon size or its Docked gap must update this call to match;
-		// nothing enforces the two staying in sync beyond that they are three
-		// lines apart.
+		// footer icons' size or the slot's docked gap must update this call to
+		// match; nothing enforces the two staying in sync beyond that they are
+		// three lines apart.
 		On(css.Mobile, widget.Part("list"),
 			style.Pad(cardInset),
 			style.FloatingChrome(style.EdgeBottom, style.IconLg, style.Space4),
@@ -173,6 +167,15 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// back to Primary blue, since at that point nothing is active anymore.
 		When(widget.Open, widget.Part("action"),
 			style.As(style.AccentInverse),
+		).
+		// Red while deleting, matching the rows it will act on: the rule
+		// selects Within the footer's Open state, which holds exactly in
+		// delete mode (see Render) — normal mode stays Primary blue. A When
+		// on the button itself cannot say this: the button's own Open means
+		// "visible", true in normal mode too, and Disclosure admits no
+		// other state.
+		WhenWithin(widget.Open, widget.Part("footer"), widget.Part("action-delete"),
+			style.As(style.DangerWash),
 		).
 		// The delete-confirmation modal's holder must not cost the frame a flex
 		// share: as a plain in-flow child of rightpanel's Split it would take a

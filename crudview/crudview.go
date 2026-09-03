@@ -4,6 +4,7 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
 
+	"github.com/tinywasm/components/countbadge"
 	"github.com/tinywasm/components/modaldialog"
 	"github.com/tinywasm/components/targetlist"
 	"github.com/tinywasm/fmt"
@@ -22,7 +23,8 @@ var (
 	clsBtnCrud             = NameCrudView.Class("action")
 	clsBtnCrudDelete       = NameCrudView.Class("action-delete")
 	clsBtnCrudEdit         = NameCrudView.Class("action-edit")
-	clsBtnCrudCount        = NameCrudView.Class("action-count")
+	clsBtnCrudDeleteIcon   = NameCrudView.Class("action-delete-icon")
+	clsBtnCrudEditIcon     = NameCrudView.Class("action-edit-icon")
 	clsFooter              = NameCrudView.Class("footer")
 	clsBtnCrudIconHidden   = NameCrudView.Class("action-hidden")
 	clsListaBox            = NameCrudView.Class("list")
@@ -67,6 +69,10 @@ type ListView interface {
 	// Selection mode — targetlist and targetdate both implement it by
 	// assembling the components/listselect lego piece.
 	SetSelectMode(on bool)
+	// Danger tone — the list paints checked rows red instead of blue while
+	// armed. CrudView arms it exactly in delete mode; a plain list that
+	// never hears it keeps its single Accent language.
+	SetDanger(on bool)
 	CheckedIDs() []string
 	OnCheckedChange(fn func(n int))
 }
@@ -99,9 +105,9 @@ type CrudView struct {
 
 	// Additive user hooks — called AFTER the built-in behavior. Assigning them
 	// can never disable list→form fill, save or delete wiring.
-	OnSelect  func(it view.Item)
-	OnNew     func()
-	OnSaved   func(err error)
+	OnSelect func(it view.Item)
+	OnNew    func()
+	OnSaved  func(err error)
 	// OnDeleted fires after both the single-record delete (row → ⋮ → Eliminar)
 	// and the bulk delete (selection mode → 🗑 N). ids mirrors view.Deleter's
 	// own variadic shape rather than staying a lone string: one string could
@@ -391,6 +397,10 @@ func (v *CrudView) setMode(m crudMode) {
 	if m == modeDeleting || m == modeEditing {
 		if v.list != nil {
 			v.list.SetSelectMode(true)
+			// Red is the delete mode's own tone: checked rows (and the
+			// delete button, via its Invalid state) lean toward danger.
+			// Edit mode keeps the plain Accent marks — red there would lie.
+			v.list.SetDanger(m == modeDeleting)
 		}
 		if m == modeEditing && v.form != nil {
 			v.form.Reset()
@@ -400,6 +410,7 @@ func (v *CrudView) setMode(m crudMode) {
 	} else {
 		if v.list != nil {
 			v.list.SetSelectMode(false)
+			v.list.SetDanger(false)
 		}
 		v.hasEdits.Set(false)
 	}
@@ -516,6 +527,23 @@ func (v *CrudView) deleteAction(deleter view.Deleter, id string) {
 func (v *CrudView) filter() {
 	v.list.SetItems(v.Presenter.Filter(v.search.Get()))
 	v.dropSelectionOutOfScope()
+}
+
+// deleteEntryAction: the 🗑 button's click handler. A loaded record deletes
+// directly — deleteRequest opens that record's own confirmation, no
+// selection mode. With nothing loaded it enters delete mode instead; an
+// unsaved draft (composing, no id) does nothing, and the button is disabled
+// for it anyway (see Render).
+func (v *CrudView) deleteEntryAction() {
+	if v.mode.Get() == string(modeNormal) {
+		if id := v.selected.Get(); id != "" {
+			v.deleteRequest(id)
+		} else if !v.active() {
+			v.setMode(modeDeleting)
+		}
+	} else if v.mode.Get() == string(modeDeleting) {
+		v.bulkDeleteAction()
+	}
 }
 
 // bulkDeleteAction commits the marked rows. One call, not a loop: view.Deleter
@@ -653,7 +681,12 @@ func (v *CrudView) Render() *Element {
 			}
 		})
 
-		footer := Div().Set(clsFooter.AsAttr()).Child(toggle)
+		// The footer's Open state is the delete-mode tone: WhenWithin
+		// paints the delete button red only while it holds (see css.go).
+		// Footer order is [delete][toggle][edit]: delete sits at the leading
+		// edge of add, every button sharing the same box (see css.go).
+		footer := Div().Set(clsFooter.AsAttr()).
+			BindStateFunc(widget.Open, func() bool { return v.mode.Get() == string(modeDeleting) })
 
 		if _, ok := v.Presenter.(view.Deleter); ok {
 			btnDelete := Button().Set(clsBtnCrudDelete.AsAttr()).
@@ -661,29 +694,34 @@ func (v *CrudView) Render() *Element {
 				BindStateFunc(widget.Open, func() bool {
 					return v.mode.Get() == string(modeNormal) || v.mode.Get() == string(modeDeleting)
 				}).
+				// In delete mode the button leans red with the rows it will
+				// act on (see css.go); everywhere else it stays Primary.
+				// The tone rides the FOOTER's Open state, not the button's:
+				// this sheet's Disclosure kind admits no other state, and
+				// the button's own Open already means "visible", which is
+				// true in normal mode too.
 				BindAttrBool("disabled", DeriveBool(func() bool {
 					if v.mode.Get() == string(modeNormal) {
-						return v.active()
+						// A loaded record deletes directly (its own confirm
+						// dialog); only an unsaved draft — nothing to name
+						// in the dialog — keeps the button dead.
+						return v.composing.Get()
 					}
 					return !v.hasChecked.Get()
 				})).
+				// The count rides OUT of the flow: a countbadge bubble on the
+				// top-end corner, so the button keeps its box with 0, 1 or 99
+				// marked. Visible only above zero — at zero the disabled
+				// button already says there is nothing to commit.
 				Child(
-					iconCrudDelete.Render(""),
-					Span().Set(clsBtnCrudCount.AsAttr()).
-						BindText(v.checkedCount).
-						BindStateFunc(widget.Open, func() bool { return v.mode.Get() == string(modeDeleting) }),
+					iconCrudDelete.Render(string(clsBtnCrudDeleteIcon)),
+					(&countbadge.CountBadge{Count: v.checkedCount, Visible: v.hasChecked}).Render(),
 				)
-			btnDelete.On("click", func(Event) {
-				if v.mode.Get() == string(modeNormal) {
-					if !v.active() {
-						v.setMode(modeDeleting)
-					}
-				} else if v.mode.Get() == string(modeDeleting) {
-					v.bulkDeleteAction()
-				}
-			})
+			btnDelete.On("click", func(Event) { v.deleteEntryAction() })
 			footer.Child(btnDelete)
 		}
+
+		footer.Child(toggle)
 
 		if _, ok := v.Presenter.(view.Updater); ok {
 			btnEdit := Button().Set(clsBtnCrudEdit.AsAttr()).
@@ -702,10 +740,8 @@ func (v *CrudView) Render() *Element {
 					return !v.hasChecked.Get() || !v.hasEdits.Get()
 				})).
 				Child(
-					iconCrudEdit.Render(""),
-					Span().Set(clsBtnCrudCount.AsAttr()).
-						BindText(v.checkedCount).
-						BindStateFunc(widget.Open, func() bool { return v.mode.Get() == string(modeEditing) }),
+					iconCrudEdit.Render(string(clsBtnCrudEditIcon)),
+					(&countbadge.CountBadge{Count: v.checkedCount, Visible: v.hasChecked}).Render(),
 				)
 			btnEdit.On("click", func(Event) {
 				if v.mode.Get() == string(modeNormal) {

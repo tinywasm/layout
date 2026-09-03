@@ -208,3 +208,95 @@ func TestBulkEdit_ApplyIsDeadUntilSomethingIsEdited(t *testing.T) {
 		t.Error("touching a field must arm the apply button")
 	}
 }
+
+func clickFooterButton(t *testing.T, doc js.Value, name string) {
+	t.Helper()
+	btn := doc.Call("querySelector", "[name='"+name+"']")
+	if btn.IsNull() || btn.IsUndefined() {
+		t.Fatalf("footer button %s not mounted", name)
+	}
+	btn.Call("click")
+}
+
+func rowAttr(t *testing.T, doc js.Value, id, attr string) string {
+	t.Helper()
+	row := doc.Call("getElementById", id)
+	if row.IsNull() {
+		t.Fatalf("row %s not mounted", id)
+	}
+	v := row.Call("getAttribute", attr)
+	if v.IsNull() {
+		return ""
+	}
+	return v.String()
+}
+
+// The same click that opens selection mode with nothing loaded confirms the
+// loaded record directly: no mode change, then one single delete call.
+func TestSingleDelete_ClickConfirmsLoadedRecord(t *testing.T) {
+	v, caller, doc := mountBulk(t, false)
+
+	clickRow(t, doc, "tl-id-2") // normal mode: loads the record into the form
+	if v.selected.Get() != "id-2" {
+		t.Fatalf("expected id-2 loaded, got %q", v.selected.Get())
+	}
+
+	clickFooterButton(t, doc, "cv-cruddelete")
+
+	if v.mode.Get() != string(modeNormal) {
+		t.Fatalf("a single delete must not enter selection mode, got %q", v.mode.Get())
+	}
+	if v.deleteID.Get() != "id-2" {
+		t.Fatalf("the confirmation must name the loaded record, got %q", v.deleteID.Get())
+	}
+
+	v.confirmDeleteAction()
+
+	calls := callsFor(caller, "device_delete")
+	if len(calls) != 1 {
+		t.Fatalf("expected exactly 1 delete call, got %d", len(calls))
+	}
+	sent := conformance.Payload(calls[0].Args)
+	if !conformance.Has(sent, "ids", "id-2") {
+		t.Errorf("the single delete must ship id-2, got %v", sent)
+	}
+	if v.selected.Get() != "" {
+		t.Errorf("confirming must clear the selection, got %q", v.selected.Get())
+	}
+}
+
+// The danger tone, live: a tapped row in delete mode carries data-invalid
+// (red wash) and never data-selected; untapping drops it again.
+func TestDeleteMode_TappedRowTurnsInvalidRed(t *testing.T) {
+	_, _, doc := mountBulk(t, false)
+
+	clickFooterButton(t, doc, "cv-cruddelete") // nothing loaded: enters selection
+
+	clickRow(t, doc, "tl-id-1")
+	if got := rowAttr(t, doc, "tl-id-1", "data-invalid"); got != "true" {
+		t.Errorf("a tapped row in delete mode must carry data-invalid, got %q", got)
+	}
+	if got := rowAttr(t, doc, "tl-id-1", "data-selected"); got != "" {
+		t.Errorf("a danger-marked row must not carry data-selected, got %q", got)
+	}
+
+	clickRow(t, doc, "tl-id-1")
+	if got := rowAttr(t, doc, "tl-id-1", "data-invalid"); got != "" {
+		t.Errorf("untapping must drop data-invalid, got %q", got)
+	}
+}
+
+// Edit mode keeps the plain blue marks: red would lie about the action.
+func TestEditMode_TappedRowStaysSelectedBlue(t *testing.T) {
+	_, _, doc := mountBulk(t, true)
+
+	clickFooterButton(t, doc, "cv-crudedit") // nothing loaded: enters edit mode
+
+	clickRow(t, doc, "tl-id-1")
+	if got := rowAttr(t, doc, "tl-id-1", "data-selected"); got != "true" {
+		t.Errorf("a tapped row in edit mode must carry data-selected, got %q", got)
+	}
+	if got := rowAttr(t, doc, "tl-id-1", "data-invalid"); got != "" {
+		t.Errorf("an edit-marked row must not carry data-invalid, got %q", got)
+	}
+}
