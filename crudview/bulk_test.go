@@ -416,8 +416,6 @@ func TestFooterHidesBulkActionsWhenNothingToActOn(t *testing.T) {
 	if shown("cv-crudedit") {
 		t.Errorf("with one row ✏ must hide — bulk edit needs 2+ rows")
 	}
-	v.search.Set("")
-	v.filter()
 
 	// Back to a populated list, then compose a new record.
 	v.search.Set("")
