@@ -2,6 +2,8 @@
 PLAN: "feat(crudview): bulk-edit (✏) button appears only with 2+ rows"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 18098741118092702533
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
