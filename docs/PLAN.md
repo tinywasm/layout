@@ -2,8 +2,9 @@
 PLAN: "feat(crudview): bulk-edit (✏) button appears only with 2+ rows"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 18098741118092702533
+PR: https://github.com/tinywasm/layout/pull/31
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
