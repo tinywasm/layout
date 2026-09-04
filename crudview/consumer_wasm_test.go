@@ -17,7 +17,7 @@ type mockCtxWasmConsumer struct{}
 func (m *mockCtxWasmConsumer) OnCleanup(fn func()) {}
 
 func TestConsumer_Wasm_Render(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{},
 		view.WithTitle("Custom Search Title"),
 		view.WithSearchPlaceholder("Custom Search..."))

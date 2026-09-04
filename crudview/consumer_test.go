@@ -64,7 +64,7 @@ func (d *Device) Item() view.Item {
 var _ model.Model = (*Device)(nil) // Verify compile-time implementation
 var _ view.Itemizer = (*Device)(nil)
 
-// listSaveDeleteBackend implements view.Backend + view.Saver +
+// listSaveDeleteBackend implements view.Lister + view.Saver +
 // view.Deleter, but NOT view.Updater: the double for every test that
 // asserts update UI stays absent.
 type listSaveDeleteBackend struct {
@@ -152,7 +152,7 @@ func TestConsumer_NewNoWidgets(t *testing.T) {
 
 // Case 2: The list operation on wiring is ListOp (reloaded on Init)
 func TestConsumer_ListOp(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 
 	cfg := Config{
@@ -173,7 +173,7 @@ func TestConsumer_ListOp(t *testing.T) {
 
 // Case 3: The list renders cards returned by Items
 func TestConsumer_ListRendersCards(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 			&Device{Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
@@ -202,7 +202,7 @@ func TestConsumer_ListRendersCards(t *testing.T) {
 
 // Case 4: Selecting a card populates the form using form.LoadValues
 func TestConsumer_SelectPopulatesForm(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 			&Device{Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
@@ -248,7 +248,7 @@ func TestConsumer_SelectPopulatesForm(t *testing.T) {
 
 // Case 5: Save calls Save with form data, not original Record
 func TestConsumer_SaveWithFormData(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 
 	cfg := Config{
@@ -304,7 +304,7 @@ func TestConsumer_SaveWithFormData(t *testing.T) {
 
 // Case 6: Save with invalid form doesn't call presenter and returns error
 func TestConsumer_SaveInvalidForm(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 
 	cfg := Config{
@@ -349,7 +349,7 @@ func TestConsumer_SaveInvalidForm(t *testing.T) {
 
 // Case 7: Delete calls Delete on presenter
 func TestConsumer_DeleteSelected(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "123", Name: "Device One", Ip: "192.168.1.1"},
 		},
@@ -402,7 +402,7 @@ func TestConsumer_DeleteSelected(t *testing.T) {
 
 // Case 8: Delete can return error from presenter
 func TestConsumer_DeleteNoSelection(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "non-existent", Name: "Device One", Ip: "192.168.1.1"},
 		},
@@ -451,7 +451,7 @@ func TestConsumer_DeleteNoSelection(t *testing.T) {
 // Case 9: Presenter error on list is propagated to Reload caller
 func TestConsumer_ListErrorPropagated(t *testing.T) {
 	expectedErr := fmt.Errf("network connection failed")
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Err: expectedErr,
 	}
 	p := view.New(fb, &Device{})
@@ -477,7 +477,7 @@ func TestConsumer_ListErrorPropagated(t *testing.T) {
 
 // Case 10: Search filters cards by Label and Description (case-insensitive)
 func TestConsumer_SearchFiltering(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Frontend Device", Ip: "192.168.1.10"},
 			&Device{Id: "23", Name: "Backend Server", Ip: "10.0.0.5"},
@@ -530,7 +530,7 @@ func TestConsumer_SearchFiltering(t *testing.T) {
 // protecting; and new/undo always leave the form editable too. The "disabled"
 // gate that used to appear on selection is the regression this guards.
 func TestConsumer_NoLockGating(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		},
@@ -584,7 +584,7 @@ func TestConsumer_NoLockGating(t *testing.T) {
 // actually deletes. Dismissing the modal without confirming leaves the
 // record untouched.
 func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		},
@@ -628,7 +628,7 @@ func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
 // icon/toggleAction branch reads. Regression test for the reported bug: the
 // button stayed on "+" after pressing it.
 func TestConsumer_NewFlipsToggleActive(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		},

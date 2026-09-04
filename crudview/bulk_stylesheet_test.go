@@ -13,7 +13,7 @@ import (
 )
 
 func TestActionGrowsInsteadOfFillingTheRow(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -34,7 +34,7 @@ func TestActionGrowsInsteadOfFillingTheRow(t *testing.T) {
 }
 
 func TestFooterButtonsShareTheControlHeight(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -62,7 +62,7 @@ func TestFooterButtonsShareTheControlHeight(t *testing.T) {
 // itself a destructive commit surface and carries the white glyph
 // (--color-on-danger), the same fill the checked row marks wear.
 func TestDeleteButtonTurnsRedOnlyWhileDeleting(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -97,7 +97,7 @@ func TestDeleteButtonTurnsRedOnlyWhileDeleting(t *testing.T) {
 // stays centered and is the reference. Row(SpaceNone) is what makes the
 // revealed display flex; see css.go.
 func TestFooterButtonsCentreTheirGlyphWhenRevealed(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",

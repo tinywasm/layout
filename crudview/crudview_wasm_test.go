@@ -11,7 +11,7 @@ import (
 )
 
 func TestCrudView_Wasm_Flow(t *testing.T) {
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "1", Name: "Item One", Ip: "Desc One"},
 			&Device{Id: "2", Name: "Item Two", Ip: "Desc Two"},

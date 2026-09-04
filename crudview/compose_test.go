@@ -28,9 +28,9 @@ func (f *fakeFilter) Render() *dom.Element {
 	return Div().Attr("data-testid", "fake-filter")
 }
 
-// fakeListBackend returns a FakeBackend seeded with three rows, like the demo store.
-func fakeListBackend() *conformance.FakeBackend {
-	return &conformance.FakeBackend{
+// fakeListBackend returns a FakeLister seeded with three rows, like the demo store.
+func fakeListBackend() *conformance.FakeLister {
+	return &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Frontend Device", Ip: "192.168.1.10"},
 			&Device{Id: "23", Name: "Backend Server", Ip: "10.0.0.5"},

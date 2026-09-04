@@ -44,7 +44,7 @@ func ruleBlock(cssStr, want string) string {
 // in PLAN_STAGE_2). A rule reappearing here means someone re-hardcoded a
 // skeleton into the controller.
 func TestCrudView_ControlAndEdgeAsserts(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -77,7 +77,7 @@ func TestCrudView_ControlAndEdgeAsserts(t *testing.T) {
 // floating, must NOT carry a --floating-bottom reservation — a scroller with
 // nothing floating over it should not pad for one anyway.
 func TestListDeclaresFloatingChromeOnMobileOnly(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -126,7 +126,7 @@ func TestListDeclaresFloatingChromeOnMobileOnly(t *testing.T) {
 // property name itself (Scroll() legitimately emits padding-block-end every
 // time it is used), is the thing to catch.
 func TestNoManualFloatingReservation(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -150,7 +150,7 @@ func TestNoManualFloatingReservation(t *testing.T) {
 // the ⋮ (see targetlist/css.go's PartList comment), so the exception is
 // retired with the premise that justified it.
 func TestListCardMatchesFormIndentOnMobile(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -192,7 +192,7 @@ func TestListCardMatchesFormIndentOnMobile(t *testing.T) {
 }
 
 func TestConsumer_StylesheetAsserts(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
@@ -220,7 +220,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	// 3. Extract markup and match classes starting with "crudview"
 	html1 := v.Render().String()
 
-	pFull := view.New(&conformance.FakeBackend{}, &Device{})
+	pFull := view.New(&conformance.FakeLister{}, &Device{})
 	vFull := &CrudView{Title: "Full", Form: html.Div(), Presenter: pFull}
 	vFull.Init(&fakeCtx{})
 	html2 := vFull.Render().String()

@@ -24,7 +24,7 @@ func TestRowClick_WritesDataSelected(t *testing.T) {
 	doc.Get("body").Call("appendChild", root)
 	t.Cleanup(func() { root.Set("innerHTML", "") })
 
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "1", Name: "Item 1", Ip: "Desc 1"},
 			&Device{Id: "2", Name: "Item 2", Ip: "Desc 2"},

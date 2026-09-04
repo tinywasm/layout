@@ -34,7 +34,7 @@ func TestCrudView_Render_Basic(t *testing.T) {
 }
 
 func TestCrudView_Render_WithSource(t *testing.T) {
-	fb := &conformance.FakeBackend{}
+	fb := &conformance.FakeLister{}
 	p := view.New(fb, &Device{})
 
 	v := &CrudView{

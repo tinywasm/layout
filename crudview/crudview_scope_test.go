@@ -11,12 +11,12 @@ import (
 )
 
 // newTestCrudView builds a fully wired controller over the standard Device
-// fixture: a presenter fed by FakeBackend, Init'd and Reloaded so the list is
+// fixture: a presenter fed by FakeLister, Init'd and Reloaded so the list is
 // populated. The filter scope below is whatever the fixture's Filter returns
 // for a term, so a term with no matches empties the list entirely.
 func newTestCrudView(t *testing.T) *CrudView {
 	t.Helper()
-	fb := &conformance.FakeBackend{
+	fb := &conformance.FakeLister{
 		Rows: []model.Model{
 			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 			&Device{Id: "23", Name: "Device Two", Ip: "192.168.1.2"},

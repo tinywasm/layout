@@ -12,16 +12,16 @@ import (
 	"github.com/tinywasm/view/conformance"
 )
 
-func setupBulkTest(t *testing.T, withUpdate bool) (*CrudView, view.Backend) {
+func setupBulkTest(t *testing.T, withUpdate bool) (*CrudView, view.Lister) {
 	rows := []model.Model{
 		&Device{Id: "id-1", Name: "Device One", Ip: "192.168.1.1"},
 		&Device{Id: "id-2", Name: "Device Two", Ip: "192.168.1.2"},
 		&Device{Id: "id-3", Name: "Device Three", Ip: "192.168.1.3"},
 	}
 
-	var backend view.Backend
+	var backend view.Lister
 	if withUpdate {
-		backend = &conformance.FakeBackend{Rows: rows}
+		backend = &conformance.FakeLister{Rows: rows}
 	} else {
 		backend = &listSaveDeleteBackend{rows: rows}
 	}
@@ -110,7 +110,7 @@ func TestDeleteModeTurnsOnListSelection(t *testing.T) {
 
 func TestCommitDisabledWithNothingChecked(t *testing.T) {
 	v, backend := setupBulkTest(t, true)
-	fb := backend.(*conformance.FakeBackend)
+	fb := backend.(*conformance.FakeLister)
 
 	v.setMode(modeDeleting)
 	v.bulkDeleteAction()
@@ -141,7 +141,7 @@ func TestCancelClearsSelection(t *testing.T) {
 
 func TestBulkEditSuspendsAutoSave(t *testing.T) {
 	v, backend := setupBulkTest(t, true)
-	fb := backend.(*conformance.FakeBackend)
+	fb := backend.(*conformance.FakeLister)
 
 	v.setMode(modeEditing)
 	v.form.SetValues("name", "Auto Save Test")
@@ -154,7 +154,7 @@ func TestBulkEditSuspendsAutoSave(t *testing.T) {
 
 func TestBulkEditRefusesWithNoDirtyFields(t *testing.T) {
 	v, backend := setupBulkTest(t, true)
-	fb := backend.(*conformance.FakeBackend)
+	fb := backend.(*conformance.FakeLister)
 
 	v.setMode(modeEditing)
 	// No fields touched
@@ -197,7 +197,7 @@ var _ = form.New
 // change, one dialog naming the record.
 func TestSingleDeleteEntryConfirmsLoadedRecord(t *testing.T) {
 	v, backend := setupBulkTest(t, true)
-	fb := backend.(*conformance.FakeBackend)
+	fb := backend.(*conformance.FakeLister)
 
 	v.selectAction(view.Item{ID: "id-1", Label: "Device One"})
 	v.deleteEntryAction()

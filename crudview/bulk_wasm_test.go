@@ -18,7 +18,7 @@ import (
 // the user touched are written" — live here, where the click is real and the
 // path runs end to end through crudview's own methods.
 
-func mountBulk(t *testing.T, withUpdate bool) (*CrudView, view.Backend, js.Value) {
+func mountBulk(t *testing.T, withUpdate bool) (*CrudView, view.Lister, js.Value) {
 	t.Helper()
 	doc := js.Global().Get("document")
 	root := doc.Call("createElement", "div")
@@ -32,9 +32,9 @@ func mountBulk(t *testing.T, withUpdate bool) (*CrudView, view.Backend, js.Value
 		&Device{Id: "id-3", Name: "Device id-3", Ip: "10.0.0.id-3"},
 	}
 
-	var backend view.Backend
+	var backend view.Lister
 	if withUpdate {
-		backend = &conformance.FakeBackend{Rows: rows}
+		backend = &conformance.FakeLister{Rows: rows}
 	} else {
 		backend = &listSaveDeleteBackend{rows: rows}
 	}
@@ -106,7 +106,7 @@ func TestBulkDelete_ChecksFollowRenderOrder(t *testing.T) {
 
 func TestBulkEdit_WritesOnlyTheFieldsTheUserTouched(t *testing.T) {
 	v, backend, doc := mountBulk(t, true)
-	fb := backend.(*conformance.FakeBackend)
+	fb := backend.(*conformance.FakeLister)
 
 	v.setMode(modeEditing)
 	clickRow(t, doc, "tl-id-1")
