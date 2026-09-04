@@ -346,7 +346,7 @@ func (b *noSaveBackend) List() ([]model.Model, error) {
 	return out, nil
 }
 
-func (b *noSaveBackend) Delete(ids []string) error {
+func (b *noSaveBackend) Delete(ids ...string) error {
 	return nil
 }
 

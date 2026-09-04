@@ -79,12 +79,12 @@ func (b *listSaveDeleteBackend) List() ([]model.Model, error) {
 	return out, nil
 }
 
-func (b *listSaveDeleteBackend) Save(recs []model.Model) error {
+func (b *listSaveDeleteBackend) Save(recs ...model.Model) error {
 	b.saved = append(b.saved, recs...)
 	return nil
 }
 
-func (b *listSaveDeleteBackend) Delete(ids []string) error {
+func (b *listSaveDeleteBackend) Delete(ids ...string) error {
 	b.deleted = append(b.deleted, ids...)
 	return nil
 }
