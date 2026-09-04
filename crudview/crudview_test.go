@@ -8,7 +8,6 @@ import (
 	. "github.com/tinywasm/fmt"
 	"github.com/tinywasm/fmt/lang"
 	. "github.com/tinywasm/html"
-	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
 )
@@ -35,9 +34,8 @@ func TestCrudView_Render_Basic(t *testing.T) {
 }
 
 func TestCrudView_Render_WithSource(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 
 	v := &CrudView{
 		Title:     "CRUD with List",

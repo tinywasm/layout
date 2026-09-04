@@ -28,17 +28,13 @@ func (f *fakeFilter) Render() *dom.Element {
 	return Div().Attr("data-testid", "fake-filter")
 }
 
-// fakeListCaller replies to device_list with three rows, like the demo store.
-func fakeListCaller() *conformance.FakeCaller {
-	return &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id, d1.Name, d1.Ip = "12", "Frontend Device", "192.168.1.10"
-			d2 := dl.Append().(*Device)
-			d2.Id, d2.Name, d2.Ip = "23", "Backend Server", "10.0.0.5"
-			d3 := dl.Append().(*Device)
-			d3.Id, d3.Name, d3.Ip = "34", "Database Instance", "mysql-production"
+// fakeListBackend returns a FakeBackend seeded with three rows, like the demo store.
+func fakeListBackend() *conformance.FakeBackend {
+	return &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Frontend Device", Ip: "192.168.1.10"},
+			&Device{Id: "23", Name: "Backend Server", Ip: "10.0.0.5"},
+			&Device{Id: "34", Name: "Database Instance", Ip: "mysql-production"},
 		},
 	}
 }
@@ -46,8 +42,7 @@ func fakeListCaller() *conformance.FakeCaller {
 // The controller composes the rightpanel skeleton and no longer paints its own
 // grid: the old crudview__detail/search classes are gone from the markup.
 func TestCrudView_RendersThroughRightPanel(t *testing.T) {
-	p := view.New(fakeListCaller(), &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fakeListBackend(), &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
 		Presenter: p,
@@ -72,8 +67,7 @@ func TestCrudView_RendersThroughRightPanel(t *testing.T) {
 
 // The Filter slot lands in the aside's controls band.
 func TestCrudView_FilterSlotIsRendered(t *testing.T) {
-	p := view.New(fakeListCaller(), &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fakeListBackend(), &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
 		Presenter: p,
@@ -93,8 +87,7 @@ func TestCrudView_FilterSlotIsRendered(t *testing.T) {
 
 // No Filter paints no controls band at all — and no search input either.
 func TestCrudView_NoFilterPaintsNoControlsBand(t *testing.T) {
-	p := view.New(fakeListCaller(), &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fakeListBackend(), &Device{})
 	v := &CrudView{Title: "CRUD", Presenter: p}
 	v.Init(&fakeCtx{})
 
@@ -109,8 +102,7 @@ func TestCrudView_NoFilterPaintsNoControlsBand(t *testing.T) {
 
 // A widget.Filterable slot drives the list filter through the Init seam.
 func TestCrudView_FilterableDrivesTheList(t *testing.T) {
-	p := view.New(fakeListCaller(), &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fakeListBackend(), &Device{})
 	f := &fakeFilter{}
 	v := &CrudView{Title: "CRUD", Presenter: p, Filter: f}
 	v.Init(&fakeCtx{})
@@ -135,8 +127,7 @@ func TestCrudView_FilterableDrivesTheList(t *testing.T) {
 // New with no Filter installs the ergonomic default: a searchbar carrying the
 // presenter's placeholder.
 func TestCrudView_NewInstallsADefaultFilter(t *testing.T) {
-	p := view.New(fakeListCaller(), &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fakeListBackend(), &Device{})
 	v, err := New(Config{ParentID: "compose", Presenter: p, IDs: testIDs})
 	if err != nil {
 		t.Fatalf("New: %v", err)

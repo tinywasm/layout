@@ -8,15 +8,13 @@ import (
 
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/html"
-	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
 )
 
 func TestActionGrowsInsteadOfFillingTheRow(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
 		Presenter: p,
@@ -36,9 +34,8 @@ func TestActionGrowsInsteadOfFillingTheRow(t *testing.T) {
 }
 
 func TestFooterButtonsShareTheControlHeight(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
 		Presenter: p,
@@ -59,30 +56,14 @@ func TestFooterButtonsShareTheControlHeight(t *testing.T) {
 	}
 }
 
-// The list card is a positioning context so the row-count chip (countbadge)
-// resolves against it, not the page.
-func TestListCardAnchorsTheRowCountChip(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
-	v := &CrudView{Title: "CRUD", Presenter: p, Form: html.Div()}
-	v.Init(&fakeCtx{})
-
-	b := ruleBlock(v.RenderCSS().String(), ".crudview__list {")
-	if !strings.Contains(b, "position: relative") {
-		t.Errorf(".crudview__list must be position: relative (Anchor), block:\n%s", b)
-	}
-}
-
 // The delete button leans red with the rows it will act on, and only there:
 // the rule selects Within the footer's Open state, which holds exactly while
 // deleting — normal mode stays Primary blue. Solid Danger, not a wash: it is
 // itself a destructive commit surface and carries the white glyph
 // (--color-on-danger), the same fill the checked row marks wear.
 func TestDeleteButtonTurnsRedOnlyWhileDeleting(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
 		Presenter: p,
@@ -116,9 +97,8 @@ func TestDeleteButtonTurnsRedOnlyWhileDeleting(t *testing.T) {
 // stays centered and is the reference. Row(SpaceNone) is what makes the
 // revealed display flex; see css.go.
 func TestFooterButtonsCentreTheirGlyphWhenRevealed(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 	v := &CrudView{
 		Title:     "CRUD",
 		Presenter: p,

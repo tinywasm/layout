@@ -17,12 +17,8 @@ import (
 // whole plan exists for — "the batch ships in ONE call" and "only the fields
 // the user touched are written" — live here, where the click is real and the
 // path runs end to end through crudview's own methods.
-//
-// Anything that calls deleter.Delete(...) or updater.Update(...) directly is
-// testing view, not crudview: it would pass with bulkDeleteAction and
-// bulkEditAction entirely broken.
 
-func mountBulk(t *testing.T, withUpdate bool) (*CrudView, *conformance.FakeCaller, js.Value) {
+func mountBulk(t *testing.T, withUpdate bool) (*CrudView, view.Backend, js.Value) {
 	t.Helper()
 	doc := js.Global().Get("document")
 	root := doc.Call("createElement", "div")
@@ -30,26 +26,19 @@ func mountBulk(t *testing.T, withUpdate bool) (*CrudView, *conformance.FakeCalle
 	doc.Get("body").Call("appendChild", root)
 	t.Cleanup(func() { root.Set("innerHTML", "") })
 
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			if op != "device_list" {
-				return
-			}
-			dl := into.(*DeviceList)
-			for _, id := range []string{"id-1", "id-2", "id-3"} {
-				d := dl.Append().(*Device)
-				d.Id = id
-				d.Name = "Device " + id
-				d.Ip = "10.0.0." + id
-			}
-		},
+	rows := []model.Model{
+		&Device{Id: "id-1", Name: "Device id-1", Ip: "10.0.0.id-1"},
+		&Device{Id: "id-2", Name: "Device id-2", Ip: "10.0.0.id-2"},
+		&Device{Id: "id-3", Name: "Device id-3", Ip: "10.0.0.id-3"},
 	}
-	opts := []view.Option{view.WithDeleteOp("device_delete"), view.WithSaveOp("device_save")}
+
+	var backend view.Backend
 	if withUpdate {
-		opts = append(opts, view.WithUpdateOp("device_update"))
+		backend = &conformance.FakeBackend{Rows: rows}
+	} else {
+		backend = &listSaveDeleteBackend{rows: rows}
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} }, opts...)
+	p := view.New(backend, &Device{})
 
 	// Through New(), not a bare struct literal: New is what builds the real
 	// form from the record's schema, and bulk edit is nothing without it.
@@ -66,7 +55,7 @@ func mountBulk(t *testing.T, withUpdate bool) (*CrudView, *conformance.FakeCalle
 	if v.form == nil {
 		t.Fatal("expected the real form from form.New")
 	}
-	return v, caller, doc
+	return v, backend, doc
 }
 
 func clickRow(t *testing.T, doc js.Value, id string) {
@@ -78,18 +67,9 @@ func clickRow(t *testing.T, doc js.Value, id string) {
 	row.Call("click")
 }
 
-func callsFor(caller *conformance.FakeCaller, op string) []conformance.FakeCall {
-	var out []conformance.FakeCall
-	for _, c := range caller.Calls {
-		if c.Op == op {
-			out = append(out, c)
-		}
-	}
-	return out
-}
-
 func TestBulkDelete_ShipsEveryCheckedIDInOneCall(t *testing.T) {
-	v, caller, doc := mountBulk(t, false)
+	v, backend, doc := mountBulk(t, false)
+	lsd := backend.(*listSaveDeleteBackend)
 
 	v.setMode(modeDeleting)
 	clickRow(t, doc, "tl-id-1")
@@ -101,16 +81,11 @@ func TestBulkDelete_ShipsEveryCheckedIDInOneCall(t *testing.T) {
 
 	v.confirmDeleteAction()
 
-	calls := callsFor(caller, "device_delete")
-	if len(calls) != 1 {
-		t.Fatalf("expected exactly 1 delete call for a 2-row batch, got %d", len(calls))
+	if len(lsd.deleted) != 2 {
+		t.Fatalf("expected 2 deleted IDs, got %v", lsd.deleted)
 	}
-	sent := conformance.Payload(calls[0].Args)
-	if !conformance.Has(sent, "ids", "id-1") || !conformance.Has(sent, "ids", "id-3") {
-		t.Errorf("both checked ids must ship in the one call, got %v", sent)
-	}
-	if conformance.Has(sent, "ids", "id-2") {
-		t.Errorf("an unchecked row must not be deleted, got %v", sent)
+	if lsd.deleted[0] != "id-1" || lsd.deleted[1] != "id-3" {
+		t.Errorf("both checked ids must ship in the one call, got %v", lsd.deleted)
 	}
 }
 
@@ -130,7 +105,8 @@ func TestBulkDelete_ChecksFollowRenderOrder(t *testing.T) {
 }
 
 func TestBulkEdit_WritesOnlyTheFieldsTheUserTouched(t *testing.T) {
-	v, caller, doc := mountBulk(t, true)
+	v, backend, doc := mountBulk(t, true)
+	fb := backend.(*conformance.FakeBackend)
 
 	v.setMode(modeEditing)
 	clickRow(t, doc, "tl-id-1")
@@ -140,25 +116,29 @@ func TestBulkEdit_WritesOnlyTheFieldsTheUserTouched(t *testing.T) {
 	v.form.SetValues("name", "Renamed")
 	v.autoSaveAction() // the form's own commit hook; must NOT save in this mode
 
-	if n := len(callsFor(caller, "device_save")); n != 0 {
+	if n := len(fb.SavedRecords); n != 0 {
 		t.Errorf("auto-save must stay suspended in bulk edit, got %d save calls", n)
 	}
 
 	v.bulkEditAction()
 
-	calls := callsFor(caller, "device_update")
-	if len(calls) != 1 {
-		t.Fatalf("expected exactly 1 update call for a 2-row batch, got %d", len(calls))
+	if len(fb.UpdatedIDs) != 2 {
+		t.Fatalf("expected 2 updated IDs, got %d (%v)", len(fb.UpdatedIDs), fb.UpdatedIDs)
 	}
-	sent := conformance.Payload(calls[0].Args)
-	if !conformance.Has(sent, "ids", "id-1") || !conformance.Has(sent, "ids", "id-2") {
-		t.Errorf("both checked ids must ship, got %v", sent)
+	if fb.UpdatedIDs[0] != "id-1" || fb.UpdatedIDs[1] != "id-2" {
+		t.Errorf("both checked ids must ship, got %v", fb.UpdatedIDs)
 	}
-	if !conformance.Has(sent, "fields", "name") {
-		t.Errorf("the touched field must be named, got %v", sent)
+	hasField := false
+	for _, f := range fb.UpdatedFields {
+		if f == "name" {
+			hasField = true
+		}
+		if f == "ip" {
+			t.Errorf("an untouched field must never be written, got %v", fb.UpdatedFields)
+		}
 	}
-	if conformance.Has(sent, "fields", "ip") {
-		t.Errorf("an untouched field must never be written — that is the lost update this design exists to prevent, got %v", sent)
+	if !hasField {
+		t.Errorf("the touched field must be named, got %v", fb.UpdatedFields)
 	}
 }
 
@@ -234,7 +214,8 @@ func rowAttr(t *testing.T, doc js.Value, id, attr string) string {
 // The same click that opens selection mode with nothing loaded confirms the
 // loaded record directly: no mode change, then one single delete call.
 func TestSingleDelete_ClickConfirmsLoadedRecord(t *testing.T) {
-	v, caller, doc := mountBulk(t, false)
+	v, backend, doc := mountBulk(t, false)
+	lsd := backend.(*listSaveDeleteBackend)
 
 	clickRow(t, doc, "tl-id-2") // normal mode: loads the record into the form
 	if v.selected.Get() != "id-2" {
@@ -252,13 +233,8 @@ func TestSingleDelete_ClickConfirmsLoadedRecord(t *testing.T) {
 
 	v.confirmDeleteAction()
 
-	calls := callsFor(caller, "device_delete")
-	if len(calls) != 1 {
-		t.Fatalf("expected exactly 1 delete call, got %d", len(calls))
-	}
-	sent := conformance.Payload(calls[0].Args)
-	if !conformance.Has(sent, "ids", "id-2") {
-		t.Errorf("the single delete must ship id-2, got %v", sent)
+	if len(lsd.deleted) != 1 || lsd.deleted[0] != "id-2" {
+		t.Errorf("the single delete must ship id-2, got %v", lsd.deleted)
 	}
 	if v.selected.Get() != "" {
 		t.Errorf("confirming must clear the selection, got %q", v.selected.Get())

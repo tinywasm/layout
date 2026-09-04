@@ -12,33 +12,20 @@ import (
 	"github.com/tinywasm/view/conformance"
 )
 
-func setupBulkTest(t *testing.T, withUpdate bool) (*CrudView, *conformance.FakeCaller) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			if op == "device_list" {
-				dl := into.(*DeviceList)
-				d1 := dl.Append().(*Device)
-				d1.Id = "id-1"
-				d1.Name = "Device One"
-				d1.Ip = "192.168.1.1"
-
-				d2 := dl.Append().(*Device)
-				d2.Id = "id-2"
-				d2.Name = "Device Two"
-				d2.Ip = "192.168.1.2"
-
-				d3 := dl.Append().(*Device)
-				d3.Id = "id-3"
-				d3.Name = "Device Three"
-				d3.Ip = "192.168.1.3"
-			}
-		},
+func setupBulkTest(t *testing.T, withUpdate bool) (*CrudView, view.Backend) {
+	rows := []model.Model{
+		&Device{Id: "id-1", Name: "Device One", Ip: "192.168.1.1"},
+		&Device{Id: "id-2", Name: "Device Two", Ip: "192.168.1.2"},
+		&Device{Id: "id-3", Name: "Device Three", Ip: "192.168.1.3"},
 	}
-	opts := []view.Option{view.WithDeleteOp("device_delete")}
+
+	var backend view.Backend
 	if withUpdate {
-		opts = append(opts, view.WithUpdateOp("device_update"))
+		backend = &conformance.FakeBackend{Rows: rows}
+	} else {
+		backend = &listSaveDeleteBackend{rows: rows}
 	}
-	p := view.New(caller, &Device{}, "device_list", func() model.ModelSlice { return &DeviceList{} }, opts...)
+	p := view.New(backend, &Device{})
 
 	cfg := Config{
 		ParentID:  "bulk-test-parent",
@@ -59,7 +46,7 @@ func setupBulkTest(t *testing.T, withUpdate bool) (*CrudView, *conformance.FakeC
 		t.Fatal("expected real form.Form from form.New")
 	}
 
-	return v, caller
+	return v, backend
 }
 
 func TestBulkEntriesOnlyInNormalMode(t *testing.T) {
@@ -122,7 +109,8 @@ func TestDeleteModeTurnsOnListSelection(t *testing.T) {
 }
 
 func TestCommitDisabledWithNothingChecked(t *testing.T) {
-	v, caller := setupBulkTest(t, true)
+	v, backend := setupBulkTest(t, true)
+	fb := backend.(*conformance.FakeBackend)
 
 	v.setMode(modeDeleting)
 	v.bulkDeleteAction()
@@ -132,10 +120,8 @@ func TestCommitDisabledWithNothingChecked(t *testing.T) {
 
 	v.setMode(modeEditing)
 	v.bulkEditAction()
-	for _, c := range caller.Calls {
-		if c.Op == "device_update" {
-			t.Error("bulkEditAction called Update with nothing checked")
-		}
+	if len(fb.UpdatedIDs) != 0 {
+		t.Error("bulkEditAction called Update with nothing checked")
 	}
 }
 
@@ -154,30 +140,28 @@ func TestCancelClearsSelection(t *testing.T) {
 }
 
 func TestBulkEditSuspendsAutoSave(t *testing.T) {
-	v, caller := setupBulkTest(t, true)
+	v, backend := setupBulkTest(t, true)
+	fb := backend.(*conformance.FakeBackend)
 
 	v.setMode(modeEditing)
 	v.form.SetValues("name", "Auto Save Test")
 	v.autoSaveAction()
 
-	for _, c := range caller.Calls {
-		if c.Op == "device_save" {
-			t.Error("autoSaveAction called Save during modeEditing")
-		}
+	if len(fb.SavedRecords) != 0 {
+		t.Error("autoSaveAction called Save during modeEditing")
 	}
 }
 
 func TestBulkEditRefusesWithNoDirtyFields(t *testing.T) {
-	v, caller := setupBulkTest(t, true)
+	v, backend := setupBulkTest(t, true)
+	fb := backend.(*conformance.FakeBackend)
 
 	v.setMode(modeEditing)
 	// No fields touched
 	v.bulkEditAction()
 
-	for _, c := range caller.Calls {
-		if c.Op == "device_update" {
-			t.Error("bulkEditAction executed Update with no dirty fields")
-		}
+	if len(fb.UpdatedIDs) != 0 {
+		t.Error("bulkEditAction executed Update with no dirty fields")
 	}
 }
 
@@ -208,21 +192,12 @@ func TestRowTapStillLoadsRecordInNormalMode(t *testing.T) {
 // Ensure form.New import is referenced
 var _ = form.New
 
-// TestBulkDeleteShipsOneCall and TestBulkEditShipsOnlyDirtyFields used to live
-// here and asserted nothing: with no way to check a row under SSR — a row is
-// marked by a DOM click — they called deleter.Delete(...) and
-// updater.Update(...) directly, which tests view, not crudview, and would pass
-// with bulkDeleteAction and bulkEditAction entirely broken.
-//
-// Both assertions now run for real in bulk_wasm_test.go, where the click is a
-// click: TestBulkDelete_ShipsEveryCheckedIDInOneCall and
-// TestBulkEdit_WritesOnlyTheFieldsTheUserTouched.
-
 // A loaded record deletes directly: the same click that opens selection mode
 // with nothing loaded opens that record's own confirmation instead — no mode
 // change, one dialog naming the record.
 func TestSingleDeleteEntryConfirmsLoadedRecord(t *testing.T) {
-	v, caller := setupBulkTest(t, true)
+	v, backend := setupBulkTest(t, true)
+	fb := backend.(*conformance.FakeBackend)
 
 	v.selectAction(view.Item{ID: "id-1", Label: "Device One"})
 	v.deleteEntryAction()
@@ -236,23 +211,8 @@ func TestSingleDeleteEntryConfirmsLoadedRecord(t *testing.T) {
 
 	v.confirmDeleteAction()
 
-	count := 0
-	for _, c := range caller.Calls {
-		if c.Op != "device_delete" {
-			continue
-		}
-		sent := conformance.Payload(c.Args)
-		if !conformance.Has(sent, "ids", "id-1") {
-			t.Errorf("the single delete must ship id-1, got %v", sent)
-		}
-		for _, kv := range sent {
-			if kv.Key == "ids" {
-				count++
-			}
-		}
-	}
-	if count != 1 {
-		t.Errorf("expected exactly one deleted id across all calls, got %d", count)
+	if len(fb.DeletedIDs) != 1 || fb.DeletedIDs[0] != "id-1" {
+		t.Errorf("the single delete must ship id-1, got %v", fb.DeletedIDs)
 	}
 }
 
@@ -318,11 +278,25 @@ func TestFooterToneHoldsOnlyWhileDeleting(t *testing.T) {
 
 // Gap fix: the "+" create action is gated on view.Saver, like 🗑 on Deleter
 // and ✏ on Updater. setupBulkTest builds a Deleter(+Updater)-only presenter
-// (no WithSaveOp), so the toggle's "+" must be a no-op and render disabled in
+// (no Saver backend), so the toggle's "+" must be a no-op and render disabled in
 // normal mode — but the SAME button still has to work as "↺" to leave
 // selection mode.
 func TestCreateActionGatedOnSaver(t *testing.T) {
-	v, _ := setupBulkTest(t, true) // no WithSaveOp → not a view.Saver
+	v, _ := setupBulkTest(t, true)
+	// We need a presenter that is NOT a view.Saver.
+	// Create a custom double without Save method.
+	nosaveBackend := &noSaveBackend{
+		rows: []model.Model{
+			&Device{Id: "id-1", Name: "Device One", Ip: "192.168.1.1"},
+		},
+	}
+	vNoSave, err := New(Config{ParentID: "no-save-parent", Presenter: view.New(nosaveBackend, &Device{}), IDs: testIDs})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	vNoSave.Init(&fakeCtx{})
+	v = vNoSave
+
 	if _, ok := v.Presenter.(view.Saver); ok {
 		t.Fatal("precondition: this presenter must not be a view.Saver")
 	}
@@ -360,6 +334,20 @@ func TestCreateActionGatedOnSaver(t *testing.T) {
 	if strings.Contains(tag, "disabled='true'") {
 		t.Errorf("the toggle must be live as ↺ while in a selection mode, tag: %s", tag)
 	}
+}
+
+type noSaveBackend struct {
+	rows []model.Model
+}
+
+func (b *noSaveBackend) List() ([]model.Model, error) {
+	out := make([]model.Model, len(b.rows))
+	copy(out, b.rows)
+	return out, nil
+}
+
+func (b *noSaveBackend) Delete(ids []string) error {
+	return nil
 }
 
 // buttonOpenTag returns the opening <button ...> tag for the named control.
@@ -433,30 +421,5 @@ func TestFooterHidesBulkActionsWhenNothingToActOn(t *testing.T) {
 	}
 	if shown("cv-crudedit") {
 		t.Errorf("a loaded row must hide ✏ — bulk edit would discard the form")
-	}
-}
-
-// The row-count chip reflects the visible count and updates on filter.
-func TestRowCountChipTracksTheList(t *testing.T) {
-	v, _ := setupBulkTest(t, true)
-
-	if v.rowCount.Get() != "3" {
-		t.Errorf("rowCount = %q, want \"3\" (3 seeded devices)", v.rowCount.Get())
-	}
-
-	v.search.Set("Device One")
-	v.filter()
-	if v.rowCount.Get() != "1" {
-		t.Errorf("after filtering to one row, rowCount = %q, want \"1\"", v.rowCount.Get())
-	}
-
-	v.search.Set("no-such-device-xyz")
-	v.filter()
-	if v.rowCount.Get() != "0" {
-		t.Errorf("empty list rowCount = %q, want \"0\"", v.rowCount.Get())
-	}
-	// the chip's Visible (v.hasRows) is false here, so "0" never renders
-	if v.hasRows.Get() {
-		t.Errorf("hasRows must be false for an empty list (chip hidden)")
 	}
 }

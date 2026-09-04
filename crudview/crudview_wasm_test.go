@@ -3,31 +3,21 @@
 package crudview
 
 import (
+	"testing"
+
 	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
-	"testing"
 )
 
 func TestCrudView_Wasm_Flow(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "1"
-			d1.Name = "Item One"
-			d1.Ip = "Desc One"
-
-			d2 := dl.Append().(*Device)
-			d2.Id = "2"
-			d2.Name = "Item Two"
-			d2.Ip = "Desc Two"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "1", Name: "Item One", Ip: "Desc One"},
+			&Device{Id: "2", Name: "Item Two", Ip: "Desc Two"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithTitle("Wasm Test"),
-		view.WithDeleteOp("device_delete"))
+	p := view.New(fb, &Device{}, view.WithTitle("Wasm Test"))
 
 	v := &CrudView{
 		Title:     "Wasm Test",
