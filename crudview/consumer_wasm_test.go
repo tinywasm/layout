@@ -8,7 +8,6 @@ import (
 	"github.com/tinywasm/components/searchbar"
 	"github.com/tinywasm/fmt"
 	"github.com/tinywasm/form"
-	"github.com/tinywasm/model"
 	"github.com/tinywasm/view"
 	"github.com/tinywasm/view/conformance"
 )
@@ -18,17 +17,15 @@ type mockCtxWasmConsumer struct{}
 func (m *mockCtxWasmConsumer) OnCleanup(fn func()) {}
 
 func TestConsumer_Wasm_Render(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{},
 		view.WithTitle("Custom Search Title"),
 		view.WithSearchPlaceholder("Custom Search..."))
 
 	cfg := Config{
 		ParentID:  "my-wasm-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {

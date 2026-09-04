@@ -64,23 +64,30 @@ func (d *Device) Item() view.Item {
 var _ model.Model = (*Device)(nil) // Verify compile-time implementation
 var _ view.Itemizer = (*Device)(nil)
 
-type DeviceList struct {
-	Items []*Device
+// listSaveDeleteBackend implements view.Backend + view.Saver +
+// view.Deleter, but NOT view.Updater: the double for every test that
+// asserts update UI stays absent.
+type listSaveDeleteBackend struct {
+	rows    []model.Model
+	saved   []model.Model
+	deleted []string
 }
 
-func (l *DeviceList) IsNil() bool                      { return l == nil }
-func (l *DeviceList) DecodeFields(r model.FieldReader) {}
-func (l *DeviceList) Schema() []model.Field            { return nil }
-func (l *DeviceList) Pointers() []any                  { return nil }
-func (l *DeviceList) Len() int                         { return len(l.Items) }
-func (l *DeviceList) At(i int) model.Fielder           { return l.Items[i] }
-func (l *DeviceList) Append() model.Fielder {
-	d := &Device{}
-	l.Items = append(l.Items, d)
-	return d
+func (b *listSaveDeleteBackend) List() ([]model.Model, error) {
+	out := make([]model.Model, len(b.rows))
+	copy(out, b.rows)
+	return out, nil
 }
 
-var _ model.ModelSlice = (*DeviceList)(nil)
+func (b *listSaveDeleteBackend) Save(recs []model.Model) error {
+	b.saved = append(b.saved, recs...)
+	return nil
+}
+
+func (b *listSaveDeleteBackend) Delete(ids []string) error {
+	b.deleted = append(b.deleted, ids...)
+	return nil
+}
 
 // deviceNoWidgetsModel is a model without widgets
 var deviceNoWidgetsModel = model.Definition{
@@ -132,8 +139,7 @@ func TestConsumer_NewNoWidgets(t *testing.T) {
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err == nil {
@@ -146,20 +152,13 @@ IDs:        testIDs,
 
 // Case 2: The list operation on wiring is ListOp (reloaded on Init)
 func TestConsumer_ListOp(t *testing.T) {
-	var reloaded bool
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			reloaded = true
-		},
-	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -167,35 +166,25 @@ IDs:        testIDs,
 	}
 	v.Init(&fakeCtx{})
 
-	if !reloaded {
+	if fb.Calls == 0 {
 		t.Errorf("expected Presenter to be reloaded on Init")
 	}
 }
 
 // Case 3: The list renders cards returned by Items
 func TestConsumer_ListRendersCards(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Device One"
-			d1.Ip = "192.168.1.1"
-
-			d2 := dl.Append().(*Device)
-			d2.Id = "23"
-			d2.Name = "Device Two"
-			d2.Ip = "192.168.1.2"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
+			&Device{Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -213,28 +202,18 @@ IDs:        testIDs,
 
 // Case 4: Selecting a card populates the form using form.LoadValues
 func TestConsumer_SelectPopulatesForm(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Device One"
-			d1.Ip = "192.168.1.1"
-
-			d2 := dl.Append().(*Device)
-			d2.Id = "23"
-			d2.Name = "Device Two"
-			d2.Ip = "192.168.1.2"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
+			&Device{Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -269,23 +248,13 @@ IDs:        testIDs,
 
 // Case 5: Save calls Save with form data, not original Record
 func TestConsumer_SaveWithFormData(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			if op == "device_save" {
-				// Handled in WithSaveOp or similar, but Caller gets Called
-				// and we want to capture what was sent. FakeCaller.Calls can capture this.
-			}
-		},
-	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithSaveOp("device_save"))
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -318,44 +287,30 @@ IDs:        testIDs,
 		t.Fatalf("expected no save error, got: %v", saveErr)
 	}
 
-	// Read from FakeCaller.Calls
-	if len(caller.Calls) == 0 {
-		t.Fatal("expected save call on fake caller")
+	if len(fb.SavedRecords) != 1 {
+		t.Fatalf("expected 1 saved record, got %d", len(fb.SavedRecords))
 	}
-	// The first call should be "device_list" on Init, the second should be "device_save"
-	var saveCall *conformance.FakeCall
-	for _, c := range caller.Calls {
-		if c.Op == "device_save" {
-			saveCall = &c
-			break
-		}
+	dev, ok := fb.SavedRecords[0].(*Device)
+	if !ok {
+		t.Fatalf("expected *Device saved record, got %T", fb.SavedRecords[0])
 	}
-	if saveCall == nil {
-		t.Fatal("expected device_save call to be recorded")
+	if dev.Name != "New Name" {
+		t.Errorf("expected saved device name 'New Name', got %q", dev.Name)
 	}
-	// Assert the WIRE shape, not the Go type: view ships batches inside its own
-	// envelope now, so the payload is no longer the record itself.
-	sent := conformance.Payload(saveCall.Args)
-	if !conformance.Has(sent, "name", "New Name") {
-		t.Errorf("expected the shipped device name to be 'New Name', got %v", sent)
-	}
-	if !conformance.Has(sent, "ip", "10.0.0.1") {
-		t.Errorf("expected the shipped device ip to be '10.0.0.1', got %v", sent)
+	if dev.Ip != "10.0.0.1" {
+		t.Errorf("expected saved device ip '10.0.0.1', got %q", dev.Ip)
 	}
 }
 
 // Case 6: Save with invalid form doesn't call presenter and returns error
 func TestConsumer_SaveInvalidForm(t *testing.T) {
-	caller := &conformance.FakeCaller{}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithSaveOp("device_save"))
+	fb := &conformance.FakeBackend{}
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -387,36 +342,24 @@ IDs:        testIDs,
 	if saveErr == nil {
 		t.Error("expected validation error, got nil")
 	}
-	// Verify device_save was never called on caller
-	for _, c := range caller.Calls {
-		if c.Op == "device_save" {
-			t.Error("device_save was called on fake caller but form was invalid")
-		}
+	if len(fb.SavedRecords) != 0 {
+		t.Error("Save was called on fake backend but form was invalid")
 	}
 }
 
 // Case 7: Delete calls Delete on presenter
 func TestConsumer_DeleteSelected(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			if op == "device_list" {
-				dl := into.(*DeviceList)
-				d1 := dl.Append().(*Device)
-				d1.Id = "123"
-				d1.Name = "Device One"
-				d1.Ip = "192.168.1.1"
-			}
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "123", Name: "Device One", Ip: "192.168.1.1"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithDeleteOp("device_delete"))
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -452,46 +395,24 @@ IDs:        testIDs,
 		t.Errorf("expected hook deleted ids to be ['123'], got %v", deletedIDs)
 	}
 
-	// Verify delete op was called on caller
-	var deleteCall *conformance.FakeCall
-	for _, c := range caller.Calls {
-		if c.Op == "device_delete" {
-			deleteCall = &c
-			break
-		}
-	}
-	if deleteCall == nil {
-		t.Fatal("expected device_delete call to be recorded")
-	}
-	// Delete ships {ids: [...]}, so the id arrives keyed by the array name.
-	sent := conformance.Payload(deleteCall.Args)
-	if !conformance.Has(sent, "ids", "123") {
-		t.Errorf("expected the shipped delete id to be '123', got %v", sent)
+	if len(fb.DeletedIDs) != 1 || fb.DeletedIDs[0] != "123" {
+		t.Errorf("expected backend deleted ids to be ['123'], got %v", fb.DeletedIDs)
 	}
 }
 
 // Case 8: Delete can return error from presenter
 func TestConsumer_DeleteNoSelection(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			if op == "device_list" {
-				dl := into.(*DeviceList)
-				d1 := dl.Append().(*Device)
-				d1.Id = "non-existent"
-				d1.Name = "Device One"
-				d1.Ip = "192.168.1.1"
-			}
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "non-existent", Name: "Device One", Ip: "192.168.1.1"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithDeleteOp("device_delete"))
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -502,9 +423,9 @@ IDs:        testIDs,
 	// Select the item so it is registered
 	v.selectAction(view.Item{ID: "non-existent"})
 
-	// Set caller.Err *after* successful Init/Reload
+	// Set fb.Err *after* successful Init/Reload
 	expectedErr := fmt.Errf("no selection")
-	caller.Err = expectedErr
+	fb.Err = expectedErr
 
 	var deleteDoneCalled bool
 	var deleteErr error
@@ -530,17 +451,15 @@ IDs:        testIDs,
 // Case 9: Presenter error on list is propagated to Reload caller
 func TestConsumer_ListErrorPropagated(t *testing.T) {
 	expectedErr := fmt.Errf("network connection failed")
-	caller := &conformance.FakeCaller{
+	fb := &conformance.FakeBackend{
 		Err: expectedErr,
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -558,33 +477,19 @@ IDs:        testIDs,
 
 // Case 10: Search filters cards by Label and Description (case-insensitive)
 func TestConsumer_SearchFiltering(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Frontend Device"
-			d1.Ip = "192.168.1.10"
-
-			d2 := dl.Append().(*Device)
-			d2.Id = "23"
-			d2.Name = "Backend Server"
-			d2.Ip = "10.0.0.5"
-
-			d3 := dl.Append().(*Device)
-			d3.Id = "34"
-			d3.Name = "Database Instance"
-			d3.Ip = "mysql-production"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Frontend Device", Ip: "192.168.1.10"},
+			&Device{Id: "23", Name: "Backend Server", Ip: "10.0.0.5"},
+			&Device{Id: "34", Name: "Database Instance", Ip: "mysql-production"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	cfg := Config{
 		ParentID:  "my-id",
 		Presenter: p,
-
-IDs:        testIDs,
+		IDs:       testIDs,
 	}
 	v, err := New(cfg)
 	if err != nil {
@@ -625,17 +530,12 @@ IDs:        testIDs,
 // protecting; and new/undo always leave the form editable too. The "disabled"
 // gate that used to appear on selection is the regression this guards.
 func TestConsumer_NoLockGating(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Device One"
-			d1.Ip = "192.168.1.1"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	cfg := Config{ParentID: "my-id", Presenter: p, IDs: testIDs}
 	v, err := New(cfg)
@@ -684,18 +584,12 @@ func TestConsumer_NoLockGating(t *testing.T) {
 // actually deletes. Dismissing the modal without confirming leaves the
 // record untouched.
 func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Device One"
-			d1.Ip = "192.168.1.1"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithDeleteOp("device_delete"))
+	p := view.New(fb, &Device{})
 
 	cfg := Config{ParentID: "my-id", Presenter: p, IDs: testIDs}
 	v, err := New(cfg)
@@ -704,19 +598,9 @@ func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
 	}
 	v.Init(&fakeCtx{})
 
-	countDeleteCalls := func() int {
-		n := 0
-		for _, c := range caller.Calls {
-			if c.Op == "device_delete" {
-				n++
-			}
-		}
-		return n
-	}
-
 	// deleteRequest (⋮ -> Eliminar) only opens the modal — no delete yet.
 	v.deleteRequest("12")
-	if countDeleteCalls() != 0 {
+	if len(fb.DeletedIDs) != 0 {
 		t.Error("expected deleteRequest to only open the confirmation modal, not delete")
 	}
 	if v.deleteID.Get() != "12" {
@@ -728,14 +612,14 @@ func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
 
 	// Dismissing without confirming (e.g. Cancelar/backdrop/×) must not delete.
 	v.confirmDelete.Close()
-	if countDeleteCalls() != 0 {
+	if len(fb.DeletedIDs) != 0 {
 		t.Error("expected closing the modal without confirming to not delete")
 	}
 
 	// confirmDeleteAction (the modal's "Eliminar" button) performs the delete.
 	v.confirmDeleteAction()
-	if countDeleteCalls() != 1 {
-		t.Errorf("expected exactly 1 device_delete call after confirming, got %d", countDeleteCalls())
+	if len(fb.DeletedIDs) != 1 {
+		t.Errorf("expected exactly 1 device_delete call after confirming, got %d", len(fb.DeletedIDs))
 	}
 }
 
@@ -744,17 +628,12 @@ func TestConsumer_DeleteRequiresConfirmation(t *testing.T) {
 // icon/toggleAction branch reads. Regression test for the reported bug: the
 // button stayed on "+" after pressing it.
 func TestConsumer_NewFlipsToggleActive(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Device One"
-			d1.Ip = "192.168.1.1"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	cfg := Config{ParentID: "my-id", Presenter: p, IDs: testIDs}
 	v, err := New(cfg)

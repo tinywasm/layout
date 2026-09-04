@@ -24,20 +24,13 @@ func TestRowClick_WritesDataSelected(t *testing.T) {
 	doc.Get("body").Call("appendChild", root)
 	t.Cleanup(func() { root.Set("innerHTML", "") })
 
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			for _, id := range []string{"1", "2"} {
-				d := dl.Append().(*Device)
-				d.Id = id
-				d.Name = "Item " + id
-				d.Ip = "Desc " + id
-			}
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "1", Name: "Item 1", Ip: "Desc 1"},
+			&Device{Id: "2", Name: "Item 2", Ip: "Desc 2"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} },
-		view.WithDeleteOp("device_delete"))
+	p := view.New(fb, &Device{})
 
 	v := &CrudView{Title: "Wasm Test", Presenter: p}
 	v.Init(&mockCtxWasm{})

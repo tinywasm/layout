@@ -11,27 +11,18 @@ import (
 )
 
 // newTestCrudView builds a fully wired controller over the standard Device
-// fixture: a presenter fed by FakeCaller, Init'd and Reloaded so the list is
+// fixture: a presenter fed by FakeBackend, Init'd and Reloaded so the list is
 // populated. The filter scope below is whatever the fixture's Filter returns
 // for a term, so a term with no matches empties the list entirely.
 func newTestCrudView(t *testing.T) *CrudView {
 	t.Helper()
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
-			dl := into.(*DeviceList)
-			d1 := dl.Append().(*Device)
-			d1.Id = "12"
-			d1.Name = "Device One"
-			d1.Ip = "192.168.1.1"
-
-			d2 := dl.Append().(*Device)
-			d2.Id = "23"
-			d2.Name = "Device Two"
-			d2.Ip = "192.168.1.2"
+	fb := &conformance.FakeBackend{
+		Rows: []model.Model{
+			&Device{Id: "12", Name: "Device One", Ip: "192.168.1.1"},
+			&Device{Id: "23", Name: "Device Two", Ip: "192.168.1.2"},
 		},
 	}
-	p := view.New(caller, &Device{}, "device_list",
-		func() model.ModelSlice { return &DeviceList{} })
+	p := view.New(fb, &Device{})
 
 	v, err := New(Config{ParentID: "my-id", Presenter: p, IDs: testIDs})
 	if err != nil {
