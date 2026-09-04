@@ -2,6 +2,8 @@
 PLAN: "refactor!: layout crudview tests use typed view.Backend doubles, then row-count overlay"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 15340752021910714942
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
