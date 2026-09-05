@@ -370,18 +370,23 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		//
 		// The position comes from the msg-stack wrapper it rides inside, not
 		// from this rule: two docked boxes in the same corner would need an
-		// offset calculation to stay apart. Width(Content) keeps the button
-		// from stretching to the stack's width, and PushEnd pushes it to the
-		// end edge — the same corner it always had — while the toast block
+		// offset calculation to stay apart. PushEnd pushes it to the end
+		// edge — the same corner it always had — while the toast block
 		// below widens with its messages.
+		//
+		// Exact 50px square from closed scales only: FontSize(TextLg) +
+		// IconBox(IconLg) = 2.5em of 1.25rem — the same pair that boxes
+		// every square control, replacing the old content-plus-Pad sizing
+		// (40px glyph + Space2 = 56, matching nothing). The 40px nav glyphs
+		// ride centered inside with room to spare.
 		OnlyOn(css.Mobile, widget.Part("hamburger"),
 			style.Row(style.Space1),
 			style.As(style.AccentInverse),
-			style.Pad(style.Space2),
+			style.FontSize(style.TextLg),
+			style.IconBox(style.IconLg),
 			style.Round(style.RadiusSm),
 			style.Raise(style.Floating),
 			style.CenterContent(),
-			style.Width(style.Content),
 			style.PushEnd(),
 			// Se guarda mientras el usuario baja. Es un estado, no una clase: lo
 			// escribe Go y lo lee la hoja, y el atributo sale del propio State para

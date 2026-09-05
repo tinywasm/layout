@@ -108,11 +108,48 @@ func TestListDeclaresFloatingChromeOnMobileOnly(t *testing.T) {
 	if mb == "" {
 		t.Fatal("expected a mobile rule for .crudview__list")
 	}
-	// 2.5em (IconLg, matching action-new/action-cancel's own mobile size) +
+	// 1.5em (IconMd, matching every footer icon's own size) +
 	// 2 * Space4 (matching the button's own Docked gap) — traceable to the
 	// button's real construction, not an invented number.
-	if !fmt.Contains(mb, "--floating-bottom: calc(2.5em + 2 * var(--space-4,1rem));") {
+	if !fmt.Contains(mb, "--floating-bottom: calc(1.5em + 2 * var(--space-4,1rem));") {
 		t.Errorf(".crudview__list must declare its FloatingChrome reservation, block:\n%s", mb)
+	}
+}
+
+// TestFooterButtonsAre50SquareOnMobile pins the single-source square on
+// phones: FontSize(TextLg) + IconBox(IconLg) = 2.5em of 1.25rem — the same
+// pair boxing the hamburger, the month arrows and every cap. The docked
+// slot is shrink-to-fit, so without the IconBox the buttons would render
+// content-sized (40px); desktop keeps the Grow bars (static parent).
+func TestFooterButtonsAre50SquareOnMobile(t *testing.T) {
+	fb := &conformance.FakeLister{}
+	p := view.New(fb, &Device{})
+	v := &CrudView{Title: "CRUD", Presenter: p, Form: html.Div(), Filter: html.Div()}
+	v.Init(&fakeCtx{})
+	cssStr := v.RenderCSS().String()
+
+	mediaIdx := strings.Index(cssStr, "@media (max-width")
+	if mediaIdx == -1 {
+		t.Fatal("expected a mobile (max-width) media query")
+	}
+	mobileRegion := cssStr[mediaIdx:]
+	if next := strings.Index(mobileRegion[1:], "@media"); next != -1 {
+		mobileRegion = mobileRegion[:next+1]
+	}
+	for _, sel := range []string{
+		".crudview__action {",
+		".crudview__action-delete {",
+		".crudview__action-edit {",
+	} {
+		mb := ruleBlock(mobileRegion, sel)
+		if mb == "" {
+			t.Fatalf("expected a mobile rule for %s", sel)
+		}
+		for _, want := range []string{"width: 2.5em", "height: 2.5em", "font-size: var(--text-lg"} {
+			if !strings.Contains(mb, want) {
+				t.Errorf("mobile %s should contain %q, block:\n%s", sel, want, mb)
+			}
+		}
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	. "github.com/tinywasm/dom"
 	. "github.com/tinywasm/html"
 
-	"github.com/tinywasm/components/countbadge"
 	"github.com/tinywasm/components/modaldialog"
 	"github.com/tinywasm/components/targetlist"
 	"github.com/tinywasm/fmt"
@@ -139,11 +138,10 @@ type CrudView struct {
 	deleteLabel   *SignalString // its label, for the confirmation message
 	composing     *SignalBool   // "+" was pressed and nothing saved/cancelled yet (see active())
 	mode          *SignalString // single source of truth for mode (crudMode)
-	checkedCount  *SignalString // count of checked items, for display only (BindText needs a string)
-	// hasChecked and hasEdits are what the commit buttons READ. checkedCount is
-	// a string because BindText needs one; comparing it back against "0" made a
-	// number's meaning depend on its rendering, and carried a dead `== ""`
-	// branch guarding an initial state that never occurs.
+	// hasChecked and hasEdits are what the commit buttons READ. The count
+	// itself has no display here — listselect.Header's "k / N" strip is the
+	// one place it's shown; a second count on the footer button (a
+	// countbadge bubble) duplicated it for no reason.
 	hasChecked *SignalBool
 	hasEdits   *SignalBool
 	// hasRows mirrors "the list currently shows at least one record", set in
@@ -175,7 +173,6 @@ func (v *CrudView) Init(ctx Ctx) {
 	v.deleteLabel = NewString("")
 	v.composing = NewBool(false)
 	v.mode = NewString(string(modeNormal))
-	v.checkedCount = NewString("0")
 	v.hasChecked = NewBool(false)
 	v.hasEdits = NewBool(false)
 	v.hasRows = NewBool(false)
@@ -195,7 +192,6 @@ func (v *CrudView) Init(ctx Ctx) {
 	}
 	v.list = buildList(v.selected, v.selectAction)
 	v.list.OnCheckedChange(func(n int) {
-		v.checkedCount.Set(fmt.Sprintf("%d", n))
 		v.hasChecked.Set(n > 0)
 	})
 
@@ -778,14 +774,10 @@ func (v *CrudView) Render() *Element {
 					}
 					return !v.hasChecked.Get()
 				})).
-				// The count rides OUT of the flow: a countbadge bubble on the
-				// top-end corner, so the button keeps its box with 0, 1 or 99
-				// marked. Visible only above zero — at zero the disabled
-				// button already says there is nothing to commit.
-				Child(
-					trash.Ref.Render(string(clsBtnCrudDeleteIcon)),
-					(&countbadge.CountBadge{Count: v.checkedCount, Visible: v.hasChecked}).Render(),
-				)
+				// No count badge here: listselect.Header's "k / N" strip
+				// already shows how many are marked, right above the list —
+				// a second count bubble on this button duplicated it.
+				Child(trash.Ref.Render(string(clsBtnCrudDeleteIcon)))
 			btnDelete.On("click", func(Event) { v.deleteEntryAction() })
 			footer.Child(btnDelete)
 		}
@@ -819,10 +811,8 @@ func (v *CrudView) Render() *Element {
 					// alive. An unpressable button needs no error message.
 					return !v.hasChecked.Get() || !v.hasEdits.Get()
 				})).
-				Child(
-					pencil.Ref.Render(string(clsBtnCrudEditIcon)),
-					(&countbadge.CountBadge{Count: v.checkedCount, Visible: v.hasChecked}).Render(),
-				)
+				// No count badge here either — see btnDelete above.
+				Child(pencil.Ref.Render(string(clsBtnCrudEditIcon)))
 			btnEdit.On("click", func(Event) {
 				if v.mode.Get() == string(modeNormal) {
 					if !v.active() {

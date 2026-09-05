@@ -46,16 +46,19 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 			style.Scroll(),
 			style.Round(style.RadiusMd),
 			style.Fill(),
-		). // The footer is a Row of equal buttons: delete leads, add follows
+		). 		// The footer is a Row of equal buttons: delete leads, add follows
 		// (see Render). Every button answers to --control-height — the same
 		// token the search bar measures by — so the two ends of the column
 		// agree by construction instead of by hand-tuned padding. Grow, not
 		// Full: each button takes its share of the free space and yields to
-		// its siblings.
+		// its siblings. Glyph IconMd + Pad Space2 = 40px of content, so the
+		// ControlBox floor lands the bar at exactly 50px on every
+		// breakpoint — no mobile bump (the old IconLg overrides inflated the
+		// bar to 64 on phones, matching nothing).
 		Part(widget.Part("action"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
-			style.Pad(style.Space3),
+			style.Pad(style.Space2),
 			style.Grow(),
 			style.ControlBox(),
 			style.CenterContent(),
@@ -78,7 +81,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		Part(widget.Part("action-delete"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
-			style.Pad(style.Space3),
+			style.Pad(style.Space2),
 			style.Grow(),
 			style.ControlBox(),
 			style.Row(style.SpaceNone),
@@ -89,7 +92,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		Part(widget.Part("action-edit"),
 			style.As(style.Primary),
 			style.Round(style.RadiusMd),
-			style.Pad(style.Space3),
+			style.Pad(style.Space2),
 			style.Grow(),
 			style.ControlBox(),
 			style.Row(style.SpaceNone),
@@ -129,11 +132,20 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// siblings at full width. No per-button Docked, on any breakpoint:
 		// every footer button keeps the same Grow box it has on desktop.
 		// ControlBox's min-height stays on everywhere, so the row keeps the
-		// control token as its measure instead of hugging the glyphs.
-		On(css.Mobile, widget.Part("action-new"), style.IconBox(style.IconLg)).
-		On(css.Mobile, widget.Part("action-cancel"), style.IconBox(style.IconLg)).
-		On(css.Mobile, widget.Part("action-delete-icon"), style.IconBox(style.IconLg)).
-		On(css.Mobile, widget.Part("action-edit-icon"), style.IconBox(style.IconLg)).
+		// control token as its measure instead of hugging the glyphs. The
+		// glyphs stay IconMd on every breakpoint too: the old mobile IconLg
+		// bump inflated the bar to 64px on phones, matching nothing.
+		//
+		// Exact 50px squares on mobile from the same pair as every square
+		// control (FontSize TextLg + IconBox Lg = 2.5em of 1.25rem): the
+		// docked slot is shrink-to-fit, so Grow has no free space to share
+		// and the buttons would render content-sized (40px) — the IconBox
+		// owns the 50 instead. Desktop keeps the Grow bars (static parent,
+		// height already 50 via ControlBox). border-box keeps Pad inside
+		// the 50; the Md glyphs ride 30px inside on the buttons' 20px type.
+		On(css.Mobile, widget.Part("action"), style.FontSize(style.TextLg), style.IconBox(style.IconLg)).
+		On(css.Mobile, widget.Part("action-delete"), style.FontSize(style.TextLg), style.IconBox(style.IconLg)).
+		On(css.Mobile, widget.Part("action-edit"), style.FontSize(style.TextLg), style.IconBox(style.IconLg)).
 		// Bare, not Inset, on a phone: the grey card + border of fields/list
 		// adds nothing over the panel's own page surface, and the list is
 		// where the user first wants whitespace to breathe. Bare strips
@@ -158,10 +170,10 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// deliberate mobile exception to cardInset's promise; it is retired
 		// with the premise that justified it.
 		//
-		// FloatingChrome(EdgeBottom, IconLg, Space4): the footer row floats over
+		// FloatingChrome(EdgeBottom, IconMd, Space4): the footer row floats over
 		// content this Part contains — rightpanel docks the aside-footer slot
-		// to THIS panel's corner. The icons (IconLg, matching every footer
-		// icon's own mobile size two rules up) plus the docked gap, doubled,
+		// to THIS panel's corner. The icons (IconMd, matching every footer
+		// icon's own size) plus the docked gap, doubled,
 		// is the footprint the scroller must clear. This Part is not itself what scrolls — targetlist's
 		// own Fill()+Scroll() two levels in is — but --floating-bottom is an
 		// inherited custom property, so it reaches that descendant without
@@ -171,7 +183,7 @@ func (v *CrudView) RenderSheet() *style.Sheet {
 		// three lines apart.
 		On(css.Mobile, widget.Part("list"),
 			style.Pad(cardInset),
-			style.FloatingChrome(style.EdgeBottom, style.IconLg, style.Space4),
+			style.FloatingChrome(style.EdgeBottom, style.IconMd, style.Space4),
 		).
 		// Amber while open, matching the selection language the list already
 		// uses: the button IS what is currently "selected" in the sense that

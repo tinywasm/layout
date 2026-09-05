@@ -241,6 +241,32 @@ func TestHamburgerIsDrivenByScrollAlone(t *testing.T) {
 	}
 }
 
+// TestHamburgerIs50Square pins the single-source square: FontSize(TextXl) +
+// IconBox(IconLg) = 2.5em of 1.25rem, the same pair boxing every square
+// control — replacing the old content-plus-Pad sizing (40px glyph + Space2
+// = 56, matching nothing). Scans every block: the first match is OnlyOn's
+// base hide, not the sizing rule.
+func TestHamburgerIs50Square(t *testing.T) {
+	cssStr := (&Platform{}).RenderCSS().String()
+	rest := cssStr
+	found := false
+	for {
+		mb := ruleBlock(rest, ".pd__hamburger {")
+		if mb == "" {
+			break
+		}
+		if strings.Contains(mb, "width: 2.5em") && strings.Contains(mb, "height: 2.5em") &&
+			strings.Contains(mb, "font-size: var(--text-lg") {
+			found = true
+			break
+		}
+		rest = rest[strings.Index(rest, mb)+len(mb):]
+	}
+	if !found {
+		t.Errorf("no .pd__hamburger block boxes the exact 50px square (2.5em + text-lg), got:\n%s", cssStr)
+	}
+}
+
 func TestPlatform_StylesheetAsserts(t *testing.T) {
 	// Identity, brand and the actions slot are all supplied: the class-parity
 	// assertion below is two-directional, so anything left nil would read as a
