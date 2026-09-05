@@ -414,17 +414,23 @@ func (p *Platform) RenderSheet() *style.Sheet {
 		// hugging the rectangle around button+toasts would be a visible seam
 		// around an invisible box. Each toast raises itself instead.
 		//
-		// Stacking: a Viewport dock claims the widget's layer (LayerDropdown,
+		// Stacking: a Viewport pin claims the widget's layer (LayerDropdown,
 		// the same --z-dropdown the drawer and the overlay ride), so the stack
 		// ties with them and DOM order breaks the tie — which is why
 		// msg-stack is the ROOT'S LAST CHILD in Render(): a toast must paint
 		// above the drawer's overlay when both are on screen. (The --z-toast
 		// layer exists for widgets whose Kind is Alert; platformd is a Menu,
 		// and switching kinds to steal the layer would change its role.)
+		//
+		// FloatMiddle, not a top Docked: the hamburger rides the vertical
+		// middle of the end edge — reachable mid-scroll, clear of both the
+		// header zone and the footer chrome — with the same Space4 off the
+		// edge the footer keeps off the frame. Toasts hang below it down
+		// the Stack gap, as before.
 		OnlyOn(css.Mobile, widget.Part("msg-stack"),
 			style.Stack(style.Space2),
 			style.KeepSize(),
-			style.Docked(style.Viewport, style.EdgeTop, style.SideEnd, style.Space4),
+			style.FloatMiddle(style.SideEnd, style.Space4),
 		).
 		OnlyOn(css.Mobile, widget.Part("msg-slot-mobile"),
 			style.Stack(style.Space2),

@@ -127,7 +127,13 @@ func (r *RightPanel) RenderSheet() *style.Sheet {
 			style.Row(style.Space1),
 			style.KeepSize(),
 		).
-		On(css.Mobile, partAsideFooter, style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.SpaceNone)).
+		// Floating chrome keeps one step off the frame on every edge it
+		// meets: Space3 here, plus the aside's own Space1 gutter, lands the
+		// footer exactly Space4 (16px) off the frame — the same Space4 the
+		// hamburger's msg-stack keeps. Same criterion, same total, both
+		// corners; flush (SpaceNone) is banned for floating chrome, where
+		// elements get lost and tap targets die at the edge.
+		On(css.Mobile, partAsideFooter, style.Docked(style.Parent, style.EdgeBottom, style.SideEnd, style.Space3)).
 		// Restores the aside's card border once there is room to show it — see
 		// the "aside" Part above for why it starts borderless.
 		On(css.Tablet, partAside, style.As(style.Panel)).

@@ -203,6 +203,42 @@ func TestDrawerPanelFloatIsFinePointerScoped(t *testing.T) {
 // — invisible on a real phone (iOS does not focus on tap), but on a desktop
 // browser or a device emulator the button vanished on arrival and came back
 // only by clicking outside the page.
+// TestMsgStackFloatsMiddleEnd pins the hamburger's ride: vertically
+// centered on the end edge (FloatMiddle), one Space4 step off the frame —
+// the same 16px the footer keeps, reachable mid-scroll.
+func TestMsgStackFloatsMiddleEnd(t *testing.T) {
+	cssStr := (&Platform{}).RenderCSS().String()
+	mediaIdx := strings.Index(cssStr, "@media (max-width")
+	if mediaIdx == -1 {
+		t.Fatal("expected a mobile (max-width) media query")
+	}
+	mobileRegion := cssStr[mediaIdx:]
+	if next := strings.Index(mobileRegion[1:], "@media"); next != -1 {
+		mobileRegion = mobileRegion[:next+1]
+	}
+	mb := ""
+	rest := mobileRegion
+	for {
+		b := ruleBlock(rest, ".pd__msg-stack {")
+		if b == "" {
+			break
+		}
+		if strings.Contains(b, "top: 50%;") {
+			mb = b
+			break
+		}
+		rest = rest[strings.Index(rest, b)+len(b):]
+	}
+	if mb == "" {
+		t.Fatal("expected a mobile .pd__msg-stack block carrying the middle pin")
+	}
+	for _, want := range []string{"top: 50%;", "translateY(-50%)", "inset-inline-end: var(--space-4"} {
+		if !strings.Contains(mb, want) {
+			t.Errorf(".pd__msg-stack should contain %q, block:\n%s", want, mb)
+		}
+	}
+}
+
 func TestHamburgerIsDrivenByScrollAlone(t *testing.T) {
 	cssStr := (&Platform{}).RenderCSS().String()
 

@@ -232,6 +232,40 @@ func TestAsideKeepsGutterOnMobile(t *testing.T) {
 	}
 }
 
+// TestFooterKeepsOffFrameOnMobile pins the floating-chrome criterion:
+// the docked footer keeps Space3, which plus the aside's own Space1 gutter
+// lands it exactly Space4 off the frame — the same Space4 the hamburger's
+// msg-stack keeps. Flush (SpaceNone) strands tap targets at the edge.
+func TestFooterKeepsOffFrameOnMobile(t *testing.T) {
+	r := &RightPanel{
+		Module:        &mockModule{id: "test-module"},
+		Title:         "Test Title",
+		Article:       html.Div(),
+		AsideControls: html.Div(),
+		Aside:         html.Div(),
+		AsideFooter:   html.Div(),
+	}
+
+	cssStr := r.RenderCSS().String()
+	mediaIdx := strings.Index(cssStr, "@media (max-width")
+	if mediaIdx == -1 {
+		t.Fatal("expected a mobile (max-width) media query")
+	}
+	mobileRegion := cssStr[mediaIdx:]
+	if next := strings.Index(mobileRegion[1:], "@media"); next != -1 {
+		mobileRegion = mobileRegion[:next+1]
+	}
+	mb := ruleBlock(mobileRegion, ".rp__aside-footer {")
+	if mb == "" {
+		t.Fatal("expected a mobile rule for .rp__aside-footer")
+	}
+	for _, want := range []string{"inset-block-end: var(--space-3", "inset-inline-end: var(--space-3"} {
+		if !strings.Contains(mb, want) {
+			t.Errorf(".rp__aside-footer should keep %q off the frame, block:\n%s", want, mb)
+		}
+	}
+}
+
 func TestRightPanel_FlowIsSplitRootStackedMain(t *testing.T) {
 	r := &RightPanel{
 		Module:        &mockModule{id: "test-module"},
