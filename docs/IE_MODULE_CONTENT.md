@@ -152,12 +152,12 @@ lista, usada por algunos módulos).
 5. El título del módulo es claro y fijo en la **esquina superior izquierda**
    del panel (h1 blanco sobre franja azul), además del `#area` del header.
 
-## 4. Mapeo a `crudview` (tinywasm/layout)
+## 4. Mapeo a `crudview` (webtyp/layout)
 
 | Pa100T | crudview |
 |---|---|
 | `.article-contend` (66vw) | zona `Form` + título + barra CRUD |
-| `.form-distributed-fields` + fieldsets | slot `Form` (típicamente `*form.Form`; los fieldset/legend los pinta `tinywasm/form`) |
+| `.form-distributed-fields` + fieldsets | slot `Form` (típicamente `*form.Form`; los fieldset/legend los pinta `webtyp/form`) |
 | `.contebuton` (4 botones) | barra CRUD propia de crudview (callbacks New/Save/Delete/Cancel) |
 | `.aside-contend` (29vw) | zona lista + búsqueda |
 | `.lista .target-li` + `.description-target` | ítems tipados `Item{ID, Label, Description}` |

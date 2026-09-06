@@ -1,21 +1,21 @@
 package crudview
 
 import (
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/html"
+	. "webtyp.com/dom"
+	. "webtyp.com/html"
 
-	"github.com/tinywasm/components/modaldialog"
-	"github.com/tinywasm/components/targetlist"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/fmt/lang"
-	"github.com/tinywasm/form"
-	"github.com/tinywasm/icons/pencil"
-	"github.com/tinywasm/icons/plus"
-	"github.com/tinywasm/icons/trash"
-	"github.com/tinywasm/icons/undo"
-	"github.com/tinywasm/layout/rightpanel"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/widget"
+	"webtyp.com/components/modaldialog"
+	"webtyp.com/components/targetlist"
+	"webtyp.com/fmt"
+	"webtyp.com/fmt/lang"
+	"webtyp.com/form"
+	"webtyp.com/icons/pencil"
+	"webtyp.com/icons/plus"
+	"webtyp.com/icons/trash"
+	"webtyp.com/icons/undo"
+	"webtyp.com/layout/rightpanel"
+	"webtyp.com/view"
+	"webtyp.com/widget"
 )
 
 const NameCrudView widget.Name = "crudview"
@@ -40,7 +40,7 @@ var (
 const (
 	// The single toggle button swaps between these two glyphs reactively — see
 	// the "toggle" block in Render(). All four crud glyphs come from
-	// tinywasm/icons; trash/pencil are also drawn by the list marks
+	// webtyp/icons; trash/pencil are also drawn by the list marks
 	// (targetlist/targetdate) from the same package, so the buttons and the
 	// rows they act on can never draw a different shape.
 	iconCrudNew    = plus.Ref // "+"  — nothing selected

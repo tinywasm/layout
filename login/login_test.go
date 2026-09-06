@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/tinywasm/html"
+	. "webtyp.com/html"
 )
 
 func TestLogin_RendersTitleAndForm(t *testing.T) {

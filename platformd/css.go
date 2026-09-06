@@ -3,9 +3,9 @@
 package platformd
 
 import (
-	"github.com/tinywasm/css"
-	"github.com/tinywasm/widget"
-	"github.com/tinywasm/widget/style"
+	"webtyp.com/css"
+	"webtyp.com/widget"
+	"webtyp.com/widget/style"
 )
 
 // RenderSheet returns the style Sheet containing the rules for platformd.

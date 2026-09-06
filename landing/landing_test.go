@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/dom"
-	"github.com/tinywasm/html"
-	"github.com/tinywasm/image"
-	"github.com/tinywasm/layout/landing"
+	"webtyp.com/dom"
+	"webtyp.com/html"
+	"webtyp.com/image"
+	"webtyp.com/layout/landing"
 )
 
 type dummyComponent struct {

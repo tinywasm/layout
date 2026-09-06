@@ -15,7 +15,7 @@ type UIModule interface {
 
 ## Theme Agnostic
 
-`platformd` is theme-agnostic and does not define its own colors. It references semantic tokens from `github.com/tinywasm/css` (`ColorSecondary`, `ColorSurface`, etc.). The actual theme is provided by the root application.
+`platformd` is theme-agnostic and does not define its own colors. It references semantic tokens from `webtyp.com/css` (`ColorSecondary`, `ColorSurface`, etc.). The actual theme is provided by the root application.
 
 ## Routing
 

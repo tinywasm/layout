@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/components/targetlist"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/form"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/components/targetlist"
+	"webtyp.com/fmt"
+	"webtyp.com/form"
+	"webtyp.com/model"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 func setupBulkTest(t *testing.T, withUpdate bool) (*CrudView, view.Lister) {

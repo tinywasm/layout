@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/html"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/fmt"
+	"webtyp.com/html"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 // ruleBlock returns the declaration block of the first rule whose selector
@@ -271,7 +271,7 @@ func TestConsumer_StylesheetAsserts(t *testing.T) {
 	importMatches := func() map[string]bool {
 		classes := make(map[string]bool)
 		// We look for class='...' attributes
-		// HTML strings use single quotes for attributes in tinywasm/dom.
+		// HTML strings use single quotes for attributes in webtyp/dom.
 		for i := 0; i < len(allHTML); i++ {
 			if strings.HasPrefix(allHTML[i:], "class='") {
 				start := i + len("class='")

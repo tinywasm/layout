@@ -2,12 +2,12 @@
 
 package platformd
 
-import "github.com/tinywasm/svg/sprite"
+import "webtyp.com/svg/sprite"
 
 // IconSvg registers the default platform chrome glyphs: the identity fallback,
 // the brand fallback and the menu button. The full page sprite is the MERGE of
 // every module's IconSvg() (platformd + crudview + components + the demo app,
-// github.com/tinywasm/app-demo), assembled by tinywasm/ssr and injected inline
+// webtyp.com/app-demo), assembled by webtyp/ssr and injected inline
 // in <body>.
 //
 // Content icons (what a module calls itself) live with their module, in the

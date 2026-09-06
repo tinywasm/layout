@@ -4,8 +4,8 @@ package rightpanel
 
 
 import (
-	"github.com/tinywasm/css"
-	"github.com/tinywasm/widget/style"
+	"webtyp.com/css"
+	"webtyp.com/widget/style"
 )
 
 // frameGutter is Root's own rhythm: the blue frame that separates the

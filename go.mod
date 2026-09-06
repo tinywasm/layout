@@ -1,22 +1,22 @@
-module github.com/tinywasm/layout
+module webtyp.com/layout
 
 go 1.25.2
 
 require (
-	github.com/tinywasm/components v0.6.10
-	github.com/tinywasm/css v0.4.20
-	github.com/tinywasm/date v0.0.2
-	github.com/tinywasm/dom v0.13.9
-	github.com/tinywasm/fmt v0.25.7
-	github.com/tinywasm/form v0.4.0
-	github.com/tinywasm/html v0.0.19
-	github.com/tinywasm/image v0.1.0
-	github.com/tinywasm/input v0.0.3
-	github.com/tinywasm/model v0.1.7
-	github.com/tinywasm/svg v0.3.3
-	github.com/tinywasm/time v0.5.4
-	github.com/tinywasm/view v0.5.1
-	github.com/tinywasm/widget v0.6.23
+	webtyp.com/components v0.6.10
+	webtyp.com/css v0.4.20
+	webtyp.com/date v0.0.5
+	webtyp.com/dom v0.13.9
+	webtyp.com/fmt v0.25.7
+	webtyp.com/form v0.4.0
+	webtyp.com/html v0.0.19
+	webtyp.com/image v0.1.0
+	webtyp.com/input v0.0.3
+	webtyp.com/model v0.1.7
+	webtyp.com/svg v0.3.3
+	webtyp.com/time v0.5.4
+	webtyp.com/view v0.5.1
+	webtyp.com/widget v0.6.23
 )
 
 // TEMPORAL — solo para probar en el iPhone el fix de Focus(preventScroll) en
@@ -24,14 +24,14 @@ require (
 // el resultado (funcione o no).
 
 require (
-	github.com/tinywasm/color v0.1.1 // indirect
-	github.com/tinywasm/context v0.0.18 // indirect
-	github.com/tinywasm/fetch v0.1.24 // indirect
-	github.com/tinywasm/font v0.0.4 // indirect
-	github.com/tinywasm/icons v0.0.2
-	github.com/tinywasm/js v0.0.6 // indirect
-	github.com/tinywasm/json v0.5.23 // indirect
-	github.com/tinywasm/router v0.1.30 // indirect
+	webtyp.com/color v0.1.1 // indirect
+	webtyp.com/context v0.0.18 // indirect
+	webtyp.com/fetch v0.1.24 // indirect
+	webtyp.com/font v0.0.4 // indirect
+	webtyp.com/icons v0.0.2
+	webtyp.com/js v0.0.6 // indirect
+	webtyp.com/json v0.5.23 // indirect
+	webtyp.com/router v0.1.30 // indirect
 )
 
-// TEMP: local until FloatingChrome consume + Filled cue + CueSibling ship in tinywasm/widget.
+// TEMP: local until FloatingChrome consume + Filled cue + CueSibling ship in webtyp/widget.

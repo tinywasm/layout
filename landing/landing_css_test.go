@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/layout/landing"
+	"webtyp.com/layout/landing"
 )
 
 func TestRenderCSS(t *testing.T) {

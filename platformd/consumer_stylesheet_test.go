@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/css"
-	"github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
-	"github.com/tinywasm/html"
-	"github.com/tinywasm/svg"
+	"webtyp.com/css"
+	"webtyp.com/dom"
+	. "webtyp.com/fmt"
+	"webtyp.com/html"
+	"webtyp.com/svg"
 )
 
 // testIdentity is the smallest thing that satisfies the Identity contract.
@@ -399,7 +399,7 @@ func TestPlatform_StylesheetAsserts(t *testing.T) {
 	extractClasses := func(html string) map[string]bool {
 		classes := make(map[string]bool)
 		// We look for class='...' attributes
-		// HTML strings use single quotes for attributes in tinywasm/dom.
+		// HTML strings use single quotes for attributes in webtyp/dom.
 		for i := 0; i < len(html); i++ {
 			if strings.HasPrefix(html[i:], "class='") {
 				start := i + len("class='")

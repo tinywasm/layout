@@ -3,8 +3,8 @@ package crudview
 import (
 	"testing"
 
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 func TestViewConformance(t *testing.T) {

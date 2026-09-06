@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/dom"
-	"github.com/tinywasm/layout/rightpanel"
+	"webtyp.com/dom"
+	"webtyp.com/layout/rightpanel"
 )
 
 // stubModule implements Module for tests.

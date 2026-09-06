@@ -1,9 +1,9 @@
 package login
 
 import (
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/html"
-	"github.com/tinywasm/widget"
+	. "webtyp.com/dom"
+	. "webtyp.com/html"
+	"webtyp.com/widget"
 )
 
 // NameLogin is the widget identity; it produces the class prefix "login" and

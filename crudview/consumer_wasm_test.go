@@ -5,11 +5,11 @@ package crudview
 import (
 	"testing"
 
-	"github.com/tinywasm/components/searchbar"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/form"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/components/searchbar"
+	"webtyp.com/fmt"
+	"webtyp.com/form"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 type mockCtxWasmConsumer struct{}

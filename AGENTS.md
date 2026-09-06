@@ -1,4 +1,4 @@
-# Agent Guide — `tinywasm/layout`
+# Agent Guide — `webtyp/layout`
 
 Constraints for agents working on layout (e.g. `platformd`). Read this before any change.
 
@@ -6,7 +6,7 @@ Constraints for agents working on layout (e.g. `platformd`). Read this before an
 
 ## Hot reload — do NOT compile manually
 
-The TinyWasm dev server has hot reload: every source change (Go, CSS in `css.go`,
+The WebTyp dev server has hot reload: every source change (Go, CSS in `css.go`,
 SSR assets) is recompiled and re-served automatically. Do **not** run `go build`,
 `GOOS=js GOARCH=wasm go build`, or re-run `start_development` to "pick up" a change,
 and do not poll the wasm endpoint waiting for a rebuild. Just edit the file, then
@@ -15,7 +15,7 @@ by hand is a one-off compile check; the running app never needs it.
 
 ---
 
-## Construction Harness — the TinyWasm way (read first)
+## Construction Harness — the WebTyp way (read first)
 
 The typed, explicit code **is** the harness. Whoever writes against this library is
 often an agent that does **not** know it; they must produce correct code guided only
@@ -27,7 +27,7 @@ first is orders of magnitude more reliable for someone with no context.
 Every public API must hold to these principles:
 
 1. **Typed over `any`.** No generic holes (`func(...any)`, `interface{}`) in the
-   API — intent-typed methods, like the `tinywasm/json` writer (`String`, `Int`,
+   API — intent-typed methods, like the `webtyp/json` writer (`String`, `Int`,
    `Bool`, `Object`, `Array`). `any` is allowed **only** at the I/O edge, never in
    the data. **Reuse already-declared types** (e.g. `fmt.KeyValue`) instead of
    inventing new ones. Generics with an `any` constraint are the same hole in
@@ -67,7 +67,7 @@ There is **NO** `OnMount`/`OnUpdate`/`OnUnmount` and **NO** manual `Update()` (u
 
 ## No Generics
 
-Zero generic functions (follow `tinywasm/fmt` codec rule "cero any, cero map"). Concrete typed
+Zero generic functions (follow `webtyp/fmt` codec rule "cero any, cero map"). Concrete typed
 signals only: `SignalString`/`SignalBool`/`SignalNodes`, `DeriveString`/`DeriveBool`, `Bind*`,
 `Show`. Never `Signal[T]`.
 
@@ -79,15 +79,15 @@ internal helpers and anything only this package uses. Struct fields stay unexpor
 ## WASM / TinyGo
 
 - Reactive code in `//go:build wasm`; `!wasm` stubs where called from tag-less code.
-- No Go stdlib: use `github.com/tinywasm/fmt`. DOM only via `github.com/tinywasm/dom`, never
+- No Go stdlib: use `webtyp.com/fmt`. DOM only via `webtyp.com/dom`, never
   `syscall/js`. `switch` not `map`. No `defer/recover`. Embed `dom.Element` by value.
-- **No `encoding/json`:** Direct use of the standard library `encoding/json` is prohibited in WASM paths. Use `github.com/tinywasm/json` instead.
+- **No `encoding/json`:** Direct use of the standard library `encoding/json` is prohibited in WASM paths. Use `webtyp.com/json` instead.
 
 ## Translatable messages — word keys, consumer dictionary
 
 Framework-authored UI chrome text (dialog titles, button labels, confirmation
 messages, aria-labels) MUST go through `lang.Translate(...)` from
-`github.com/tinywasm/fmt/lang` — never hardcoded literals:
+`webtyp.com/fmt/lang` — never hardcoded literals:
 
 - **One word per argument.** `lang.Translate("Delete", "%s?", "This", "action",
   "cannot", "be", "undone.")` — never a whole sentence as a single key.
@@ -97,7 +97,7 @@ messages, aria-labels) MUST go through `lang.Translate(...)` from
   default render is English; other languages need a dictionary + activation.
 - **The dictionary is the consumer's, never the library's.** No
   `lang.RegisterWords` call in production code — only in tests (registering a
-  dictionary simulates the consumer, mirroring `tinywasm/input`'s pattern) and in
+  dictionary simulates the consumer, mirroring `webtyp/input`'s pattern) and in
   the consumer app. Activating a language (`lang.OutLang(lang.ES)`) is the
   consumer's job too.
 - **Scope is chrome only.** App-supplied literals (`CrudView.Title`,
@@ -111,7 +111,7 @@ Consumer instructions: `docs/DICTIONARY.md`.
 ## Testing
 
 ```bash
-go install github.com/tinywasm/devflow/cmd/gotest@latest
+go install webtyp.com/devflow/cmd/gotest@latest
 gotest
 ```
 
@@ -136,17 +136,17 @@ The isomorphic Go ecosystem means files compile to both backend and browser. We 
 | `//go:build !wasm` | Backend/SSR | SSR asset collection, `sprite.Define`. NEVER ships to WASM. |
 
 > [!IMPORTANT]
-> `tinywasm/svg` is split by PACKAGE, not by build tag inside the library.
-> - `github.com/tinywasm/svg`: Shared reference (safe for untagged code).
-> - `github.com/tinywasm/svg/sprite`: Backend-only definition.
+> `webtyp/svg` is split by PACKAGE, not by build tag inside the library.
+> - `webtyp.com/svg`: Shared reference (safe for untagged code).
+> - `webtyp.com/svg/sprite`: Backend-only definition.
 >
 > `svg/sprite` compiles for WASM too, so forgetting the `!wasm` tag on your
 > `svg.go` does NOT fail the build — it silently ships every path `d` string
 > into the browser bundle. Only the dependency-graph check catches it:
 >
 > ```bash
-> GOOS=js GOARCH=wasm go list -deps ./platformd | grep tinywasm/svg/sprite  # MUST be empty
-> GOOS=js GOARCH=wasm go list -deps ./crudview | grep tinywasm/svg/sprite   # MUST be empty
+> GOOS=js GOARCH=wasm go list -deps ./platformd | grep webtyp/svg/sprite  # MUST be empty
+> GOOS=js GOARCH=wasm go list -deps ./crudview | grep webtyp/svg/sprite   # MUST be empty
 > ```
 
 ## SVG icons — name is shared, drawing is backend-only
@@ -157,12 +157,12 @@ The isomorphic Go ecosystem means files compile to both backend and browser. We 
 
 Do NOT hand-build `<svg><use href="#id"/></svg>` blocks using `svg.Svg()` or `svg.Use()`.
 
-**A glyph shared with a component comes from `tinywasm/icons`.** `crudview`'s
+**A glyph shared with a component comes from `webtyp/icons`.** `crudview`'s
 footer trash/pencil are the same marks `targetlist`/`targetdate` draw on their
-rows — so all of them import `github.com/tinywasm/icons/trash` and
+rows — so all of them import `webtyp.com/icons/trash` and
 `.../pencil` and take `Ref` + `Def()`. Never re-define a shared glyph's
 geometry here, never import it sideways from `components`. `plus`/`undo` (the
-toggle button) come from `tinywasm/icons` too. A glyph private to `crudview`
+toggle button) come from `webtyp/icons` too. A glyph private to `crudview`
 still lives in `crudview/svg.go`.
 
 **The mark's *skin* is `listselect.Apply` — assembled, not re-declared.** The
@@ -197,7 +197,7 @@ and reason as `components/listselect/css.go`.
 
 ## SSR asset provider names are matched by regex — the name must be EXACT
 
-`tinywasm/ssr` collects a package's SSR output by scanning `css.go`/`js.go`/`svg.go`/`html.go`
+`webtyp/ssr` collects a package's SSR output by scanning `css.go`/`js.go`/`svg.go`/`html.go`
 for functions whose names match **exactly**: `RenderCSS`, `RootCSS`, `RenderHTML`, `RenderJS`,
 `IconSvg`. A CSS builder named anything else (e.g. `GenerateCSS`) is **silently never emitted** —
 the component renders with **zero styling** and nothing fails at build time.

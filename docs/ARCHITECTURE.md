@@ -1,8 +1,8 @@
-# tinywasm/layout Architecture
+# webtyp/layout Architecture
 
 ## Package Layout
 
-    tinywasm/layout/
+    webtyp/layout/
     ├── platformd/      # Shell: header, nav rail, hash routing, notifications
     │   └── modules/    # Demo modules, one package each (devices, medicalhistory, about):
     │                   # view + data + icon, owned by the module, not the chassis
@@ -35,7 +35,7 @@ handed to `Child()` as itself serializes from its zero embedded `Element` and
 disappears as an empty `<></>`.
 
 The reference demo (the `about`, `devices` and `medicalhistory` modules) lives
-in its own repo — [github.com/tinywasm/app-demo](https://github.com/tinywasm/app-demo) —
+in its own repo — [github.com/webtyp/app-demo](https://github.com/webtyp/app-demo) —
 so the demo's ORM/storage/input dependencies never enter layout's `go.mod`.
 Each module owns its view, its data and its icon (declared shared in the
 untagged file, drawn in a `//go:build !wasm` `svg.go` via `sprite.Define`). The
@@ -57,11 +57,11 @@ what the construction harness has to say about it.
 
 ## Dependencies
 
-    tinywasm/layout → tinywasm/html (element builders)
-    tinywasm/layout → tinywasm/svg  (Icon helper, *Sprite)
-    tinywasm/layout → tinywasm/dom  (Component, Event, lifecycle)
-    tinywasm/layout → tinywasm/css  (Stylesheet, Token)
-	tinywasm/layout → tinywasm/router (Caller interface)
+    webtyp/layout → webtyp/html (element builders)
+    webtyp/layout → webtyp/svg  (Icon helper, *Sprite)
+    webtyp/layout → webtyp/dom  (Component, Event, lifecycle)
+    webtyp/layout → webtyp/css  (Stylesheet, Token)
+	webtyp/layout → webtyp/router (Caller interface)
 
 ---
 

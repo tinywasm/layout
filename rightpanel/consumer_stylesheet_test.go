@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/html"
+	"webtyp.com/fmt"
+	"webtyp.com/html"
 )
 
 type mockModule struct {
@@ -113,7 +113,7 @@ func TestRightPanel_StylesheetAsserts(t *testing.T) {
 	importMatches := func() map[string]bool {
 		classes := make(map[string]bool)
 		// We look for class='...' attributes
-		// HTML strings use single quotes for attributes in tinywasm/dom.
+		// HTML strings use single quotes for attributes in webtyp/dom.
 		for i := 0; i < len(allHTML); i++ {
 			if strings.HasPrefix(allHTML[i:], "class='") {
 				start := i + len("class='")

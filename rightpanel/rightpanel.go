@@ -1,11 +1,11 @@
 package rightpanel
 
 import (
-	"github.com/tinywasm/layout"
-	"github.com/tinywasm/widget"
+	"webtyp.com/layout"
+	"webtyp.com/widget"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/html"
+	. "webtyp.com/dom"
+	. "webtyp.com/html"
 )
 
 const NameRightPanel widget.Name = "rp"
@@ -50,7 +50,7 @@ func (r *RightPanel) WidgetKind() widget.Kind { return widget.Region }
 // The layout does not define what the slots contain — that is the consumer's job.
 //
 // IMPORTANT: All Component implementors passed as slots MUST embed Element as a value,
-// not as a pointer. See tinywasm/dom interface.dom.go for details.
+// not as a pointer. See webtyp/dom interface.dom.go for details.
 //
 // Usage:
 //

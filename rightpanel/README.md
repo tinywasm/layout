@@ -9,5 +9,5 @@
 
 ## Styling
 
-Uses semantic tokens from `github.com/tinywasm/css` for all colors and spacing.
+Uses semantic tokens from `webtyp.com/css` for all colors and spacing.
 Proportions are controlled via `--rp-main-width` and `--rp-aside-width`.

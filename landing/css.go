@@ -3,8 +3,8 @@
 package landing
 
 import (
-	"github.com/tinywasm/css"
-	"github.com/tinywasm/widget/style"
+	"webtyp.com/css"
+	"webtyp.com/widget/style"
 )
 
 // RenderSheet returns the style Sheet containing the rules for landing.

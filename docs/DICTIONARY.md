@@ -1,7 +1,7 @@
 # Translation Dictionary — Consumer Guide
 
 `layout` renders its own UI chrome (dialog titles, button labels, confirmation
-messages) through `lang.Translate` from `github.com/tinywasm/fmt/lang`. The
+messages) through `lang.Translate` from `webtyp.com/fmt/lang`. The
 dictionary itself is **consumer-owned**: the library never registers words, so
 you decide the language your users see. Without any dictionary, everything
 renders in English (the canonical keys pass through unchanged).
@@ -21,14 +21,14 @@ the same entry can serve your own UI.
 
 ## How to add your dictionary
 
-1. Import the language package: `import "github.com/tinywasm/fmt/lang"`.
+1. Import the language package: `import "webtyp.com/fmt/lang"`.
 2. Register your translations once (in `init()` or at app startup).
 3. Activate the language with `lang.OutLang(lang.ES)` — or call
    `lang.OutLang()` with no arguments to auto-detect the system/browser
    language. English is the default and needs no activation.
 
 ```go
-import "github.com/tinywasm/fmt/lang"
+import "webtyp.com/fmt/lang"
 
 func init() {
 	lang.RegisterWords([]lang.DictEntry{
@@ -58,7 +58,7 @@ func main() {
   reused across the app.
 - **Write keys in an order that reads naturally in your target language** —
   the words are joined in the given order. See the fmt translation guide
-  (`github.com/tinywasm/fmt/docs/TRANSLATE.md`) for the word-order rules.
+  (`webtyp.com/fmt/docs/TRANSLATE.md`) for the word-order rules.
 - **RegisterWords merges** — registering only some languages for a key never
   wipes the others; repeated registration adds translations to existing keys.
 - **9 languages** — `EN, ES, ZH, HI, AR, PT, FR, DE, RU` are supported in

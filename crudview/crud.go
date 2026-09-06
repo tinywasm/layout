@@ -1,12 +1,12 @@
 package crudview
 
 import (
-	"github.com/tinywasm/components/searchbar"
-	"github.com/tinywasm/dom"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/form"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
+	"webtyp.com/components/searchbar"
+	"webtyp.com/dom"
+	"webtyp.com/fmt"
+	"webtyp.com/form"
+	"webtyp.com/model"
+	"webtyp.com/view"
 )
 
 // Config is what a renderer needs to draw a view.Presenter — nothing about ops, transport, or

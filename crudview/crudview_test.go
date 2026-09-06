@@ -5,11 +5,11 @@ package crudview
 import (
 	"testing"
 
-	. "github.com/tinywasm/fmt"
-	"github.com/tinywasm/fmt/lang"
-	. "github.com/tinywasm/html"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	. "webtyp.com/fmt"
+	"webtyp.com/fmt/lang"
+	. "webtyp.com/html"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 func TestCrudView_Render_Basic(t *testing.T) {
@@ -81,7 +81,7 @@ func (m *mockCtx) OnCleanup(fn func()) {}
 // framework-owned chrome, so its text is a lang.Translate call — resolved
 // from the English canonical keys, never hardcoded. The dictionary is the
 // consumer's concern (registered here, in the test — never in production
-// code), mirroring tinywasm/input's lazy-resolution test.
+// code), mirroring webtyp/input's lazy-resolution test.
 func TestCrudView_DeleteConfirm_Language(t *testing.T) {
 	openDialog := func(v *CrudView) string {
 		v.confirmDelete.Init(&mockCtx{})

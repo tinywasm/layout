@@ -3,7 +3,7 @@
 package platformd_test
 
 import (
-	"github.com/tinywasm/layout/platformd"
+	"webtyp.com/layout/platformd"
 	"strings"
 	"testing"
 )

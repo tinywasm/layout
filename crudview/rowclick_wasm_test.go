@@ -6,10 +6,10 @@ import (
 	"syscall/js"
 	"testing"
 
-	. "github.com/tinywasm/dom"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	. "webtyp.com/dom"
+	"webtyp.com/model"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 // TestRowClick_WritesDataSelected is the observable the whole plan exists for.

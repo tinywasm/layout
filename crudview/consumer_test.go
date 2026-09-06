@@ -3,11 +3,11 @@ package crudview
 import (
 	"testing"
 
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/input"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/fmt"
+	"webtyp.com/input"
+	"webtyp.com/model"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 // fakeCtx is a simple implementation of Ctx for testing

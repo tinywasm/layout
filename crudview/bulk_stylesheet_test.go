@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/html"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/fmt"
+	"webtyp.com/html"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
 )
 
 func TestActionGrowsInsteadOfFillingTheRow(t *testing.T) {

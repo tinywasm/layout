@@ -3,9 +3,9 @@
 package crudview
 
 import (
-	"github.com/tinywasm/css"
-	"github.com/tinywasm/widget"
-	"github.com/tinywasm/widget/style"
+	"webtyp.com/css"
+	"webtyp.com/widget"
+	"webtyp.com/widget/style"
 )
 
 // cardInset is the gap between a card's own border and its content, on the

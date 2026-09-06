@@ -2,7 +2,7 @@
 
 > Documento de decisión, en español por pedido explícito. Evalúa `crudview` y
 > `rightpanel` contra
-> [CONSTRUCTION_HARNESS.md](https://github.com/tinywasm/app-releases/blob/main/docs/CONSTRUCTION_HARNESS.md),
+> [CONSTRUCTION_HARNESS.md](https://github.com/webtyp/app-releases/blob/main/docs/CONSTRUCTION_HARNESS.md),
 > que es la autoridad del ecosistema.
 
 ---
@@ -83,7 +83,7 @@ type Expandable  interface{ Expand(open bool) }
 ```
 
 Falta la cuarta línea. Precedente idéntico, escrito por ti, en
-[`widget/field.go`](https://github.com/tinywasm/widget/blob/main/field.go):
+[`widget/field.go`](https://github.com/webtyp/widget/blob/main/field.go):
 
 > *"It lives here because it crosses the boundary between these two libraries,
 > and neither can own it without the other depending on it."*
@@ -227,7 +227,7 @@ dice que los documentos largos son síntoma, no cura:
 > harness, a minimal cheat-sheet is enough."*
 
 La duplicación se previene con **tests que fallan cuando aparece**, igual que
-[`components/conformance_test.go`](https://github.com/tinywasm/components/blob/main/conformance_test.go)
+[`components/conformance_test.go`](https://github.com/webtyp/components/blob/main/conformance_test.go)
 ya parsea el AST de cada `css.go` para rechazar `css.Raw` y colores literales.
 El precedente existe; solo hay que apuntarlo a esto:
 

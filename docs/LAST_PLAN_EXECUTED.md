@@ -11,13 +11,13 @@ REVIEWER: none
 
 > **Idioma:** este documento está en español porque lo pidió el autor.
 > **El código, los comentarios de código y los nombres de símbolos van SIEMPRE en
-> inglés** — `tinywasm/*` es librería pública. No traduzcas identificadores ni
+> inglés** — `webtyp/*` es librería pública. No traduzcas identificadores ni
 > escribas comentarios en español dentro de los `.go`.
 
 ## Prerrequisito (ejecutar primero)
 
 ```bash
-go install github.com/tinywasm/devflow/cmd/gotest@latest
+go install webtyp.com/devflow/cmd/gotest@latest
 ```
 
 Se ejecuta `gotest` (nunca `go test`) desde la raíz del repo. No invoques
@@ -210,7 +210,7 @@ grep -n "Items() \[\]view.Item" crudview/crudview.go
 - **Sin strings sueltos en la lógica.** Este cambio no introduce literales; si
   necesitas uno, va a constante de paquete.
 - **Sin librería estándar en código compartido con WASM.** `crudview.go` es
-  neutro (sin build tag) y compila a WASM: usa `github.com/tinywasm/fmt`,
+  neutro (sin build tag) y compila a WASM: usa `webtyp.com/fmt`,
   nunca `strings`/`errors`/`strconv` del stdlib. *Anti-footgun:* los `css.go`
   de este repo llevan `//go:build !wasm` y ahí el stdlib sí es legítimo — no
   "arregles" esos imports.
@@ -324,7 +324,7 @@ En la demo, módulo **Ficha Paciente**:
 ## 9. Fuera de alcance (NO hacer)
 
 - No toques `components/selectsearch`: sus defectos visuales van en
-  <https://github.com/tinywasm/components/blob/main/docs/PLAN.md>.
+  <https://github.com/webtyp/components/blob/main/docs/PLAN.md>.
 - No toques `widget/capability.go`: **no** hace falta un contrato nuevo
   (`ScopeSource` o similar). `widget.Filterable` + `ListView.Items()` ya
   alcanzan, y añadir una capacidad que un control puede olvidar implementar

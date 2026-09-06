@@ -1,4 +1,4 @@
-# tinywasm/layout/platformd
+# webtyp/layout/platformd
 
 Shell layout with hash-based routing, nav rail, header, and notifications.
 
@@ -25,7 +25,7 @@ Icons are SVG sprite references. Register them in your consumer's `svg.go`:
     //go:build !wasm
     package main
 
-    import "github.com/tinywasm/svg"
+    import "webtyp.com/svg"
     // or consume Platform's built-in icons (icon-home, icon-products, icon-info)
 
 The platform registers `icon-home`, `icon-products`, `icon-info` by default via `Platform.IconSvg()`.

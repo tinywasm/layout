@@ -3,15 +3,15 @@ package platformd
 import (
 	"sync"
 
-	"github.com/tinywasm/components/usermenu"
-	"github.com/tinywasm/layout"
-	"github.com/tinywasm/svg"
-	"github.com/tinywasm/widget"
+	"webtyp.com/components/usermenu"
+	"webtyp.com/layout"
+	"webtyp.com/svg"
+	"webtyp.com/widget"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
-	. "github.com/tinywasm/html"
-	"github.com/tinywasm/time"
+	. "webtyp.com/dom"
+	. "webtyp.com/fmt"
+	. "webtyp.com/html"
+	"webtyp.com/time"
 )
 
 const NamePlatform widget.Name = "pd"
@@ -66,7 +66,7 @@ func (p *Platform) WidgetKind() widget.Kind { return widget.Menu }
 // Identity is what the platform needs to know about whoever is logged in.
 //
 // It is a READ contract, not a store: platformd renders it and never mutates
-// it. Whatever owns authentication — github.com/tinywasm/user in a real
+// it. Whatever owns authentication — webtyp.com/user in a real
 // application — supplies an implementation; the platform neither knows nor
 // cares where the values come from.
 //

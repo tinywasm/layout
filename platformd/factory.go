@@ -1,8 +1,8 @@
 package platformd
 
 import (
-	. "github.com/tinywasm/dom"
-	"github.com/tinywasm/svg"
+	. "webtyp.com/dom"
+	"webtyp.com/svg"
 )
 
 // NewUIModule returns a private implementation of UIModule.

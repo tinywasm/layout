@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/tinywasm/dom"
-	. "github.com/tinywasm/fmt"
-	. "github.com/tinywasm/html"
-	"github.com/tinywasm/svg"
+	. "webtyp.com/dom"
+	. "webtyp.com/fmt"
+	. "webtyp.com/html"
+	"webtyp.com/svg"
 )
 
 type mockModule struct {
@@ -125,7 +125,7 @@ func TestPlatform_Render_DefaultModule(t *testing.T) {
 	p.Init(NilCtx()) // Should activate mod2
 
 	html := p.Render().String()
-	// tinywasm/dom uses single quotes for attributes and boolean attributes are empty keys
+	// webtyp/dom uses single quotes for attributes and boolean attributes are empty keys
 	if !contains(html, "id='mod2' class='pd__panel' data-id='mod2' data-current='true'") {
 		t.Errorf("expected mod2 to be active, got HTML: %s", html)
 	}

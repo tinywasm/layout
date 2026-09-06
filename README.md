@@ -1,7 +1,7 @@
 # layout
 <img src="docs/img/badges.svg">
 
-Predefined UI layouts for tinywasm modules
+Predefined UI layouts for webtyp modules
 
 ## Docs
 
@@ -55,9 +55,9 @@ down.
 - `Platform.Brand` (`BrandName()`/`BrandMark()`): optional leading header slot; empty mark falls back to the shell's default glyph.
 
 The reference demo — `devices`, `medicalhistory` and `about` modules on this
-shell — lives in its own public repo, [github.com/tinywasm/app-demo](https://github.com/tinywasm/app-demo),
+shell — lives in its own public repo, [github.com/webtyp/app-demo](https://github.com/webtyp/app-demo),
 so the demo's ORM/storage/input dependencies do not weigh on this module's
-`go.mod`. Run it from that repo with the tinywasm dev server. Each module owns
+`go.mod`. Run it from that repo with the webtyp dev server. Each module owns
 its view, its data and its icon; the chassis ships only its own chrome glyphs.
 Adding a module to an application is a package plus one line in `p.Modules` —
 no `if` in the shell.
@@ -129,7 +129,7 @@ pages := site.RenderPages() // implements html.PagesProvider: home + one page pe
 ```
 
 `Split`, `MapEmbed`, `Footer` and `Hours` are horizontal bands with no state, so
-they live here; everything with behaviour is consumed from `tinywasm/components`
+they live here; everything with behaviour is consumed from `webtyp/components`
 (`infobar`, `sitenav`, `herobanner`, `statgrid`, `contentcard`), never
 reimplemented. Images in `Split` and `Cards` accept base image paths without variant
 suffixes (e.g., `/img/foto.jpg`, not `/img/foto.M.jpg`) and emit responsive `srcset`

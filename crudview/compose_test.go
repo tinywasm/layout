@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tinywasm/components/searchbar"
-	"github.com/tinywasm/dom"
-	. "github.com/tinywasm/html"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/view"
-	"github.com/tinywasm/view/conformance"
-	"github.com/tinywasm/widget"
+	"webtyp.com/components/searchbar"
+	"webtyp.com/dom"
+	. "webtyp.com/html"
+	"webtyp.com/model"
+	"webtyp.com/view"
+	"webtyp.com/view/conformance"
+	"webtyp.com/widget"
 )
 
 // fakeFilter is a filter control with no markup beyond a marker attribute.

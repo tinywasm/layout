@@ -158,7 +158,7 @@ Tras login exitoso el servidor responde con lista de módulos autorizados (`msg.
 | D5 | `border-radius` panel | `0em .4em .4em 0em` | `0 .4em 0 0` | ⬜ Corregir: ambos lados derechos |
 | D6 | `.btn-url-up`/`.btn-url-down` | primer/último item | no existe | ⬜ Agregar al CSS como modificadores opcionales |
 | D7 | Grid root | `<body>` | `<div class="pd-root">` | ✅ OK — wrapper es mejor práctica |
-| D8 | Carga de módulos | lazy por WebSocket | todos en DOM desde inicio | ✅ OK — tinywasm renderiza todo en WASM |
+| D8 | Carga de módulos | lazy por WebSocket | todos en DOM desde inicio | ✅ OK — webtyp renderiza todo en WASM |
 | D9 | Activación panel | `z-index` implícito | clase `.pd-panel-active` | ✅ OK — más explícito y correcto |
 | D10 | JS activo menú | `.btn-selected` en `<svg>` | `pd-nav-active` en `<a>` | ✅ OK — misma semántica, mejor target |
 | D11 | `font-family: Arvo` | declarado en `body` | declarado en reset universal | ✅ OK — ambos aplican Arvo |
